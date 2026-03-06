@@ -22,10 +22,15 @@ struct PollingScheduler {
     private var stabilityStreak: Int = 0
     private var previousSessionPct: Double?
     private var previousWeeklyPct: Double?
+    private var serverRetryAfter: TimeInterval?
 
     /// Computed interval incorporating both backoff and adaptive multipliers.
     var currentInterval: TimeInterval {
         if consecutiveRateLimitFailures > 0 {
+            // If the server told us when to retry, honour that (floored at baseInterval)
+            if let retryAfter = serverRetryAfter, retryAfter > 0 {
+                return max(retryAfter, baseInterval)
+            }
             let backoff = baseInterval * pow(2.0, Double(consecutiveRateLimitFailures))
             return min(backoff, maxBackoffInterval)
         }
@@ -74,6 +79,7 @@ struct PollingScheduler {
         // Streak is intentionally preserved through backoff recovery, so idle users
         // return to their previous polling tier immediately after rate-limit recovery.
         consecutiveRateLimitFailures = 0
+        serverRetryAfter = nil
 
         let sessionPct = usage.sessionPercentage
         let weeklyPct = usage.weeklyPercentage
@@ -91,9 +97,16 @@ struct PollingScheduler {
         previousWeeklyPct = weeklyPct
     }
 
-    /// Record a 429 rate-limit error. Increments exponential backoff (capped at 20).
-    mutating func recordRateLimitError() {
+    /// Record a 429 rate-limit error. If the server provided a `Retry-After` value
+    /// it is used instead of exponential backoff (floored at `baseInterval`).
+    /// Falls back to exponential backoff when `retryAfter` is nil or zero.
+    mutating func recordRateLimitError(retryAfter: TimeInterval? = nil) {
         consecutiveRateLimitFailures = min(consecutiveRateLimitFailures + 1, 20)
+        if let retryAfter = retryAfter, retryAfter > 0 {
+            serverRetryAfter = retryAfter
+        } else {
+            serverRetryAfter = nil
+        }
     }
 
     /// Record a non-rate-limit error. Does not affect polling interval.
