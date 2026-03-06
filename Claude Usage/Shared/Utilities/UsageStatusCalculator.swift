@@ -87,4 +87,64 @@ final class UsageStatusCalculator {
             return usedPercentage
         }
     }
+
+    /// Map utilization + optional session pacing to a 1–10 ANSI color level for the statusline.
+    ///
+    /// Color band contract (mirrors `calculateStatus` severity):
+    ///   - green  (safe)     → levels 1–3:  projected < 75%
+    ///   - orange (moderate) → levels 4–7:  projected 75–95%
+    ///   - red    (critical) → levels 8–10: projected ≥ 95%
+    ///
+    /// Pacing fires when `elapsedFraction` ≥ 0.15 and < 1.0 and utilization > 0.
+    /// Otherwise falls back to absolute thresholds that match `calculateStatus` (used-based).
+    ///
+    /// - Parameters:
+    ///   - utilization: Integer usage percentage (0–100)
+    ///   - elapsedFraction: Fraction of the session elapsed (0–1), or nil if unavailable
+    /// - Returns: A level in the range 1–10
+    static func colorLevel(utilization: Int, elapsedFraction: Double?) -> Int {
+        let u = Double(utilization) / 100.0
+
+        // Pacing mode: same guard conditions as calculateStatus
+        if let t = elapsedFraction, t >= 0.15, t < 1.0, u > 0 {
+            let projected = u / t  // fraction of full capacity consumed by end of session
+
+            if projected < 0.75 {
+                // Green range: sub-divide 0–75% into thirds
+                if projected < 0.25 { return 1 }
+                if projected < 0.50 { return 2 }
+                return 3
+            } else if projected < 0.95 {
+                // Orange range: sub-divide 75–95% into quarters
+                if projected < 0.80 { return 4 }
+                if projected < 0.85 { return 5 }
+                if projected < 0.90 { return 6 }
+                return 7
+            } else {
+                // Red range: sub-divide ≥95% by 20-point bands
+                if projected < 1.15 { return 8 }
+                if projected < 1.35 { return 9 }
+                return 10
+            }
+        }
+
+        // Fallback: absolute thresholds matching calculateStatus (used-based)
+        if utilization < 50 {
+            // Green range: levels 1–3
+            if utilization < 17 { return 1 }
+            if utilization < 34 { return 2 }
+            return 3
+        } else if utilization < 80 {
+            // Orange range: levels 4–7
+            if utilization < 60 { return 4 }
+            if utilization < 67 { return 5 }
+            if utilization < 73 { return 6 }
+            return 7
+        } else {
+            // Red range: levels 8–10
+            if utilization < 87 { return 8 }
+            if utilization < 93 { return 9 }
+            return 10
+        }
+    }
 }
