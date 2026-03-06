@@ -732,6 +732,9 @@ class MenuBarManager: NSObject, ObservableObject {
             }
 
             // Fetch usage for each selected profile
+            var hitRateLimit = false
+            var activeProfileUsage: ClaudeUsage?
+
             for profile in selectedProfiles {
                 LoggingService.shared.log("MenuBarManager: Fetching usage for profile '\(profile.name)'")
                 do {
@@ -747,9 +750,14 @@ class MenuBarManager: NSObject, ObservableObject {
                         // If this is the active profile, also update the manager's usage
                         if profile.id == self.profileManager.activeProfile?.id {
                             self.usage = newUsage
+                            activeProfileUsage = newUsage
                         }
                     }
                 } catch {
+                    let appError = AppError.wrap(error)
+                    if appError.code == .apiRateLimited {
+                        hitRateLimit = true
+                    }
                     LoggingService.shared.logError("Failed to refresh profile '\(profile.name)': \(error.localizedDescription)")
                 }
             }
@@ -762,6 +770,14 @@ class MenuBarManager: NSObject, ObservableObject {
                     config: config
                 )
                 self.isRefreshing = false
+
+                // Update polling scheduler and reschedule next poll
+                if hitRateLimit {
+                    self.pollingScheduler.recordRateLimitError()
+                } else if let usage = activeProfileUsage {
+                    self.pollingScheduler.recordSuccess(usage: usage)
+                }
+                self.startAutoRefresh()
             }
         }
     }
