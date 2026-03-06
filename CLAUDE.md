@@ -68,23 +68,38 @@ Common scopes: `api`, `menubar`, `statusline`, `settings`, `services`, `models`,
 
 ## Deploy to /Applications
 
-Always pull latest before building, then remove the old bundle before copying — `cp -R` silently skips overwriting an existing `.app` directory, leaving the stale binary in place.
+Full clean deploy — every step matters. Skipping any step risks shipping a stale binary.
 
 ```bash
+# 1. Pull latest
 git pull origin main
 
+# 2. Quit the running app
+kill $(pgrep -f "Claude Usage") 2>/dev/null; sleep 1
+
+# 3. Nuke DerivedData to prevent stale object files
+rm -rf ~/Library/Developer/Xcode/DerivedData/Claude_Usage-*
+
+# 4. Clean build from scratch
 xcodebuild clean build -project "Claude Usage.xcodeproj" -scheme "Claude Usage" -configuration Release \
   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
+# 5. Locate the built product
 DERIVED=$(xcodebuild -project "Claude Usage.xcodeproj" -scheme "Claude Usage" -configuration Release \
   -showBuildSettings CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
-  | awk '/BUILT_PRODUCTS_DIR/{print $3}')
+  | grep '^\s*BUILT_PRODUCTS_DIR = ' | head -1 | sed 's/.*= //')
 
+# 6. Remove old bundle, copy new, relaunch
 rm -rf "/Applications/Claude Usage.app"
 cp -R "$DERIVED/Claude Usage.app" "/Applications/"
+open "/Applications/Claude Usage.app"
 ```
 
-Use `clean build` (not just `build`) when verifying a fix — incremental Release builds can reuse stale object files and ship the old behaviour.
+**Why each step:**
+- **Kill first**: macOS can keep the old process in memory even after replacing the bundle.
+- **Nuke DerivedData**: `clean build` alone can reuse stale object files from incremental caches.
+- **`rm -rf` before `cp -R`**: `cp -R` silently skips overwriting an existing `.app` directory, leaving the stale binary in place.
+- **`grep` not `awk`**: The `awk` pattern for `BUILT_PRODUCTS_DIR` can match the wrong line (e.g. `CODE_SIGNING_ALLOWED = YES`).
 
 ## Release
 
