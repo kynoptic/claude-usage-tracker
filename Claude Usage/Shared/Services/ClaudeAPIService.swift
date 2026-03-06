@@ -634,8 +634,10 @@ class ClaudeAPIService: APIServiceProtocol {
 
     /// Parses the Retry-After header value (integer seconds) from an HTTP 429 response.
     func parseRetryAfter(from response: HTTPURLResponse) -> TimeInterval? {
-        guard let value = response.value(forHTTPHeaderField: "Retry-After") else { return nil }
-        return TimeInterval(value)  // Anthropic uses integer seconds
+        guard let value = response.value(forHTTPHeaderField: "Retry-After"),
+              let parsed = TimeInterval(value),
+              parsed >= 0 else { return nil }
+        return parsed  // Anthropic uses integer seconds
     }
 
     /// Logs all rate-limit-related headers from an HTTP 429 response for debugging.

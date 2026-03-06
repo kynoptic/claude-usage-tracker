@@ -257,6 +257,13 @@ final class PollingSchedulerTests: XCTestCase {
         XCTAssertEqual(scheduler.currentInterval, 30, "Retry-After below baseInterval should be floored to baseInterval")
     }
 
+    func testRetryAfterCappedAtMaxBackoff() {
+        var scheduler = PollingScheduler(baseInterval: 30, maxBackoffInterval: 300)
+
+        scheduler.recordRateLimitError(retryAfter: 86400)
+        XCTAssertEqual(scheduler.currentInterval, 300, "Server Retry-After should be capped at maxBackoffInterval")
+    }
+
     func testRetryAfterClearedOnSuccess() {
         var scheduler = PollingScheduler(baseInterval: 30)
 
@@ -270,8 +277,8 @@ final class PollingSchedulerTests: XCTestCase {
     func testRetryAfterReplacedBySubsequentRateLimitError() {
         var scheduler = PollingScheduler(baseInterval: 30)
 
-        scheduler.recordRateLimitError(retryAfter: 120)
-        XCTAssertEqual(scheduler.currentInterval, 120)
+        scheduler.recordRateLimitError(retryAfter: 200)
+        XCTAssertEqual(scheduler.currentInterval, 200)
 
         // Second 429 without Retry-After should fall back to exponential backoff
         scheduler.recordRateLimitError(retryAfter: nil)

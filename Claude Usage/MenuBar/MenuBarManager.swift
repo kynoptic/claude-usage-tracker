@@ -758,7 +758,9 @@ class MenuBarManager: NSObject, ObservableObject {
                     let appError = AppError.wrap(error)
                     if appError.code == .apiRateLimited {
                         hitRateLimit = true
-                        rateLimitRetryAfter = appError.retryAfter
+                        if let ra = appError.retryAfter {
+                            rateLimitRetryAfter = max(ra, rateLimitRetryAfter ?? 0)
+                        }
                     }
                     LoggingService.shared.logError("Failed to refresh profile '\(profile.name)': \(error.localizedDescription)")
                 }

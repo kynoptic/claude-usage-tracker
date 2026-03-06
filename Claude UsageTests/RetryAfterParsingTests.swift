@@ -64,6 +64,13 @@ final class RetryAfterParsingTests: XCTestCase {
         XCTAssertNil(result, "Should return nil for non-numeric Retry-After values")
     }
 
+    func testParseRetryAfterWithNegativeValue() {
+        let response = makeResponse(headers: ["Retry-After": "-5"])
+        let result = service.parseRetryAfter(from: response)
+
+        XCTAssertNil(result, "Should return nil for negative Retry-After values")
+    }
+
     func testParseRetryAfterWithLargeValue() {
         let response = makeResponse(headers: ["Retry-After": "3600"])
         let result = service.parseRetryAfter(from: response)

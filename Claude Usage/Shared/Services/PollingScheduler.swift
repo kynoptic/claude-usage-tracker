@@ -29,7 +29,7 @@ struct PollingScheduler {
         if consecutiveRateLimitFailures > 0 {
             // If the server told us when to retry, honour that (floored at baseInterval)
             if let retryAfter = serverRetryAfter, retryAfter > 0 {
-                return max(retryAfter, baseInterval)
+                return min(max(retryAfter, baseInterval), maxBackoffInterval)
             }
             let backoff = baseInterval * pow(2.0, Double(consecutiveRateLimitFailures))
             return min(backoff, maxBackoffInterval)
