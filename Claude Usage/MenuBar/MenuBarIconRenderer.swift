@@ -271,20 +271,12 @@ final class MenuBarIconRenderer {
 
         // Time-elapsed tick mark on the battery bar
         if let fraction = timeMarkerFraction {
+            // +1 accounts for the battery container's 1pt left border offset
             let tickX = round(xOffset + 1 + padding + (barWidth - padding * 2) * fraction)
             let tickPath = NSBezierPath()
             tickPath.move(to: NSPoint(x: tickX, y: barY))
             tickPath.line(to: NSPoint(x: tickX, y: barY + barHeight))
-            let ctx = NSGraphicsContext.current!.cgContext
-            ctx.saveGState()
-            ctx.setBlendMode(.clear)
-            tickPath.lineWidth = 3.0
-            tickPath.lineCapStyle = .butt
-            tickPath.stroke()
-            ctx.restoreGState()
-            NSColor.white.setStroke()
-            tickPath.lineWidth = 1.5
-            tickPath.stroke()
+            drawTimeMarkerTick(tickPath)
         }
 
         // Label BELOW the battery (replaces percentage text)
@@ -394,16 +386,7 @@ final class MenuBarIconRenderer {
                 let tickPath = NSBezierPath()
                 tickPath.move(to: NSPoint(x: tickX, y: barY))
                 tickPath.line(to: NSPoint(x: tickX, y: barY + barHeight))
-                let ctx = NSGraphicsContext.current!.cgContext
-                ctx.saveGState()
-                ctx.setBlendMode(.clear)
-                tickPath.lineWidth = 3.0
-                tickPath.lineCapStyle = .butt
-                tickPath.stroke()
-                ctx.restoreGState()
-                NSColor.white.setStroke()
-                tickPath.lineWidth = 1.5
-                tickPath.stroke()
+                drawTimeMarkerTick(tickPath)
             }
 
             // Draw session reset time inside the fill area if enabled and this is a session metric
@@ -531,6 +514,9 @@ final class MenuBarIconRenderer {
         }
 
         // Time-elapsed tick mark on the ring
+        // Note: the arc uses clockwise: false (counterclockwise in y-up AppKit coordinates),
+        // so the tick angle increases counterclockwise from 90° (top) — verify visually if
+        // the tick appears on the opposite side of the fill arc.
         if let fraction = timeMarkerFraction {
             let tickAngle = (90 + 360 * fraction) * .pi / 180
             let innerR = radius - 2.0
@@ -544,18 +530,7 @@ final class MenuBarIconRenderer {
                 x: center.x + outerR * cos(tickAngle),
                 y: center.y + outerR * sin(tickAngle)
             ))
-            // Erase a transparent gap so the tick is visible in template/monochrome mode
-            let ctx = NSGraphicsContext.current!.cgContext
-            ctx.saveGState()
-            ctx.setBlendMode(.clear)
-            tickPath.lineWidth = 3.0
-            tickPath.lineCapStyle = .butt
-            tickPath.stroke()
-            ctx.restoreGState()
-            // Draw the tick on top
-            NSColor.white.setStroke()
-            tickPath.lineWidth = 1.5
-            tickPath.stroke()
+            drawTimeMarkerTick(tickPath)
         }
 
         // Draw S/W in the CENTER of the circle
@@ -1071,6 +1046,21 @@ final class MenuBarIconRenderer {
     }
 
     // MARK: - Helper Methods
+
+    /// Draws the time-elapsed tick mark (clear gap + white stroke) onto any bar or ring path.
+    /// Guards against a missing graphics context so this is safe to call from any drawing block.
+    private func drawTimeMarkerTick(_ path: NSBezierPath) {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        ctx.saveGState()
+        ctx.setBlendMode(.clear)
+        path.lineWidth = 3.0
+        path.lineCapStyle = .butt
+        path.stroke()
+        ctx.restoreGState()
+        NSColor.white.setStroke()
+        path.lineWidth = 1.5
+        path.stroke()
+    }
 
     /// Calculates the fraction of elapsed time within a period for the time marker
     private func calculateTimeMarkerFraction(
