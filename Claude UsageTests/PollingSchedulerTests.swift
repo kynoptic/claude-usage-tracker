@@ -227,6 +227,57 @@ final class PollingSchedulerTests: XCTestCase {
         XCTAssertEqual(scheduler.currentInterval, 30) // back to normal
     }
 
+    // MARK: - Retry-After Header Support
+
+    func testRetryAfterPositiveValueOverridesBackoff() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+
+        scheduler.recordRateLimitError(retryAfter: 120)
+        XCTAssertEqual(scheduler.currentInterval, 120, "Server-specified Retry-After should override exponential backoff")
+    }
+
+    func testRetryAfterZeroFallsBackToExponentialBackoff() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+
+        scheduler.recordRateLimitError(retryAfter: 0)
+        XCTAssertEqual(scheduler.currentInterval, 60, "Retry-After of 0 should fall back to exponential backoff (30 * 2^1)")
+    }
+
+    func testRetryAfterNilFallsBackToExponentialBackoff() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+
+        scheduler.recordRateLimitError(retryAfter: nil)
+        XCTAssertEqual(scheduler.currentInterval, 60, "Retry-After nil should fall back to exponential backoff (30 * 2^1)")
+    }
+
+    func testRetryAfterBelowBaseUsesBase() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+
+        scheduler.recordRateLimitError(retryAfter: 10)
+        XCTAssertEqual(scheduler.currentInterval, 30, "Retry-After below baseInterval should be floored to baseInterval")
+    }
+
+    func testRetryAfterClearedOnSuccess() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+
+        scheduler.recordRateLimitError(retryAfter: 120)
+        XCTAssertEqual(scheduler.currentInterval, 120)
+
+        scheduler.recordSuccess(usage: makeUsage())
+        XCTAssertEqual(scheduler.currentInterval, 30, "Success should clear retryAfter and reset to base")
+    }
+
+    func testRetryAfterReplacedBySubsequentRateLimitError() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+
+        scheduler.recordRateLimitError(retryAfter: 120)
+        XCTAssertEqual(scheduler.currentInterval, 120)
+
+        // Second 429 without Retry-After should fall back to exponential backoff
+        scheduler.recordRateLimitError(retryAfter: nil)
+        XCTAssertEqual(scheduler.currentInterval, 120, "Without Retry-After, should use exponential backoff (30 * 2^2)")
+    }
+
     // MARK: - Streak Preservation Through Backoff
 
     func testStreakPreservedThroughBackoffRecovery() {
