@@ -307,7 +307,16 @@ class ClaudeAPIService: APIServiceProtocol {
                 throw AppError.apiUnauthorized()
 
             case 429:
-                throw AppError.apiRateLimited()
+                self.logRateLimitHeaders(from: httpResponse, context: "fetchAllOrganizations")
+                let parsedRetryAfter = self.parseRetryAfter(from: httpResponse)
+                throw AppError(
+                    code: .apiRateLimited,
+                    message: "Rate limited by Claude API",
+                    technicalDetails: "Endpoint: /organizations\nRetry-After: \(parsedRetryAfter.map { "\($0)" } ?? "not set")",
+                    isRecoverable: true,
+                    recoverySuggestion: "Please wait a few minutes before trying again",
+                    retryAfter: parsedRetryAfter
+                )
 
             case 500...599:
                 throw AppError.apiServerError(statusCode: httpResponse.statusCode)
@@ -403,7 +412,7 @@ class ClaudeAPIService: APIServiceProtocol {
         }
 
         guard httpResponse.statusCode == 200 else {
-            throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth fetch failed")
+            throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth fetch failed", httpResponse: httpResponse)
         }
 
         return try parseUsageResponse(data)
@@ -465,7 +474,7 @@ class ClaudeAPIService: APIServiceProtocol {
             }
 
             guard httpResponse.statusCode == 200 else {
-                throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth authentication failed")
+                throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth authentication failed", httpResponse: httpResponse)
             }
 
             return try parseUsageResponse(data)
@@ -549,12 +558,15 @@ class ClaudeAPIService: APIServiceProtocol {
             )
 
         case 429:
+            logRateLimitHeaders(from: httpResponse, context: "performRequest(\(endpoint))")
+            let parsedRetryAfter = parseRetryAfter(from: httpResponse)
             throw AppError(
                 code: .apiRateLimited,
                 message: "Rate limited by Claude API",
-                technicalDetails: "Endpoint: \(endpoint)",
+                technicalDetails: "Endpoint: \(endpoint)\nRetry-After: \(parsedRetryAfter.map { "\($0)" } ?? "not set")",
                 isRecoverable: true,
-                recoverySuggestion: "Please wait a few minutes before trying again"
+                recoverySuggestion: "Please wait a few minutes before trying again",
+                retryAfter: parsedRetryAfter
             )
 
         case 500...599:
@@ -580,11 +592,12 @@ class ClaudeAPIService: APIServiceProtocol {
 
     /// Maps an HTTP status code from an OAuth endpoint to the appropriate AppError.
     /// Internal (not private) to allow unit testing via `@testable import`.
-    func oauthError(statusCode: Int, data: Data, context: String) -> AppError {
+    func oauthError(statusCode: Int, data: Data, context: String, httpResponse: HTTPURLResponse? = nil) -> AppError {
         let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? "Unable to read response"
         let code: ErrorCode
         let qualifier: String
         let suggestion: String
+        var parsedRetryAfter: TimeInterval? = nil
         switch statusCode {
         case 401, 403:
             code = .apiUnauthorized
@@ -594,6 +607,10 @@ class ClaudeAPIService: APIServiceProtocol {
             code = .apiRateLimited
             qualifier = "rate limited"
             suggestion = "Please wait a few minutes before trying again."
+            if let httpResponse = httpResponse {
+                logRateLimitHeaders(from: httpResponse, context: "oauthError(\(context))")
+                parsedRetryAfter = parseRetryAfter(from: httpResponse)
+            }
         case 500...599:
             code = .apiServerError
             qualifier = "server error"
@@ -608,8 +625,36 @@ class ClaudeAPIService: APIServiceProtocol {
             message: "\(context): \(qualifier)",
             technicalDetails: "Status: \(statusCode)\nResponse: \(responsePreview)",
             isRecoverable: true,
-            recoverySuggestion: suggestion
+            recoverySuggestion: suggestion,
+            retryAfter: parsedRetryAfter
         )
+    }
+
+    // MARK: - Rate-Limit Header Parsing
+
+    /// Parses the Retry-After header value (integer seconds) from an HTTP 429 response.
+    func parseRetryAfter(from response: HTTPURLResponse) -> TimeInterval? {
+        guard let value = response.value(forHTTPHeaderField: "Retry-After"),
+              let parsed = TimeInterval(value),
+              parsed >= 0 else { return nil }
+        return parsed  // Anthropic uses integer seconds
+    }
+
+    /// Logs all rate-limit-related headers from an HTTP 429 response for debugging.
+    private func logRateLimitHeaders(from response: HTTPURLResponse, context: String) {
+        let headers = response.allHeaderFields
+        var rateLimitHeaders: [String: String] = [:]
+        for (key, value) in headers {
+            let keyStr = "\(key)".lowercased()
+            if keyStr.hasPrefix("anthropic-ratelimit") || keyStr == "retry-after" {
+                rateLimitHeaders["\(key)"] = "\(value)"
+            }
+        }
+        if rateLimitHeaders.isEmpty {
+            LoggingService.shared.logWarning("429 [\(context)]: No rate-limit headers present")
+        } else {
+            LoggingService.shared.logWarning("429 [\(context)] rate-limit headers: \(rateLimitHeaders)")
+        }
     }
 
     // MARK: - Response Parsing

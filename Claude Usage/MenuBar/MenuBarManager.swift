@@ -733,6 +733,7 @@ class MenuBarManager: NSObject, ObservableObject {
 
             // Fetch usage for each selected profile
             var hitRateLimit = false
+            var rateLimitRetryAfter: TimeInterval?
             var activeProfileUsage: ClaudeUsage?
 
             for profile in selectedProfiles {
@@ -757,6 +758,9 @@ class MenuBarManager: NSObject, ObservableObject {
                     let appError = AppError.wrap(error)
                     if appError.code == .apiRateLimited {
                         hitRateLimit = true
+                        if let ra = appError.retryAfter {
+                            rateLimitRetryAfter = max(ra, rateLimitRetryAfter ?? 0)
+                        }
                     }
                     LoggingService.shared.logError("Failed to refresh profile '\(profile.name)': \(error.localizedDescription)")
                 }
@@ -773,7 +777,7 @@ class MenuBarManager: NSObject, ObservableObject {
 
                 // Update polling scheduler and reschedule next poll
                 if hitRateLimit {
-                    self.pollingScheduler.recordRateLimitError()
+                    self.pollingScheduler.recordRateLimitError(retryAfter: rateLimitRetryAfter)
                 } else if let usage = activeProfileUsage {
                     self.pollingScheduler.recordSuccess(usage: usage)
                 }
@@ -926,7 +930,7 @@ class MenuBarManager: NSObject, ObservableObject {
                 // Update polling scheduler based on error type
                 await MainActor.run {
                     if appError.code == .apiRateLimited {
-                        self.pollingScheduler.recordRateLimitError()
+                        self.pollingScheduler.recordRateLimitError(retryAfter: appError.retryAfter)
                     } else {
                         self.pollingScheduler.recordOtherError()
                     }
