@@ -380,7 +380,7 @@ class ClaudeAPIService: APIServiceProtocol {
     func fetchUsageData(oauthAccessToken: String) async throws -> ClaudeUsage {
         LoggingService.shared.log("ClaudeAPIService: Fetching usage via OAuth endpoint (explicit token)")
 
-        guard let url = URL(string: "https://api.anthropic.com/api/oauth/usage") else {
+        guard let url = URL(string: Constants.APIEndpoints.oauthUsage) else {
             throw AppError(
                 code: .urlMalformed,
                 message: "Invalid OAuth usage endpoint",
@@ -449,7 +449,7 @@ class ClaudeAPIService: APIServiceProtocol {
             // Use OAuth endpoint (no organization ID needed)
             LoggingService.shared.log("ClaudeAPIService: Fetching usage via OAuth endpoint")
 
-            guard let url = URL(string: "https://api.anthropic.com/api/oauth/usage") else {
+            guard let url = URL(string: Constants.APIEndpoints.oauthUsage) else {
                 throw AppError(
                     code: .urlMalformed,
                     message: "Invalid OAuth usage endpoint",
