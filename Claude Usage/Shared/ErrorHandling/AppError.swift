@@ -36,6 +36,9 @@ struct AppError: Error, LocalizedError, CustomStringConvertible {
     /// Context information (file, line, function)
     let context: ErrorContext?
 
+    /// Server-specified retry delay (from Retry-After header), if any
+    let retryAfter: TimeInterval?
+
     // MARK: - Initialization
 
     init(
@@ -45,6 +48,7 @@ struct AppError: Error, LocalizedError, CustomStringConvertible {
         underlyingError: Error? = nil,
         isRecoverable: Bool = true,
         recoverySuggestion: String? = nil,
+        retryAfter: TimeInterval? = nil,
         file: String = #file,
         line: Int = #line,
         function: String = #function
@@ -56,6 +60,7 @@ struct AppError: Error, LocalizedError, CustomStringConvertible {
         self.timestamp = Date()
         self.isRecoverable = isRecoverable
         self.recoverySuggestion = recoverySuggestion
+        self.retryAfter = retryAfter
         self.context = ErrorContext(file: file, line: line, function: function)
     }
 
