@@ -668,6 +668,7 @@ struct SmartUsageCard: View {
         .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
         .animation(.easeInOut(duration: 0.4), value: isFlipped)
         .onTapGesture { if metric != nil { isFlipped.toggle() } }
+        .accessibilityHint(metric != nil ? "Double tap to \(isFlipped ? "hide" : "show") usage chart" : "")
     }
 
     // MARK: - Front Content

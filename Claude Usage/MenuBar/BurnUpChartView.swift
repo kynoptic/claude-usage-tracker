@@ -74,6 +74,9 @@ struct BurnUpChartView: View {
         }
     }
 
+    /// Pinned once per render to avoid Date() re-evaluation inside the chart body
+    private var now: Date { Date() }
+
     private var chartContent: some View {
         Chart {
             // Burn-up area + line
@@ -123,7 +126,7 @@ struct BurnUpChartView: View {
             .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
 
             // "Now" marker
-            RuleMark(x: .value("Now", Date()))
+            RuleMark(x: .value("Now", now))
                 .foregroundStyle(Color(nsColor: .labelColor).opacity(0.25))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 2]))
         }

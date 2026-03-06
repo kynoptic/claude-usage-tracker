@@ -135,7 +135,9 @@ final class UsageHistoryStore {
         return (try? decoder.decode([UsageSnapshot].self, from: data)) ?? []
     }
 
-    /// Persist asynchronously to avoid blocking the main thread on file I/O
+    /// Persist asynchronously to avoid blocking the main thread on file I/O.
+    /// Safe to read `cache` here: this runs on the same serial queue used by
+    /// record()/recordAll(), so mutations are always complete before this block executes.
     private func persistAsync(metric: UsageMetric) {
         queue.async { [self] in
             let url = fileURL(for: metric)

@@ -745,6 +745,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     await MainActor.run {
                         // Save to profile
                         self.profileManager.saveClaudeUsage(newUsage, for: profile.id)
+                        // Multi-profile path — mutually exclusive with single-profile recordAll
                         UsageHistoryStore.shared.recordAll(from: newUsage)
                         LoggingService.shared.log("MenuBarManager: Saved usage for profile '\(profile.name)' - session: \(newUsage.sessionPercentage)%")
 
@@ -878,7 +879,7 @@ class MenuBarManager: NSObject, ObservableObject {
                         self.profileManager.saveClaudeUsage(newUsage, for: profileId)
                     }
 
-                    // Record usage snapshot for burn-up charts
+                    // Single-profile path — mutually exclusive with multi-profile recordAll
                     UsageHistoryStore.shared.recordAll(from: newUsage)
 
                     // Update all menu bar icons
