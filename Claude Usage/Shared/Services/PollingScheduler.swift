@@ -65,7 +65,14 @@ struct PollingScheduler {
     // MARK: - Public Methods
 
     /// Record a successful API response. Resets backoff and updates stability streak.
+    ///
+    /// The stability streak counts the number of consecutive *comparisons* where both
+    /// session and weekly percentages stayed within `similarityTolerance`. The first call
+    /// stores the baseline but does not count as a comparison, so reaching `stableThreshold`
+    /// requires `stableThreshold + 1` total calls with similar data.
     mutating func recordSuccess(usage: ClaudeUsage) {
+        // Streak is intentionally preserved through backoff recovery, so idle users
+        // return to their previous polling tier immediately after rate-limit recovery.
         consecutiveRateLimitFailures = 0
 
         let sessionPct = usage.sessionPercentage
@@ -76,17 +83,17 @@ struct PollingScheduler {
            abs(weeklyPct - prevWeekly) <= similarityTolerance {
             stabilityStreak += 1
         } else {
-            // First call or data changed — reset streak but count this as the first observation
-            stabilityStreak = previousSessionPct == nil ? 1 : 0
+            // First call stores the baseline; data changes reset the streak
+            stabilityStreak = 0
         }
 
         previousSessionPct = sessionPct
         previousWeeklyPct = weeklyPct
     }
 
-    /// Record a 429 rate-limit error. Increments exponential backoff.
+    /// Record a 429 rate-limit error. Increments exponential backoff (capped at 20).
     mutating func recordRateLimitError() {
-        consecutiveRateLimitFailures += 1
+        consecutiveRateLimitFailures = min(consecutiveRateLimitFailures + 1, 20)
     }
 
     /// Record a non-rate-limit error. Does not affect polling interval.

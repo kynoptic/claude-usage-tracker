@@ -73,22 +73,36 @@ final class PollingSchedulerTests: XCTestCase {
 
     // MARK: - Adaptive Polling (Stability)
 
-    func testFiveSimilarResponsesTriggersStableTier() {
+    func testSixSimilarResponsesTriggersStableTier() {
         var scheduler = PollingScheduler(baseInterval: 30, stableThreshold: 5, idleThreshold: 10)
         let usage = makeUsage(sessionPercentage: 50.0, weeklyPercentage: 30.0)
 
-        for _ in 0..<5 {
+        // 1 baseline + 5 comparisons = 6 calls to reach stableThreshold of 5
+        for _ in 0..<6 {
             scheduler.recordSuccess(usage: usage)
         }
 
         XCTAssertEqual(scheduler.currentInterval, 60) // 30 * 2x
     }
 
-    func testTenSimilarResponsesTriggersIdleTier() {
+    func testFiveSimilarResponsesDoesNotTriggerStableTier() {
         var scheduler = PollingScheduler(baseInterval: 30, stableThreshold: 5, idleThreshold: 10)
         let usage = makeUsage(sessionPercentage: 50.0, weeklyPercentage: 30.0)
 
-        for _ in 0..<10 {
+        // Only 5 calls = 1 baseline + 4 comparisons, not enough for threshold 5
+        for _ in 0..<5 {
+            scheduler.recordSuccess(usage: usage)
+        }
+
+        XCTAssertEqual(scheduler.currentInterval, 30) // still base rate
+    }
+
+    func testElevenSimilarResponsesTriggersIdleTier() {
+        var scheduler = PollingScheduler(baseInterval: 30, stableThreshold: 5, idleThreshold: 10)
+        let usage = makeUsage(sessionPercentage: 50.0, weeklyPercentage: 30.0)
+
+        // 1 baseline + 10 comparisons = 11 calls to reach idleThreshold of 10
+        for _ in 0..<11 {
             scheduler.recordSuccess(usage: usage)
         }
 
@@ -100,8 +114,8 @@ final class PollingSchedulerTests: XCTestCase {
         let usage1 = makeUsage(sessionPercentage: 50.0, weeklyPercentage: 30.0)
         let usage2 = makeUsage(sessionPercentage: 55.0, weeklyPercentage: 30.0) // >1pp diff
 
-        // Build up stability
-        for _ in 0..<5 {
+        // Build up stability (1 baseline + 5 comparisons = 6 calls)
+        for _ in 0..<6 {
             scheduler.recordSuccess(usage: usage1)
         }
         XCTAssertEqual(scheduler.currentInterval, 60) // stable
@@ -117,8 +131,8 @@ final class PollingSchedulerTests: XCTestCase {
         var scheduler = PollingScheduler(baseInterval: 30, stableThreshold: 5, idleThreshold: 10)
         let usage = makeUsage(sessionPercentage: 50.0, weeklyPercentage: 30.0)
 
-        // Build up idle tier
-        for _ in 0..<10 {
+        // Build up idle tier (1 baseline + 10 comparisons = 11 calls)
+        for _ in 0..<11 {
             scheduler.recordSuccess(usage: usage)
         }
         XCTAssertEqual(scheduler.currentInterval, 120) // idle tier
@@ -142,7 +156,8 @@ final class PollingSchedulerTests: XCTestCase {
         var scheduler = PollingScheduler(baseInterval: 30, stableThreshold: 5, idleThreshold: 10)
         let usage = makeUsage(sessionPercentage: 50.0, weeklyPercentage: 30.0)
 
-        for _ in 0..<5 {
+        // 1 baseline + 5 comparisons = 6 calls
+        for _ in 0..<6 {
             scheduler.recordSuccess(usage: usage)
         }
         XCTAssertEqual(scheduler.currentInterval, 60) // 30 * 2x
@@ -157,10 +172,13 @@ final class PollingSchedulerTests: XCTestCase {
         var scheduler = PollingScheduler(baseInterval: 30, stableThreshold: 2, similarityTolerance: 1.0)
         let usage1 = makeUsage(sessionPercentage: 50.0, weeklyPercentage: 30.0)
         let usage2 = makeUsage(sessionPercentage: 50.5, weeklyPercentage: 30.3) // within 1pp
+        let usage3 = makeUsage(sessionPercentage: 50.2, weeklyPercentage: 30.1) // within 1pp
 
+        // 1 baseline + 2 comparisons = 3 calls to reach threshold 2
         scheduler.recordSuccess(usage: usage1)
         scheduler.recordSuccess(usage: usage2)
-        XCTAssertEqual(scheduler.currentInterval, 60) // stable (2 similar = threshold)
+        scheduler.recordSuccess(usage: usage3)
+        XCTAssertEqual(scheduler.currentInterval, 60) // stable (2 comparisons = threshold)
     }
 
     func testSimilarityExceedingToleranceResetsStreak() {
@@ -194,11 +212,12 @@ final class PollingSchedulerTests: XCTestCase {
         scheduler.recordRateLimitError()
         XCTAssertEqual(scheduler.currentInterval, 120) // 30 * 2^2
 
-        // Phase 2: Recovery
+        // Phase 2: Recovery (baseline, streak = 0)
         scheduler.recordSuccess(usage: stableUsage)
         XCTAssertEqual(scheduler.currentInterval, 30) // reset to base
 
-        // Phase 3: Stability
+        // Phase 3: Stability (1 baseline + 3 comparisons = 4 calls to reach threshold 3)
+        scheduler.recordSuccess(usage: stableUsage) // streak = 1
         scheduler.recordSuccess(usage: stableUsage) // streak = 2
         scheduler.recordSuccess(usage: stableUsage) // streak = 3
         XCTAssertEqual(scheduler.currentInterval, 60) // stable tier
@@ -206,5 +225,29 @@ final class PollingSchedulerTests: XCTestCase {
         // Phase 4: Change resets
         scheduler.recordSuccess(usage: changedUsage)
         XCTAssertEqual(scheduler.currentInterval, 30) // back to normal
+    }
+
+    // MARK: - Streak Preservation Through Backoff
+
+    func testStreakPreservedThroughBackoffRecovery() {
+        var scheduler = PollingScheduler(baseInterval: 30, stableThreshold: 5, idleThreshold: 10)
+        let usage = makeUsage(sessionPercentage: 50.0, weeklyPercentage: 30.0)
+
+        // Build up to idle tier (1 baseline + 10 comparisons = 11 calls)
+        for _ in 0..<11 {
+            scheduler.recordSuccess(usage: usage)
+        }
+        XCTAssertEqual(scheduler.currentInterval, 120) // idle tier: 30 * 4x
+
+        // Hit rate limit errors — backoff overrides adaptive
+        scheduler.recordRateLimitError()
+        XCTAssertEqual(scheduler.currentInterval, 60) // backoff: 30 * 2^1
+        scheduler.recordRateLimitError()
+        XCTAssertEqual(scheduler.currentInterval, 120) // backoff: 30 * 2^2
+
+        // Recover with one success — streak should be preserved,
+        // so idle-tier multiplier applies immediately
+        scheduler.recordSuccess(usage: usage)
+        XCTAssertEqual(scheduler.currentInterval, 120) // idle tier restored: 30 * 4x
     }
 }
