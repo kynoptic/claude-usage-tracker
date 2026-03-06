@@ -87,6 +87,21 @@ enum Constants {
         static let widgetLarge: TimeInterval = 1800  // 30 minutes
     }
 
+    /// Adaptive polling configuration.
+    ///
+    /// When consecutive API responses stay within `similarityTolerance`, the stability streak
+    /// grows. At `stableThreshold` comparisons the interval is multiplied by `stableMultiplier`;
+    /// at `idleThreshold` it uses `idleMultiplier`. Rate-limit errors trigger exponential backoff
+    /// up to `maxBackoffInterval`.
+    enum AdaptivePolling {
+        static let maxBackoffInterval: TimeInterval = 300  // 5 minutes
+        static let stableThreshold: Int = 5
+        static let idleThreshold: Int = 10
+        static let stableMultiplier: Double = 2.0
+        static let idleMultiplier: Double = 4.0
+        static let similarityTolerance: Double = 1.0  // percentage points
+    }
+
     // Session window (5 hours in seconds)
     static let sessionWindow: TimeInterval = 5 * 60 * 60
 

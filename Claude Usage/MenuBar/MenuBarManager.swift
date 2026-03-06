@@ -6,6 +6,7 @@ class MenuBarManager: NSObject, ObservableObject {
     private var statusItem: NSStatusItem?  // Legacy - kept for backwards compatibility
     private var statusBarUIManager: StatusBarUIManager?
     private var refreshTimer: Timer?
+    private var pollingScheduler = PollingScheduler()
     @Published private(set) var usage: ClaudeUsage = .empty
     @Published private(set) var status: ClaudeStatus = .unknown
     @Published private(set) var apiUsage: APIUsage?
@@ -361,14 +362,8 @@ class MenuBarManager: NSObject, ObservableObject {
     }
 
     private func restartAutoRefreshWithInterval(_ interval: TimeInterval) {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
-
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            self?.refreshUsage()
-        }
-
-        LoggingService.shared.log("Updated refresh interval to \(interval)s")
+        pollingScheduler = PollingScheduler(baseInterval: interval)
+        startAutoRefresh()
     }
 
     private func setupPopover() {
@@ -541,19 +536,18 @@ class MenuBarManager: NSObject, ObservableObject {
     // MARK: - Icon Style: Battery (Classic)
 
     private func startAutoRefresh() {
-        let interval = profileManager.activeProfile?.refreshInterval ?? 30.0
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            self?.refreshUsage()
-        }
-        LoggingService.shared.log("Started auto-refresh with interval: \(interval)s")
-    }
-
-    private func restartAutoRefresh() {
-        // Invalidate existing timer
         refreshTimer?.invalidate()
         refreshTimer = nil
 
-        // Start new timer with updated interval
+        let interval = pollingScheduler.currentInterval
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            self?.refreshUsage()
+        }
+        LoggingService.shared.log("Scheduled next refresh in \(interval)s")
+    }
+
+    private func restartAutoRefresh() {
+        // Invalidate existing timer and schedule with current interval
         startAutoRefresh()
     }
 
@@ -562,6 +556,7 @@ class MenuBarManager: NSObject, ObservableObject {
         refreshIntervalObserver = dataStore.userDefaults.observe(\.refreshInterval, options: [.new]) { [weak self] _, change in
             if let newValue = change.newValue, newValue > 0 {
                 DispatchQueue.main.async {
+                    self?.pollingScheduler.resetBaseInterval(newValue)
                     self?.restartAutoRefresh()
                 }
             }
@@ -737,6 +732,9 @@ class MenuBarManager: NSObject, ObservableObject {
             }
 
             // Fetch usage for each selected profile
+            var hitRateLimit = false
+            var activeProfileUsage: ClaudeUsage?
+
             for profile in selectedProfiles {
                 LoggingService.shared.log("MenuBarManager: Fetching usage for profile '\(profile.name)'")
                 do {
@@ -752,9 +750,14 @@ class MenuBarManager: NSObject, ObservableObject {
                         // If this is the active profile, also update the manager's usage
                         if profile.id == self.profileManager.activeProfile?.id {
                             self.usage = newUsage
+                            activeProfileUsage = newUsage
                         }
                     }
                 } catch {
+                    let appError = AppError.wrap(error)
+                    if appError.code == .apiRateLimited {
+                        hitRateLimit = true
+                    }
                     LoggingService.shared.logError("Failed to refresh profile '\(profile.name)': \(error.localizedDescription)")
                 }
             }
@@ -767,6 +770,14 @@ class MenuBarManager: NSObject, ObservableObject {
                     config: config
                 )
                 self.isRefreshing = false
+
+                // Update polling scheduler and reschedule next poll
+                if hitRateLimit {
+                    self.pollingScheduler.recordRateLimitError()
+                } else if let usage = activeProfileUsage {
+                    self.pollingScheduler.recordSuccess(usage: usage)
+                }
+                self.startAutoRefresh()
             }
         }
     }
@@ -899,6 +910,11 @@ class MenuBarManager: NSObject, ObservableObject {
                 ErrorRecovery.shared.recordSuccess(for: .api)
                 usageSuccess = true
 
+                // Update polling scheduler with successful response
+                await MainActor.run {
+                    self.pollingScheduler.recordSuccess(usage: newUsage)
+                }
+
             } catch {
                 // Convert to AppError and log
                 let appError = AppError.wrap(error)
@@ -906,6 +922,15 @@ class MenuBarManager: NSObject, ObservableObject {
 
                 // Record failure for circuit breaker
                 ErrorRecovery.shared.recordFailure(for: .api)
+
+                // Update polling scheduler based on error type
+                await MainActor.run {
+                    if appError.code == .apiRateLimited {
+                        self.pollingScheduler.recordRateLimitError()
+                    } else {
+                        self.pollingScheduler.recordOtherError()
+                    }
+                }
 
                 // Show error to user if this was triggered by session key update
                 await MainActor.run {
@@ -958,7 +983,7 @@ class MenuBarManager: NSObject, ObservableObject {
                 }
             }
 
-            // Clear loading state
+            // Clear loading state and schedule next refresh
             await MainActor.run {
                 self.isRefreshing = false
 
@@ -966,6 +991,9 @@ class MenuBarManager: NSObject, ObservableObject {
                 if usageSuccess && abs(self.lastRefreshTriggerTime.timeIntervalSinceNow) < 5 {
                     self.showSuccessNotification()
                 }
+
+                // Schedule next poll with updated interval
+                self.startAutoRefresh()
             }
         }
     }
