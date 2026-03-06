@@ -151,8 +151,9 @@ final class UsageHistoryStoreTests: XCTestCase {
     // MARK: - Persistence Tests
 
     func testPersistenceAcrossInstances() {
-        // Record data
+        // Record data and wait for async persist to complete
         store.record(33.0, for: .session)
+        store.flush()
 
         // Verify it was persisted by reading the JSON file directly,
         // avoiding a second UsageHistoryStore instance (which triggers a
@@ -198,5 +199,21 @@ final class UsageHistoryStoreTests: XCTestCase {
     func testHundredPercentage() {
         store.record(100.0, for: .session)
         XCTAssertEqual(store.snapshots(for: .session).first?.percentage, 100.0)
+    }
+
+    func testDeduplicationSkipsSamePercentage() {
+        store.record(50.0, for: .session)
+        store.record(50.0, for: .session)
+        store.record(50.0, for: .session)
+
+        XCTAssertEqual(store.snapshots(for: .session).count, 1)
+    }
+
+    func testDeduplicationRecordsDifferentPercentage() {
+        store.record(50.0, for: .session)
+        store.record(51.0, for: .session)
+        store.record(51.0, for: .session)
+
+        XCTAssertEqual(store.snapshots(for: .session).count, 2)
     }
 }

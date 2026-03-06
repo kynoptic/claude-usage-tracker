@@ -34,15 +34,18 @@ final class UsageHistoryStore {
     func record(_ percentage: Double, for metric: UsageMetric, at date: Date = Date()) {
         queue.sync {
             ensureLoaded()
+            guard shouldRecord(percentage, for: metric) else { return }
             let snapshot = UsageSnapshot(date: date, percentage: percentage)
             cache[metric, default: []].append(snapshot)
             prune(metric: metric)
-            persist(metric: metric)
         }
+        persistAsync(metric: metric)
     }
 
     /// Record all metrics from a usage update at once
     func recordAll(from usage: ClaudeUsage, at date: Date = Date()) {
+        var changed: [UsageMetric] = []
+
         queue.sync {
             ensureLoaded()
 
@@ -54,15 +57,17 @@ final class UsageHistoryStore {
             ]
 
             for (metric, percentage) in metrics {
+                guard shouldRecord(percentage, for: metric) else { continue }
                 let snapshot = UsageSnapshot(date: date, percentage: percentage)
                 cache[metric, default: []].append(snapshot)
                 prune(metric: metric)
+                changed.append(metric)
             }
+        }
 
-            // Persist all at once
-            for metric in UsageMetric.allCases {
-                persist(metric: metric)
-            }
+        // Persist only changed metrics, off the main thread
+        for metric in changed {
+            persistAsync(metric: metric)
         }
     }
 
@@ -72,6 +77,11 @@ final class UsageHistoryStore {
             ensureLoaded()
             return cache[metric] ?? []
         }
+    }
+
+    /// Block until all pending writes complete (for testing)
+    func flush() {
+        queue.sync {}
     }
 
     /// Remove all history (for testing or reset)
@@ -86,6 +96,12 @@ final class UsageHistoryStore {
     }
 
     // MARK: - Private Methods
+
+    /// Skip recording when the percentage matches the last snapshot
+    private func shouldRecord(_ percentage: Double, for metric: UsageMetric) -> Bool {
+        guard let last = cache[metric]?.last else { return true }
+        return last.percentage != percentage
+    }
 
     private func windowDuration(for metric: UsageMetric) -> TimeInterval {
         switch metric {
@@ -119,16 +135,19 @@ final class UsageHistoryStore {
         return (try? decoder.decode([UsageSnapshot].self, from: data)) ?? []
     }
 
-    private func persist(metric: UsageMetric) {
-        let url = fileURL(for: metric)
-        do {
-            try fileManager.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            let data = try encoder.encode(cache[metric] ?? [])
-            try data.write(to: url, options: .atomic)
-        } catch {
-            LoggingService.shared.logError("UsageHistoryStore: Failed to persist \(metric.rawValue): \(error)")
+    /// Persist asynchronously to avoid blocking the main thread on file I/O
+    private func persistAsync(metric: UsageMetric) {
+        queue.async { [self] in
+            let url = fileURL(for: metric)
+            do {
+                try fileManager.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                let data = try encoder.encode(cache[metric] ?? [])
+                try data.write(to: url, options: .atomic)
+            } catch {
+                LoggingService.shared.logError("UsageHistoryStore: Failed to persist \(metric.rawValue): \(error)")
+            }
         }
     }
 }

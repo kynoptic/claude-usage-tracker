@@ -3,7 +3,6 @@ import Charts
 
 /// Burn-up chart showing usage progression over a time window.
 /// Displayed on the back face of flipped SmartUsageCard instances.
-@available(macOS 14.0, *)
 struct BurnUpChartView: View {
     let snapshots: [UsageSnapshot]
     let isPrimary: Bool

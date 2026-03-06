@@ -747,7 +747,6 @@ struct SmartUsageCard: View {
 
     // MARK: - Back Content (Burn-Up Chart)
 
-    @available(macOS 14.0, *)
     private var backContent: some View {
         VStack(spacing: isPrimary ? 8 : 4) {
             // Mini header with back hint
