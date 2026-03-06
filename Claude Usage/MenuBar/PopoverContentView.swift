@@ -44,7 +44,12 @@ struct PopoverContentView: View {
             )
 
             // Intelligent Usage Dashboard
-            SmartUsageDashboard(usage: displayUsage, apiUsage: displayAPIUsage)
+            SmartUsageDashboard(
+                usage: displayUsage,
+                apiUsage: displayAPIUsage,
+                isStale: manager.isStale,
+                lastSuccessfulFetch: manager.lastSuccessfulFetch
+            )
 
             // Contextual Insights
             if showInsights {
@@ -485,6 +490,8 @@ struct SmartHeader: View {
 struct SmartUsageDashboard: View {
     let usage: ClaudeUsage
     let apiUsage: APIUsage?
+    var isStale: Bool = false
+    var lastSuccessfulFetch: Date?
     @StateObject private var profileManager = ProfileManager.shared
 
     // Get the display mode from active profile's icon config
@@ -501,8 +508,37 @@ struct SmartUsageDashboard: View {
         DataStore.shared.loadAPITrackingEnabled()
     }
 
+    /// Formatted "Updated X ago" label for stale data
+    private var stalenessLabel: String? {
+        guard isStale, let lastFetch = lastSuccessfulFetch else { return nil }
+        let elapsed = Date().timeIntervalSince(lastFetch)
+        if elapsed < 60 {
+            return "Updated \(Int(elapsed))s ago"
+        } else if elapsed < 3600 {
+            return "Updated \(Int(elapsed / 60))m ago"
+        } else {
+            return "Updated \(Int(elapsed / 3600))h ago"
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
+            // Staleness indicator
+            if isStale {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Text(stalenessLabel ?? "Data may be outdated")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 4)
+            }
+
             // Primary Usage Card
             SmartUsageCard(
                 title: "menubar.session_usage".localized,
@@ -513,7 +549,8 @@ struct SmartUsageDashboard: View {
                 isPrimary: true,
                 periodDuration: Constants.sessionWindow,
                 showTimeMarker: showTimeMarker,
-                metric: .session
+                metric: .session,
+                isStale: isStale
             )
 
             // Secondary Usage Cards
@@ -527,7 +564,8 @@ struct SmartUsageDashboard: View {
                     isPrimary: false,
                     periodDuration: Constants.weeklyWindow,
                     showTimeMarker: showTimeMarker,
-                    metric: .weekly
+                    metric: .weekly,
+                    isStale: isStale
                 )
 
                 if usage.opusWeeklyTokensUsed > 0 {
@@ -540,7 +578,8 @@ struct SmartUsageDashboard: View {
                         isPrimary: false,
                         periodDuration: Constants.weeklyWindow,
                         showTimeMarker: showTimeMarker,
-                        metric: .opus
+                        metric: .opus,
+                        isStale: isStale
                     )
                 }
 
@@ -554,7 +593,8 @@ struct SmartUsageDashboard: View {
                         isPrimary: false,
                         periodDuration: Constants.weeklyWindow,
                         showTimeMarker: showTimeMarker,
-                        metric: .sonnet
+                        metric: .sonnet,
+                        isStale: isStale
                     )
                 }
             }
@@ -568,7 +608,8 @@ struct SmartUsageDashboard: View {
                     showRemaining: showRemainingPercentage,
                     resetTime: nil,
                     isPrimary: false,
-                    periodDuration: nil
+                    periodDuration: nil,
+                    isStale: isStale
                 )
             }
 
@@ -596,6 +637,7 @@ struct SmartUsageCard: View {
     let periodDuration: TimeInterval?
     var showTimeMarker: Bool = true
     var metric: UsageMetric? = nil
+    var isStale: Bool = false
 
     @State private var isFlipped = false
 
@@ -669,6 +711,7 @@ struct SmartUsageCard: View {
         .contentShape(Rectangle())
         .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
         .animation(.easeInOut(duration: 0.4), value: isFlipped)
+        .opacity(isStale ? 0.7 : 1.0)
         .onTapGesture { if metric != nil { isFlipped.toggle() } }
         .accessibilityHint(metric != nil ? "Double tap to \(isFlipped ? "hide" : "show") usage chart" : "")
     }
@@ -771,7 +814,8 @@ struct SmartUsageCard: View {
                     isPrimary: isPrimary,
                     windowStart: chartWindowStart,
                     windowEnd: chartWindowEnd,
-                    statusColor: statusColor
+                    statusColor: statusColor,
+                    isStale: isStale
                 )
             }
         }
