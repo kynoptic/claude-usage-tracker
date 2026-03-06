@@ -797,12 +797,14 @@ class MenuBarManager: NSObject, ObservableObject {
                 )
                 self.isRefreshing = false
 
-                // Update polling scheduler and reschedule next poll
-                if hitRateLimit {
-                    self.pollingScheduler.recordRateLimitError(retryAfter: rateLimitRetryAfter)
-                } else if let usage = activeProfileUsage {
+                // Update polling scheduler and reschedule next poll.
+                // Active profile success takes priority — only back off if
+                // the active profile itself was rate-limited (no fresh data).
+                if let usage = activeProfileUsage {
                     self.pollingScheduler.recordSuccess(usage: usage)
                     self.lastSuccessfulFetch = Date()
+                } else if hitRateLimit {
+                    self.pollingScheduler.recordRateLimitError(retryAfter: rateLimitRetryAfter)
                 }
                 self.updateStaleness()
                 self.startAutoRefresh()
