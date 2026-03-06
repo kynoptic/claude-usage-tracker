@@ -43,6 +43,15 @@ final class MenuBarIconRenderer {
             )
         }
 
+        // Calculate time marker fraction for session/week metrics
+        let timeMarkerFraction: CGFloat? = globalConfig.showTimeMarker
+            ? calculateTimeMarkerFraction(
+                metricType: metricType,
+                usage: usage,
+                showRemaining: globalConfig.showRemainingPercentage
+            )
+            : nil
+
         // Render based on icon style for Session and Week
         switch config.iconStyle {
         case .battery:
@@ -53,7 +62,8 @@ final class MenuBarIconRenderer {
                 monochromeMode: monochromeMode,
                 showIconName: showIconName,
                 showNextSessionTime: showNextSessionTime,
-                usage: usage
+                usage: usage,
+                timeMarkerFraction: timeMarkerFraction
             )
         case .progressBar:
             return createProgressBarStyle(
@@ -63,7 +73,8 @@ final class MenuBarIconRenderer {
                 monochromeMode: monochromeMode,
                 showIconName: showIconName,
                 showNextSessionTime: showNextSessionTime,
-                usage: usage
+                usage: usage,
+                timeMarkerFraction: timeMarkerFraction
             )
         case .percentageOnly:
             return createPercentageOnlyStyle(
@@ -79,7 +90,8 @@ final class MenuBarIconRenderer {
                 metricData: metricData,
                 isDarkMode: isDarkMode,
                 monochromeMode: monochromeMode,
-                showIconName: showIconName
+                showIconName: showIconName,
+                timeMarkerFraction: timeMarkerFraction
             )
         case .compact:
             return createCompactStyle(
@@ -201,7 +213,8 @@ final class MenuBarIconRenderer {
         monochromeMode: Bool,
         showIconName: Bool,
         showNextSessionTime: Bool,
-        usage: ClaudeUsage
+        usage: ClaudeUsage,
+        timeMarkerFraction: CGFloat? = nil
     ) -> NSImage {
         let percentage = CGFloat(metricData.percentage) / 100.0
 
@@ -256,6 +269,17 @@ final class MenuBarIconRenderer {
             fillPath.fill()
         }
 
+        // Time-elapsed tick mark on the battery bar
+        if let fraction = timeMarkerFraction {
+            let tickX = round(xOffset + 1 + padding + (barWidth - padding * 2) * fraction)
+            let tickPath = NSBezierPath()
+            tickPath.move(to: NSPoint(x: tickX, y: barY))
+            tickPath.line(to: NSPoint(x: tickX, y: barY + barHeight))
+            NSColor.white.setStroke()
+            tickPath.lineWidth = 1.5
+            tickPath.stroke()
+        }
+
         // Label BELOW the battery (replaces percentage text)
         let textAttributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 9, weight: .medium),
@@ -295,7 +319,8 @@ final class MenuBarIconRenderer {
         monochromeMode: Bool,
         showIconName: Bool,
         showNextSessionTime: Bool,
-        usage: ClaudeUsage
+        usage: ClaudeUsage,
+        timeMarkerFraction: CGFloat? = nil
     ) -> NSImage {
         // For progress bar: show "S" or "W" before the bar (not full prefix)
         let labelWidth: CGFloat = showIconName ? 10 : 0
@@ -355,6 +380,17 @@ final class MenuBarIconRenderer {
             )
             fillColor.setFill()
             fillPath.fill()
+
+            // Time-elapsed tick mark on the progress bar
+            if let fraction = timeMarkerFraction {
+                let tickX = round(xOffset + barWidth * fraction)
+                let tickPath = NSBezierPath()
+                tickPath.move(to: NSPoint(x: tickX, y: barY))
+                tickPath.line(to: NSPoint(x: tickX, y: barY + barHeight))
+                NSColor.white.setStroke()
+                tickPath.lineWidth = 1.5
+                tickPath.stroke()
+            }
 
             // Draw session reset time inside the fill area if enabled and this is a session metric
             if showNextSessionTime && metricType == .session, let resetTime = metricData.sessionResetTime {
@@ -422,7 +458,8 @@ final class MenuBarIconRenderer {
         metricData: MetricData,
         isDarkMode: Bool,
         monochromeMode: Bool,
-        showIconName: Bool
+        showIconName: Bool,
+        timeMarkerFraction: CGFloat? = nil
     ) -> NSImage {
         // For circle: make it bigger to fit S/W in center
         let circleSize: CGFloat = showIconName ? 22 : 18  // Bigger when showing label
@@ -477,6 +514,25 @@ final class MenuBarIconRenderer {
             arcPath.lineWidth = 3.0
             arcPath.lineCapStyle = .round
             arcPath.stroke()
+        }
+
+        // Time-elapsed tick mark on the ring
+        if let fraction = timeMarkerFraction {
+            let tickAngle = (90 + 360 * fraction) * .pi / 180
+            let innerR = radius - 2.0
+            let outerR = radius + 2.0
+            let tickPath = NSBezierPath()
+            tickPath.move(to: NSPoint(
+                x: center.x + innerR * cos(tickAngle),
+                y: center.y + innerR * sin(tickAngle)
+            ))
+            tickPath.line(to: NSPoint(
+                x: center.x + outerR * cos(tickAngle),
+                y: center.y + outerR * sin(tickAngle)
+            ))
+            NSColor.white.setStroke()
+            tickPath.lineWidth = 1.5
+            tickPath.stroke()
         }
 
         // Draw S/W in the CENTER of the circle
@@ -992,6 +1048,33 @@ final class MenuBarIconRenderer {
     }
 
     // MARK: - Helper Methods
+
+    /// Calculates the fraction of elapsed time within a period for the time marker
+    private func calculateTimeMarkerFraction(
+        metricType: MenuBarMetricType,
+        usage: ClaudeUsage,
+        showRemaining: Bool
+    ) -> CGFloat? {
+        let resetTime: Date?
+        let duration: TimeInterval
+
+        switch metricType {
+        case .session:
+            resetTime = usage.sessionResetTime
+            duration = 5 * 3600
+        case .week:
+            resetTime = usage.weeklyResetTime
+            duration = 7 * 24 * 3600
+        case .api:
+            return nil
+        }
+
+        guard let reset = resetTime, reset > Date(), duration > 0 else { return nil }
+        let remaining = reset.timeIntervalSince(Date())
+        let elapsed = duration - remaining
+        let fraction = min(max(elapsed / duration, 0), 1)
+        return showRemaining ? 1.0 - fraction : fraction
+    }
 
     /// Returns the appropriate foreground color for menu bar icons based on appearance
     /// This is needed because NSColor.labelColor doesn't resolve correctly in image drawing contexts

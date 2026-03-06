@@ -492,6 +492,10 @@ struct SmartUsageDashboard: View {
         profileManager.activeProfile?.iconConfig.showRemainingPercentage ?? false
     }
 
+    private var showTimeMarker: Bool {
+        profileManager.activeProfile?.iconConfig.showTimeMarker ?? true
+    }
+
     // Check if API tracking is enabled globally
     private var isAPITrackingEnabled: Bool {
         DataStore.shared.loadAPITrackingEnabled()
@@ -507,7 +511,8 @@ struct SmartUsageDashboard: View {
                 showRemaining: showRemainingPercentage,
                 resetTime: usage.sessionResetTime,
                 isPrimary: true,
-                periodDuration: 5 * 3600
+                periodDuration: 5 * 3600,
+                showTimeMarker: showTimeMarker
             )
 
             // Secondary Usage Cards
@@ -519,7 +524,8 @@ struct SmartUsageDashboard: View {
                     showRemaining: showRemainingPercentage,
                     resetTime: usage.weeklyResetTime,
                     isPrimary: false,
-                    periodDuration: 7 * 24 * 3600
+                    periodDuration: 7 * 24 * 3600,
+                    showTimeMarker: showTimeMarker
                 )
 
                 if usage.opusWeeklyTokensUsed > 0 {
@@ -582,9 +588,11 @@ struct SmartUsageCard: View {
     let resetTime: Date?
     let isPrimary: Bool
     let periodDuration: TimeInterval?
+    var showTimeMarker: Bool = true
 
     /// Fraction (0...1) of elapsed time within the period, or nil if not applicable
     private var timeMarkerFraction: CGFloat? {
+        guard showTimeMarker else { return nil }
         guard let duration = periodDuration, duration > 0,
               let reset = resetTime else { return nil }
         let now = Date()
@@ -682,8 +690,8 @@ struct SmartUsageCard: View {
                         // Time elapsed marker
                         if let fraction = timeMarkerFraction {
                             Rectangle()
-                                .fill(Color(nsColor: .secondaryLabelColor))
-                                .frame(width: 1)
+                                .fill(Color(nsColor: .labelColor))
+                                .frame(width: 1.5)
                                 .offset(x: round(geometry.size.width * fraction))
                         }
                     }
