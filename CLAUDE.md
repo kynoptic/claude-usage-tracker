@@ -64,6 +64,8 @@ Common scopes: `api`, `menubar`, `statusline`, `settings`, `services`, `models`,
 > All work — commits, issues, PRs, releases — happens exclusively on this fork (`kynoptic/Claude-Usage-Tracker`).
 > There are no exceptions.
 
+**`gh` CLI guard:** `gh repo set-default kynoptic/claude-usage-tracker` is configured so `gh pr create`, `gh issue create`, etc. target the fork — not the upstream. If `gh` ever prompts to choose a repo, always pick the fork. When using `gh` commands that accept `--repo`, pass `--repo kynoptic/claude-usage-tracker` explicitly as a safety net.
+
 Avoid large refactors for now. If upstream becomes active again, we want to be able to contribute back cleanly without a tangled diff.
 
 ## Deploy to /Applications
