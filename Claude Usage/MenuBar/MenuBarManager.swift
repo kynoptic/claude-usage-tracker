@@ -16,12 +16,21 @@ class MenuBarManager: NSObject, ObservableObject {
     @Published private(set) var lastSuccessfulFetch: Date?
 
     /// Whether the displayed usage data is stale (rate-limited or too old).
-    var isStale: Bool {
-        // Stale when the polling scheduler is in backoff mode
-        guard !pollingScheduler.isBackingOff else { return true }
-        // Also stale when the last success was more than 5 minutes ago
-        guard let lastFetch = lastSuccessfulFetch else { return false }
-        return Date().timeIntervalSince(lastFetch) > 300
+    /// Explicitly published so SwiftUI redraws when staleness changes.
+    @Published private(set) var isStale: Bool = false
+
+    /// Recomputes `isStale` from scheduler state and last-fetch timestamp.
+    /// Call on MainActor after any scheduler state change.
+    private func updateStaleness() {
+        let stale: Bool
+        if pollingScheduler.isBackingOff {
+            stale = true
+        } else if let lastFetch = lastSuccessfulFetch {
+            stale = Date().timeIntervalSince(lastFetch) > Constants.RefreshIntervals.stalenessThreshold
+        } else {
+            stale = false
+        }
+        if isStale != stale { isStale = stale }
     }
 
     // Multi-profile mode: track which profile's icon was clicked
@@ -764,6 +773,7 @@ class MenuBarManager: NSObject, ObservableObject {
                         if profile.id == self.profileManager.activeProfile?.id {
                             self.usage = newUsage
                             activeProfileUsage = newUsage
+                            self.lastSuccessfulFetch = Date()
                         }
                     }
                 } catch {
@@ -794,6 +804,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     self.pollingScheduler.recordSuccess(usage: usage)
                     self.lastSuccessfulFetch = Date()
                 }
+                self.updateStaleness()
                 self.startAutoRefresh()
             }
         }
@@ -931,6 +942,7 @@ class MenuBarManager: NSObject, ObservableObject {
                 await MainActor.run {
                     self.pollingScheduler.recordSuccess(usage: newUsage)
                     self.lastSuccessfulFetch = Date()
+                    self.updateStaleness()
                 }
 
             } catch {
@@ -948,6 +960,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     } else {
                         self.pollingScheduler.recordOtherError()
                     }
+                    self.updateStaleness()
                 }
 
                 // Show error to user if this was triggered by session key update

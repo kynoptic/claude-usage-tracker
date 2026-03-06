@@ -513,7 +513,7 @@ struct SmartUsageDashboard: View {
         guard isStale, let lastFetch = lastSuccessfulFetch else { return nil }
         let elapsed = Date().timeIntervalSince(lastFetch)
         if elapsed < 60 {
-            return "Updated \(Int(elapsed))s ago"
+            return "Updated just now"
         } else if elapsed < 3600 {
             return "Updated \(Int(elapsed / 60))m ago"
         } else {

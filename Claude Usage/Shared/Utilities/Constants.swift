@@ -85,6 +85,7 @@ enum Constants {
         static let widgetSmall: TimeInterval = 900   // 15 minutes
         static let widgetMedium: TimeInterval = 900  // 15 minutes
         static let widgetLarge: TimeInterval = 1800  // 30 minutes
+        static let stalenessThreshold: TimeInterval = 300  // 5 minutes
     }
 
     /// Adaptive polling configuration.
