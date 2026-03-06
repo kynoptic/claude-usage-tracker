@@ -15,7 +15,7 @@ final class UsageStatusCalculator {
     static func calculateStatus(
         usedPercentage: Double,
         showRemaining: Bool,
-        elapsedFraction: CGFloat? = nil
+        elapsedFraction: Double? = nil
     ) -> UsageStatusLevel {
         let u = usedPercentage / 100.0
 
@@ -23,7 +23,7 @@ final class UsageStatusCalculator {
         // Projected = fraction we'll have consumed by the end of the session at the current rate.
         // Thresholds: green < 0.75, orange 0.75–0.95, red ≥ 0.95
         if let t = elapsedFraction, t >= 0.15, t < 1.0, u > 0 {
-            let projected = u / Double(t)
+            let projected = u / t
             switch projected {
             case ..<0.75:     return .safe
             case 0.75..<0.95: return .moderate
@@ -62,11 +62,11 @@ final class UsageStatusCalculator {
         resetTime: Date?,
         duration: TimeInterval,
         showRemaining: Bool
-    ) -> CGFloat? {
+    ) -> Double? {
         guard let reset = resetTime, reset > Date(), duration > 0 else { return nil }
         let remaining = reset.timeIntervalSince(Date())
         let elapsed = duration - remaining
-        let fraction = CGFloat(min(max(elapsed / duration, 0), 1))
+        let fraction = min(max(elapsed / duration, 0), 1)
         return showRemaining ? 1.0 - fraction : fraction
     }
 

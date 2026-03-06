@@ -1091,7 +1091,8 @@ final class MenuBarIconRenderer {
             return nil
         }
 
-        return UsageStatusCalculator.elapsedFraction(resetTime: resetTime, duration: duration, showRemaining: showRemaining)
+        guard let f = UsageStatusCalculator.elapsedFraction(resetTime: resetTime, duration: duration, showRemaining: showRemaining) else { return nil }
+        return CGFloat(f)
     }
 
     /// Returns the appropriate foreground color for menu bar icons based on appearance

@@ -294,6 +294,22 @@ final class UsageStatusCalculatorTests: XCTestCase {
         )
     }
 
+    func testPacing_ShowRemaining_Safe() {
+        // 30% used at 50% elapsed → projected 0.60 → safe (display mode does not affect pacing)
+        XCTAssertEqual(
+            UsageStatusCalculator.calculateStatus(usedPercentage: 30, showRemaining: true, elapsedFraction: 0.5),
+            .safe
+        )
+    }
+
+    func testPacing_ShowRemaining_Moderate() {
+        // 40% used at 50% elapsed → projected 0.80 → moderate (display mode does not affect pacing)
+        XCTAssertEqual(
+            UsageStatusCalculator.calculateStatus(usedPercentage: 40, showRemaining: true, elapsedFraction: 0.5),
+            .moderate
+        )
+    }
+
     func testPacing_ShowRemaining_HighProjected_Critical() {
         // 55% used at 50% elapsed → projected 1.10 → critical (regardless of display mode)
         XCTAssertEqual(
@@ -309,6 +325,39 @@ final class UsageStatusCalculatorTests: XCTestCase {
             UsageStatusCalculator.calculateStatus(usedPercentage: 80, showRemaining: false, elapsedFraction: 1.0),
             .critical
         )
+    }
+
+    // MARK: - elapsedFraction edge cases
+
+    func testElapsedFraction_ExpiredSession_ReturnsNil() {
+        // resetTime in the past → nil (session expired, pending refresh)
+        let resetTime = Date().addingTimeInterval(-60)
+        let fraction = UsageStatusCalculator.elapsedFraction(
+            resetTime: resetTime,
+            duration: Constants.sessionWindow,
+            showRemaining: false
+        )
+        XCTAssertNil(fraction)
+    }
+
+    func testElapsedFraction_ZeroDuration_ReturnsNil() {
+        // duration == 0 → nil (avoid division by zero)
+        let resetTime = Date().addingTimeInterval(3600)
+        let fraction = UsageStatusCalculator.elapsedFraction(
+            resetTime: resetTime,
+            duration: 0,
+            showRemaining: false
+        )
+        XCTAssertNil(fraction)
+    }
+
+    func testElapsedFraction_NilResetTime_ReturnsNil() {
+        let fraction = UsageStatusCalculator.elapsedFraction(
+            resetTime: nil,
+            duration: Constants.sessionWindow,
+            showRemaining: false
+        )
+        XCTAssertNil(fraction)
     }
 
     // MARK: - elapsedFraction with shared period constants
