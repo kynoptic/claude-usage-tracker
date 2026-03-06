@@ -73,7 +73,6 @@ struct BurnUpChartView: View {
             .font(.system(size: isPrimary ? 7 : 6))
             .foregroundStyle(.secondary)
         }
-        .opacity(isStale ? 0.7 : 1.0)
     }
 
     /// Pinned once per render to avoid Date() re-evaluation inside the chart body
