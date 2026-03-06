@@ -132,7 +132,19 @@ final class UsageHistoryStore {
         guard let data = try? Data(contentsOf: url) else { return [] }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode([UsageSnapshot].self, from: data)) ?? []
+        let raw = (try? decoder.decode([UsageSnapshot].self, from: data)) ?? []
+        return deduplicateConsecutive(raw)
+    }
+
+    /// Remove consecutive snapshots with the same percentage (dirty data cleanup).
+    /// Internal (not private) to allow unit testing via `@testable import`.
+    func deduplicateConsecutive(_ snapshots: [UsageSnapshot]) -> [UsageSnapshot] {
+        guard !snapshots.isEmpty else { return [] }
+        var result = [snapshots[0]]
+        for snapshot in snapshots.dropFirst() where snapshot.percentage != result.last!.percentage {
+            result.append(snapshot)
+        }
+        return result
     }
 
     /// Persist asynchronously to avoid blocking the main thread on file I/O.
