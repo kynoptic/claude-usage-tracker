@@ -963,18 +963,7 @@ class MenuBarManager: NSObject, ObservableObject {
                         self.pollingScheduler.recordOtherError()
                     }
                     self.updateStaleness()
-                }
-
-                // Show error to user if this was triggered by session key update
-                await MainActor.run {
-                    // Check if this refresh was triggered within last 5 seconds
-                    // (indicates user-initiated action like saving session key)
-                    if abs(self.lastRefreshTriggerTime.timeIntervalSinceNow) < 5 {
-                        ErrorPresenter.shared.showAlert(for: appError)
-                    } else {
-                        // Background refresh - just log
-                        LoggingService.shared.logError("MenuBarManager: Failed to fetch usage - [\(appError.code.rawValue)] \(appError.message)")
-                    }
+                    LoggingService.shared.logError("MenuBarManager: Failed to fetch usage - [\(appError.code.rawValue)] \(appError.message)")
                 }
             }
 
