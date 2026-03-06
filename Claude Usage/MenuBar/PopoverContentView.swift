@@ -608,11 +608,19 @@ struct SmartUsageCard: View {
         )
     }
 
-    /// Status level based on display mode
+    /// Status level based on display mode and session pacing
     private var statusLevel: UsageStatusLevel {
-        UsageStatusCalculator.calculateStatus(
+        // Always pass the raw elapsed fraction (not inverted for showRemaining) so pacing logic
+        // can compute projected usage correctly regardless of display mode.
+        let elapsed = UsageStatusCalculator.elapsedFraction(
+            resetTime: resetTime,
+            duration: periodDuration ?? 0,
+            showRemaining: false
+        )
+        return UsageStatusCalculator.calculateStatus(
             usedPercentage: usedPercentage,
-            showRemaining: showRemaining
+            showRemaining: showRemaining,
+            elapsedFraction: elapsed
         )
     }
 

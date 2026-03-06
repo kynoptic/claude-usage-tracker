@@ -127,9 +127,15 @@ final class MenuBarIconRenderer {
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining
             )
+            let sessionElapsed = UsageStatusCalculator.elapsedFraction(
+                resetTime: usage.sessionResetTime,
+                duration: Constants.sessionWindow,
+                showRemaining: false
+            )
             let statusLevel = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
-                showRemaining: showRemaining
+                showRemaining: showRemaining,
+                elapsedFraction: sessionElapsed
             )
 
             return MetricData(
@@ -145,9 +151,15 @@ final class MenuBarIconRenderer {
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining
             )
+            let weekElapsed = UsageStatusCalculator.elapsedFraction(
+                resetTime: usage.weeklyResetTime,
+                duration: Constants.weeklyWindow,
+                showRemaining: false
+            )
             let statusLevel = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
-                showRemaining: showRemaining
+                showRemaining: showRemaining,
+                elapsedFraction: weekElapsed
             )
 
             let displayText: String
