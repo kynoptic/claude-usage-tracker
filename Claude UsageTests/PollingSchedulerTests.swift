@@ -285,6 +285,42 @@ final class PollingSchedulerTests: XCTestCase {
         XCTAssertEqual(scheduler.currentInterval, 120, "Without Retry-After, should use exponential backoff (30 * 2^2)")
     }
 
+    // MARK: - isBackingOff (Staleness Detection)
+
+    func testIsBackingOffFalseByDefault() {
+        let scheduler = PollingScheduler(baseInterval: 30)
+        XCTAssertFalse(scheduler.isBackingOff, "New scheduler should not be in backoff")
+    }
+
+    func testIsBackingOffTrueAfterRateLimitError() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+        scheduler.recordRateLimitError()
+        XCTAssertTrue(scheduler.isBackingOff, "Should be in backoff after rate-limit error")
+    }
+
+    func testIsBackingOffFalseAfterRecovery() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+        scheduler.recordRateLimitError()
+        XCTAssertTrue(scheduler.isBackingOff)
+
+        scheduler.recordSuccess(usage: makeUsage())
+        XCTAssertFalse(scheduler.isBackingOff, "Should exit backoff after successful response")
+    }
+
+    func testIsBackingOffTrueAfterMultipleRateLimitErrors() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+        scheduler.recordRateLimitError()
+        scheduler.recordRateLimitError()
+        scheduler.recordRateLimitError()
+        XCTAssertTrue(scheduler.isBackingOff, "Should remain in backoff after multiple errors")
+    }
+
+    func testIsBackingOffFalseAfterOtherError() {
+        var scheduler = PollingScheduler(baseInterval: 30)
+        scheduler.recordOtherError()
+        XCTAssertFalse(scheduler.isBackingOff, "Non-rate-limit errors should not trigger backoff")
+    }
+
     // MARK: - Streak Preservation Through Backoff
 
     func testStreakPreservedThroughBackoffRecovery() {

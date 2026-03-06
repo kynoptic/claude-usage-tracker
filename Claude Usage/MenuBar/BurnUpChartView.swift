@@ -9,6 +9,7 @@ struct BurnUpChartView: View {
     let windowStart: Date
     let windowEnd: Date
     let statusColor: Color
+    var isStale: Bool = false
 
     /// Downsample to at most this many points for rendering performance
     private static let maxPoints = 200
