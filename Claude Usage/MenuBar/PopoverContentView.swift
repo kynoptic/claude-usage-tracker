@@ -538,7 +538,8 @@ struct SmartUsageDashboard: View {
                         showRemaining: showRemainingPercentage,
                         resetTime: nil,
                         isPrimary: false,
-                        periodDuration: nil,
+                        periodDuration: Constants.weeklyWindow,
+                        showTimeMarker: showTimeMarker,
                         metric: .opus
                     )
                 }
@@ -551,7 +552,8 @@ struct SmartUsageDashboard: View {
                         showRemaining: showRemainingPercentage,
                         resetTime: usage.sonnetWeeklyResetTime,
                         isPrimary: false,
-                        periodDuration: nil,
+                        periodDuration: Constants.weeklyWindow,
+                        showTimeMarker: showTimeMarker,
                         metric: .sonnet
                     )
                 }
