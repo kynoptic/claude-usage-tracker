@@ -511,7 +511,7 @@ struct SmartUsageDashboard: View {
                 showRemaining: showRemainingPercentage,
                 resetTime: usage.sessionResetTime,
                 isPrimary: true,
-                periodDuration: 5 * 3600,
+                periodDuration: Constants.sessionWindow,
                 showTimeMarker: showTimeMarker
             )
 
@@ -593,16 +593,11 @@ struct SmartUsageCard: View {
     /// Fraction (0...1) of elapsed time within the period, or nil if not applicable
     private var timeMarkerFraction: CGFloat? {
         guard showTimeMarker else { return nil }
-        guard let duration = periodDuration, duration > 0,
-              let reset = resetTime else { return nil }
-        let now = Date()
-        // Don't render if reset time is in the past (period already reset)
-        guard reset > now else { return nil }
-        let remaining = reset.timeIntervalSince(now)
-        let elapsed = duration - remaining
-        let fraction = min(max(elapsed / duration, 0), 1)
-        // Flip direction for "show remaining" mode
-        return showRemaining ? 1.0 - fraction : fraction
+        return UsageStatusCalculator.elapsedFraction(
+            resetTime: resetTime,
+            duration: periodDuration ?? 0,
+            showRemaining: showRemaining
+        )
     }
 
     /// Display percentage based on mode

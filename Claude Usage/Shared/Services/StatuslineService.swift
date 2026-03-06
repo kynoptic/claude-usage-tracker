@@ -218,8 +218,9 @@ if [ "$show_usage" = "1" ]; then
             now_epoch=$(date "+%s")
             if [ "$marker_epoch" -gt "$now_epoch" ]; then
               remaining=$((marker_epoch - now_epoch))
-              elapsed=$((18000 - remaining))
+              elapsed=$((18000 - remaining))  # 18000 = 5 hours (Constants.sessionWindow)
               if [ "$elapsed" -ge 0 ] && [ "$elapsed" -le 18000 ]; then
+                # Floor-divide: map 0..18000 s elapsed → 0..10 bar positions
                 marker_pos=$(( (elapsed * 10) / 18000 ))
                 [ "$marker_pos" -gt 10 ] && marker_pos=10
               fi

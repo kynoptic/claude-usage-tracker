@@ -1074,7 +1074,7 @@ final class MenuBarIconRenderer {
         switch metricType {
         case .session:
             resetTime = usage.sessionResetTime
-            duration = 5 * 3600
+            duration = Constants.sessionWindow
         case .week:
             resetTime = usage.weeklyResetTime
             duration = 7 * 24 * 3600
@@ -1082,11 +1082,7 @@ final class MenuBarIconRenderer {
             return nil
         }
 
-        guard let reset = resetTime, reset > Date(), duration > 0 else { return nil }
-        let remaining = reset.timeIntervalSince(Date())
-        let elapsed = duration - remaining
-        let fraction = min(max(elapsed / duration, 0), 1)
-        return showRemaining ? 1.0 - fraction : fraction
+        return UsageStatusCalculator.elapsedFraction(resetTime: resetTime, duration: duration, showRemaining: showRemaining)
     }
 
     /// Returns the appropriate foreground color for menu bar icons based on appearance
