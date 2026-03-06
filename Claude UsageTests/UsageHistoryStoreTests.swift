@@ -216,4 +216,66 @@ final class UsageHistoryStoreTests: XCTestCase {
 
         XCTAssertEqual(store.snapshots(for: .session).count, 2)
     }
+
+    // MARK: - Consecutive Deduplication
+
+    func testDeduplicateConsecutiveCollapsesIdentical() {
+        let snapshots = (0..<10).map { i in
+            UsageSnapshot(date: Date().addingTimeInterval(Double(i) * 30), percentage: 5.0)
+        }
+
+        let result = store.deduplicateConsecutive(snapshots)
+
+        XCTAssertEqual(result.count, 1, "10 identical snapshots should collapse to 1")
+        XCTAssertEqual(result.first?.percentage, 5.0)
+    }
+
+    func testDeduplicateConsecutivePreservesChanges() {
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-120), percentage: 5.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-90), percentage: 5.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-60), percentage: 10.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-30), percentage: 10.0),
+            UsageSnapshot(date: Date(), percentage: 15.0),
+        ]
+
+        let result = store.deduplicateConsecutive(snapshots)
+
+        XCTAssertEqual(result.count, 3, "Should keep one entry per percentage change: 5, 10, 15")
+        XCTAssertEqual(result.map(\.percentage), [5.0, 10.0, 15.0])
+    }
+
+    func testDeduplicateConsecutiveHandlesEmpty() {
+        let result = store.deduplicateConsecutive([])
+        XCTAssertEqual(result.count, 0)
+    }
+
+    func testDeduplicateConsecutiveHandlesSingle() {
+        let snapshots = [UsageSnapshot(date: Date(), percentage: 42.0)]
+        let result = store.deduplicateConsecutive(snapshots)
+        XCTAssertEqual(result.count, 1)
+    }
+
+    // MARK: - Snapshot Identity
+
+    func testSnapshotUUIDIsUniquePerInstance() {
+        let date = Date()
+        let a = UsageSnapshot(date: date, percentage: 50.0)
+        let b = UsageSnapshot(date: date, percentage: 50.0)
+
+        XCTAssertNotEqual(a.id, b.id, "Same-value snapshots must have unique IDs for ForEach")
+        XCTAssertEqual(a, b, "Value equality should still hold")
+    }
+
+    func testSnapshotIdNotPersisted() throws {
+        let snapshot = UsageSnapshot(date: Date(), percentage: 42.0)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(snapshot)
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertNil(json["id"], "UUID id should not be in the JSON payload")
+        XCTAssertNotNil(json["date"])
+        XCTAssertNotNil(json["percentage"])
+    }
 }
