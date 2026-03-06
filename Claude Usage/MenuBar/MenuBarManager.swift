@@ -878,6 +878,9 @@ class MenuBarManager: NSObject, ObservableObject {
                         self.profileManager.saveClaudeUsage(newUsage, for: profileId)
                     }
 
+                    // Record usage snapshot for burn-up charts
+                    UsageHistoryStore.shared.recordAll(from: newUsage)
+
                     // Update all menu bar icons
                     self.updateAllStatusBarIcons()
 
@@ -952,12 +955,6 @@ class MenuBarManager: NSObject, ObservableObject {
 
                     LoggingService.shared.log("MenuBarManager: Failed to fetch API usage - [\(appError.code.rawValue)] \(appError.message)")
                 }
-            }
-
-            // Record usage snapshot for burn-up charts (even if API fetch failed,
-            // self.usage holds the last known data worth charting)
-            await MainActor.run {
-                UsageHistoryStore.shared.recordAll(from: self.usage)
             }
 
             // Clear loading state

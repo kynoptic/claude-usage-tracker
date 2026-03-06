@@ -768,8 +768,7 @@ struct SmartUsageCard: View {
                     isPrimary: isPrimary,
                     windowStart: chartWindowStart,
                     windowEnd: chartWindowEnd,
-                    statusColor: statusColor,
-                    showRemaining: showRemaining
+                    statusColor: statusColor
                 )
             }
         }

@@ -9,7 +9,6 @@ struct BurnUpChartView: View {
     let windowStart: Date
     let windowEnd: Date
     let statusColor: Color
-    let showRemaining: Bool
 
     /// Downsample to at most this many points for rendering performance
     private static let maxPoints = 200
@@ -17,8 +16,7 @@ struct BurnUpChartView: View {
     /// Chart data with a synthetic origin at windowStart so even a single
     /// real data point produces a visible area fill.
     private var displaySnapshots: [UsageSnapshot] {
-        let baseline = showRemaining ? 100.0 : 0.0
-        let origin = UsageSnapshot(date: windowStart, percentage: baseline)
+        let origin = UsageSnapshot(date: windowStart, percentage: 0.0)
         var points = [origin] + snapshots
 
         // Downsample if needed (skip origin when counting)
@@ -80,7 +78,7 @@ struct BurnUpChartView: View {
         Chart {
             // Burn-up area + line
             ForEach(displaySnapshots) { snapshot in
-                let yValue = showRemaining ? 100.0 - snapshot.percentage : snapshot.percentage
+                let yValue = snapshot.percentage
 
                 AreaMark(
                     x: .value("Time", snapshot.date),
@@ -104,9 +102,9 @@ struct BurnUpChartView: View {
                 .interpolationMethod(.monotone)
             }
 
-            // Pace line: even consumption from 0% to 100% (or inverted)
-            let paceStart: Double = showRemaining ? 100.0 : 0.0
-            let paceEnd: Double = showRemaining ? 0.0 : 100.0
+            // Pace line: even consumption from 0% to 100%
+            let paceStart: Double = 0.0
+            let paceEnd: Double = 100.0
 
             LineMark(
                 x: .value("Time", windowStart),
