@@ -654,19 +654,20 @@ struct SmartUsageCard: View {
         ZStack {
             frontContent
                 .opacity(isFlipped ? 0 : 1)
-                .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
 
             backContent
+                .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
                 .opacity(isFlipped ? 1 : 0)
-                .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
         }
-        .animation(.easeInOut(duration: 0.4), value: isFlipped)
-        .onTapGesture { if metric != nil { isFlipped.toggle() } }
         .padding(isPrimary ? 16 : 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
         )
+        .contentShape(Rectangle())
+        .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+        .animation(.easeInOut(duration: 0.4), value: isFlipped)
+        .onTapGesture { if metric != nil { isFlipped.toggle() } }
     }
 
     // MARK: - Front Content
@@ -775,13 +776,22 @@ struct SmartUsageCard: View {
         }
     }
 
+    /// Effective period duration, falling back to the metric's natural window
+    private var effectiveDuration: TimeInterval {
+        if let duration = periodDuration { return duration }
+        switch metric {
+        case .session: return Constants.sessionWindow
+        case .weekly, .opus, .sonnet: return Constants.weeklyWindow
+        case .none: return Constants.sessionWindow
+        }
+    }
+
     /// Start of the chart time window, computed from reset time and period duration
     private var chartWindowStart: Date {
-        guard let reset = resetTime, let duration = periodDuration else {
-            // Fallback: show last 5 hours
-            return Date().addingTimeInterval(-Constants.sessionWindow)
+        if let reset = resetTime {
+            return reset.addingTimeInterval(-effectiveDuration)
         }
-        return reset.addingTimeInterval(-duration)
+        return Date().addingTimeInterval(-effectiveDuration)
     }
 
     /// End of the chart time window (the reset time, or now + buffer)

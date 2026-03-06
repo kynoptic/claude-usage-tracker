@@ -15,10 +15,24 @@ struct BurnUpChartView: View {
     /// Downsample to at most this many points for rendering performance
     private static let maxPoints = 200
 
+    /// Chart data with a synthetic origin at windowStart so even a single
+    /// real data point produces a visible area fill.
     private var displaySnapshots: [UsageSnapshot] {
-        guard snapshots.count > Self.maxPoints else { return snapshots }
-        let stride = max(snapshots.count / Self.maxPoints, 1)
-        return Swift.stride(from: 0, to: snapshots.count, by: stride).map { snapshots[$0] }
+        let baseline = showRemaining ? 100.0 : 0.0
+        let origin = UsageSnapshot(date: windowStart, percentage: baseline)
+        var points = [origin] + snapshots
+
+        // Downsample if needed (skip origin when counting)
+        if points.count > Self.maxPoints {
+            let stride = max(points.count / Self.maxPoints, 1)
+            points = Swift.stride(from: 0, to: points.count, by: stride).map { points[$0] }
+        }
+        return points
+    }
+
+    /// Whether this chart covers a weekly (multi-day) window vs a session window
+    private var isWeeklyWindow: Bool {
+        windowEnd.timeIntervalSince(windowStart) > Constants.sessionWindow * 2
     }
 
     private var chartHeight: CGFloat {
@@ -35,7 +49,35 @@ struct BurnUpChartView: View {
 
     // MARK: - Chart
 
+    private var startLabel: String {
+        if isWeeklyWindow {
+            return windowStart.formatted(.dateTime.month(.abbreviated).day())
+        }
+        return windowStart.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute())
+    }
+
+    private var endLabel: String {
+        if isWeeklyWindow {
+            return windowEnd.formatted(.dateTime.month(.abbreviated).day())
+        }
+        return windowEnd.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute())
+    }
+
     private var chart: some View {
+        VStack(spacing: 2) {
+            chartContent
+            // Start / End labels below chart
+            HStack {
+                Text(startLabel)
+                Spacer()
+                Text(endLabel)
+            }
+            .font(.system(size: isPrimary ? 7 : 6))
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private var chartContent: some View {
         Chart {
             // Burn-up area + line
             ForEach(displaySnapshots) { snapshot in
@@ -90,7 +132,19 @@ struct BurnUpChartView: View {
         }
         .chartXScale(domain: windowStart ... windowEnd)
         .chartYScale(domain: 0 ... 100)
-        .chartXAxis(isPrimary ? .automatic : .hidden)
+        .chartXAxis {
+            if isPrimary {
+                AxisMarks { _ in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                        .foregroundStyle(Color.secondary.opacity(0.2))
+                }
+            } else if isWeeklyWindow {
+                AxisMarks(values: .stride(by: .day, count: 1)) { _ in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                        .foregroundStyle(Color.secondary.opacity(0.2))
+                }
+            }
+        }
         .chartYAxis {
             if isPrimary {
                 AxisMarks(values: [0, 50, 100]) { value in
