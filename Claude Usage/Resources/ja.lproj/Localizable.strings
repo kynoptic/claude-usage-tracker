@@ -344,6 +344,7 @@
 "claudecode.component_usage" = "使用統計";
 "claudecode.component_progressbar" = "プログレスバー";
 "claudecode.component_resettime" = "リセット時刻";
+"claudecode.component_timemarker" = "経過時間マーカー";
 "claudecode.requirement_sessionkey" = "• 認証情報 → Claude.aiタブでセッションキーが構成されている";
 "claudecode.requirement_restart" = "• 変更適用後にClaude CLIを再起動";
 "claudecode.error_no_components" = "表示する少なくとも1つのコンポーネントを選択してください";

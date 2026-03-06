@@ -344,6 +344,7 @@
 "claudecode.component_usage" = "Usage statistics";
 "claudecode.component_progressbar" = "Progress bar";
 "claudecode.component_resettime" = "Reset time";
+"claudecode.component_timemarker" = "Time-elapsed marker";
 "claudecode.requirement_sessionkey" = "• Session key configured in Credentials → Claude.ai tab";
 "claudecode.requirement_restart" = "• Restart Claude CLI after applying changes";
 "claudecode.error_no_components" = "Please select at least one component to display";

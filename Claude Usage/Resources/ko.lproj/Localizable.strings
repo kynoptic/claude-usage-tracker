@@ -582,6 +582,7 @@
 "claudecode.component_usage" = "사용 통계";
 "claudecode.component_progressbar" = "진행 표시줄";
 "claudecode.component_resettime" = "재설정 시간";
+"claudecode.component_timemarker" = "경과 시간 마커";
 "claudecode.success_installed" = "상태표시줄이 성공적으로 설치되었습니다";
 "claudecode.success_uninstalled" = "상태표시줄이 제거되었습니다";
 "claudecode.error_installation_failed" = "설치 실패";

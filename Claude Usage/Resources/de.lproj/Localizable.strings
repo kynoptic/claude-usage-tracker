@@ -330,6 +330,7 @@
 "claudecode.component_usage" = "Nutzungsstatistiken";
 "claudecode.component_progressbar" = "Fortschrittsbalken";
 "claudecode.component_resettime" = "Zurücksetzungszeit";
+"claudecode.component_timemarker" = "Zeitverlaufsmarkierung";
 "claudecode.requirement_sessionkey" = "• Sitzungsschlüssel im Tab 'Anmeldedaten → Claude.ai' konfiguriert";
 "claudecode.requirement_restart" = "• Claude CLI nach Anwendung der Änderungen neu starten";
 "claudecode.error_no_components" = "Bitte wählen Sie mindestens eine Komponente zur Anzeige";
