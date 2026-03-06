@@ -616,6 +616,10 @@ class ClaudeAPIService: APIServiceProtocol {
     /// Internal (not private) to allow unit testing via `@testable import`.
     func oauthError(statusCode: Int, data: Data, context: String, httpResponse: HTTPURLResponse? = nil) -> AppError {
         let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? "Unable to read response"
+
+        // Log response body at error level so it persists in Release builds
+        LoggingService.shared.logError("oauthError(\(context)): HTTP \(statusCode) — \(responsePreview)")
+
         let code: ErrorCode
         let qualifier: String
         let suggestion: String
