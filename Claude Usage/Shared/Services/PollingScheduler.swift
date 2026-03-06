@@ -24,6 +24,11 @@ struct PollingScheduler {
     private var previousWeeklyPct: Double?
     private var serverRetryAfter: TimeInterval?
 
+    /// Whether the scheduler is currently in rate-limit backoff mode.
+    var isBackingOff: Bool {
+        consecutiveRateLimitFailures > 0
+    }
+
     /// Computed interval incorporating both backoff and adaptive multipliers.
     var currentInterval: TimeInterval {
         if consecutiveRateLimitFailures > 0 {
