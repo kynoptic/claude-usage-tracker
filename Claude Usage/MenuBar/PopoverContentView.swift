@@ -51,7 +51,7 @@ struct PopoverContentView: View {
                 isStale: manager.isStale,
                 lastSuccessfulFetch: manager.lastSuccessfulFetch,
                 lastRefreshError: manager.lastRefreshError,
-                nextRetryInterval: manager.nextRetryInterval
+                nextRetryDate: manager.nextRetryDate
             )
 
             // Contextual Insights
@@ -497,7 +497,7 @@ struct SmartUsageDashboard: View {
     var isStale: Bool = false
     var lastSuccessfulFetch: Date?
     var lastRefreshError: AppError?
-    var nextRetryInterval: TimeInterval?
+    var nextRetryDate: Date?
     @StateObject private var profileManager = ProfileManager.shared
 
     // Get the display mode from active profile's icon config
@@ -556,15 +556,12 @@ struct SmartUsageDashboard: View {
         return errorPart
     }
 
-    /// Actionable error message derived from the last refresh error
+    /// Actionable error message for non-rate-limit errors
     private var errorBannerText: String? {
         guard let error = lastRefreshError else { return nil }
         switch error.code {
         case .apiRateLimited:
-            if let interval = nextRetryInterval {
-                return "Rate limited — retrying in \(Int(interval))s"
-            }
-            return "Rate limited — retrying soon"
+            return nil  // Handled by countdown banner
         case .apiUnauthorized:
             return "Auth expired — re-sync in Settings"
         case .sessionKeyNotFound:
@@ -575,23 +572,50 @@ struct SmartUsageDashboard: View {
         }
     }
 
+    /// Formats remaining seconds as a compact countdown string
+    private static func countdownText(until date: Date, now: Date) -> String {
+        let remaining = max(0, Int(date.timeIntervalSince(now)))
+        if remaining >= 60 {
+            return "Rate limited — retrying in \(remaining / 60)m \(remaining % 60)s"
+        }
+        return "Rate limited — retrying in \(remaining)s"
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             // Staleness / error indicator
-            if lastRefreshError != nil && isStale {
-                // Actionable error banner
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.orange)
+            if let error = lastRefreshError, isStale {
+                if error.code == .apiRateLimited, let retryDate = nextRetryDate {
+                    // Live countdown banner for rate limiting
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(.orange)
 
-                    Text(errorBannerText ?? "Refresh failed")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.orange)
+                            Text(Self.countdownText(until: retryDate, now: context.date))
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(.orange)
 
-                    Spacer()
+                            Spacer()
+                        }
+                        .padding(.horizontal, 4)
+                    }
+                } else {
+                    // Static error banner for auth/credential/other errors
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.orange)
+
+                        Text(errorBannerText ?? "Refresh failed")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.orange)
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, 4)
                 }
-                .padding(.horizontal, 4)
             } else if isStale {
                 // Stale data, no error (aged past threshold)
                 TimelineView(.periodic(from: .now, by: 15)) { context in

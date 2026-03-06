@@ -21,6 +21,9 @@ class MenuBarManager: NSObject, ObservableObject {
     /// The last fetch error, nil when the most recent fetch succeeded.
     @Published private(set) var lastRefreshError: AppError?
 
+    /// When the next automatic retry is expected, nil when not backing off.
+    @Published private(set) var nextRetryDate: Date?
+
     /// When the next automatic refresh is scheduled to fire.
     @Published private(set) var nextRefreshAt: Date?
 
@@ -779,9 +782,16 @@ class MenuBarManager: NSObject, ObservableObject {
                     self.pollingScheduler.recordSuccess(usage: usage)
                     self.lastSuccessfulFetch = Date()
                     self.lastRefreshError = nil
+                    self.nextRetryDate = nil
                 } else if hitRateLimit {
                     self.pollingScheduler.recordRateLimitError(retryAfter: rateLimitRetryAfter)
-                    self.lastRefreshError = AppError.apiRateLimited()
+                    self.lastRefreshError = AppError(
+                        code: .apiRateLimited,
+                        message: "Rate limited by Claude API",
+                        isRecoverable: true,
+                        retryAfter: rateLimitRetryAfter
+                    )
+                    self.nextRetryDate = Date().addingTimeInterval(self.pollingScheduler.currentInterval)
                 }
                 self.updateStaleness()
                 self.startAutoRefresh()
@@ -935,6 +945,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     self.pollingScheduler.recordSuccess(usage: newUsage)
                     self.lastSuccessfulFetch = Date()
                     self.lastRefreshError = nil
+                    self.nextRetryDate = nil
                     self.updateStaleness()
                 }
 
@@ -954,6 +965,7 @@ class MenuBarManager: NSObject, ObservableObject {
                         self.pollingScheduler.recordOtherError()
                     }
                     self.lastRefreshError = appError
+                    self.nextRetryDate = Date().addingTimeInterval(self.pollingScheduler.currentInterval)
                     self.updateStaleness()
                     LoggingService.shared.logError("MenuBarManager: Failed to fetch usage - [\(appError.code.rawValue)] \(appError.message)")
                 }
