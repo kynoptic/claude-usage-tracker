@@ -12,6 +12,18 @@ class MenuBarManager: NSObject, ObservableObject {
     @Published private(set) var apiUsage: APIUsage?
     @Published private(set) var isRefreshing: Bool = false
 
+    /// Timestamp of the last successful usage fetch, nil until the first success.
+    @Published private(set) var lastSuccessfulFetch: Date?
+
+    /// Whether the displayed usage data is stale (rate-limited or too old).
+    var isStale: Bool {
+        // Stale when the polling scheduler is in backoff mode
+        guard !pollingScheduler.isBackingOff else { return true }
+        // Also stale when the last success was more than 5 minutes ago
+        guard let lastFetch = lastSuccessfulFetch else { return false }
+        return Date().timeIntervalSince(lastFetch) > 300
+    }
+
     // Multi-profile mode: track which profile's icon was clicked
     @Published private(set) var clickedProfileId: UUID?
     @Published private(set) var clickedProfileUsage: ClaudeUsage?
@@ -780,6 +792,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     self.pollingScheduler.recordRateLimitError(retryAfter: rateLimitRetryAfter)
                 } else if let usage = activeProfileUsage {
                     self.pollingScheduler.recordSuccess(usage: usage)
+                    self.lastSuccessfulFetch = Date()
                 }
                 self.startAutoRefresh()
             }
@@ -917,6 +930,7 @@ class MenuBarManager: NSObject, ObservableObject {
                 // Update polling scheduler with successful response
                 await MainActor.run {
                     self.pollingScheduler.recordSuccess(usage: newUsage)
+                    self.lastSuccessfulFetch = Date()
                 }
 
             } catch {
