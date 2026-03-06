@@ -220,7 +220,7 @@ if [ "$show_usage" = "1" ]; then
               remaining=$((marker_epoch - now_epoch))
               elapsed=$((18000 - remaining))
               if [ "$elapsed" -ge 0 ] && [ "$elapsed" -le 18000 ]; then
-                marker_pos=$(( (elapsed * 10 + 9000) / 18000 ))
+                marker_pos=$(( (elapsed * 10) / 18000 ))
                 [ "$marker_pos" -gt 10 ] && marker_pos=10
               fi
             fi
