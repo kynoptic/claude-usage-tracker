@@ -512,7 +512,8 @@ struct SmartUsageDashboard: View {
                 resetTime: usage.sessionResetTime,
                 isPrimary: true,
                 periodDuration: Constants.sessionWindow,
-                showTimeMarker: showTimeMarker
+                showTimeMarker: showTimeMarker,
+                metric: .session
             )
 
             // Secondary Usage Cards
@@ -525,7 +526,8 @@ struct SmartUsageDashboard: View {
                     resetTime: usage.weeklyResetTime,
                     isPrimary: false,
                     periodDuration: Constants.weeklyWindow,
-                    showTimeMarker: showTimeMarker
+                    showTimeMarker: showTimeMarker,
+                    metric: .weekly
                 )
 
                 if usage.opusWeeklyTokensUsed > 0 {
@@ -536,7 +538,8 @@ struct SmartUsageDashboard: View {
                         showRemaining: showRemainingPercentage,
                         resetTime: nil,
                         isPrimary: false,
-                        periodDuration: nil
+                        periodDuration: nil,
+                        metric: .opus
                     )
                 }
 
@@ -548,7 +551,8 @@ struct SmartUsageDashboard: View {
                         showRemaining: showRemainingPercentage,
                         resetTime: usage.sonnetWeeklyResetTime,
                         isPrimary: false,
-                        periodDuration: nil
+                        periodDuration: nil,
+                        metric: .sonnet
                     )
                 }
             }
@@ -589,6 +593,9 @@ struct SmartUsageCard: View {
     let isPrimary: Bool
     let periodDuration: TimeInterval?
     var showTimeMarker: Bool = true
+    var metric: UsageMetric? = nil
+
+    @State private var isFlipped = false
 
     /// Raw elapsed fraction (0…1), never inverted. Nil when timing data is unavailable.
     /// Used for both the time marker position and pacing calculations.
@@ -644,6 +651,27 @@ struct SmartUsageCard: View {
     }
 
     var body: some View {
+        ZStack {
+            frontContent
+                .opacity(isFlipped ? 0 : 1)
+                .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
+
+            backContent
+                .opacity(isFlipped ? 1 : 0)
+                .rotation3DEffect(.degrees(isFlipped ? 0 : -180), axis: (x: 0, y: 1, z: 0))
+        }
+        .animation(.easeInOut(duration: 0.4), value: isFlipped)
+        .onTapGesture { if metric != nil { isFlipped.toggle() } }
+        .padding(isPrimary ? 16 : 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
+        )
+    }
+
+    // MARK: - Front Content
+
+    private var frontContent: some View {
         VStack(spacing: isPrimary ? 12 : 8) {
             // Header
             HStack {
@@ -714,11 +742,51 @@ struct SmartUsageCard: View {
                 }
             }
         }
-        .padding(isPrimary ? 16 : 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
-        )
+    }
+
+    // MARK: - Back Content (Burn-Up Chart)
+
+    @available(macOS 14.0, *)
+    private var backContent: some View {
+        VStack(spacing: isPrimary ? 8 : 4) {
+            // Mini header with back hint
+            HStack {
+                Text(title)
+                    .font(.system(size: isPrimary ? 11 : 9, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: isPrimary ? 10 : 8, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+
+            if let metric = metric {
+                BurnUpChartView(
+                    snapshots: UsageHistoryStore.shared.snapshots(for: metric),
+                    isPrimary: isPrimary,
+                    windowStart: chartWindowStart,
+                    windowEnd: chartWindowEnd,
+                    statusColor: statusColor,
+                    showRemaining: showRemaining
+                )
+            }
+        }
+    }
+
+    /// Start of the chart time window, computed from reset time and period duration
+    private var chartWindowStart: Date {
+        guard let reset = resetTime, let duration = periodDuration else {
+            // Fallback: show last 5 hours
+            return Date().addingTimeInterval(-Constants.sessionWindow)
+        }
+        return reset.addingTimeInterval(-duration)
+    }
+
+    /// End of the chart time window (the reset time, or now + buffer)
+    private var chartWindowEnd: Date {
+        resetTime ?? Date().addingTimeInterval(60)
     }
 }
 
