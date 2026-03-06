@@ -50,7 +50,8 @@ struct PopoverContentView: View {
                 sessionContext: manager.pacingContext,
                 isStale: manager.isStale,
                 lastSuccessfulFetch: manager.lastSuccessfulFetch,
-                refreshState: manager
+                lastRefreshError: manager.lastRefreshError,
+                nextRetryInterval: manager.nextRetryInterval
             )
 
             // Contextual Insights
@@ -495,8 +496,8 @@ struct SmartUsageDashboard: View {
     var sessionContext: PacingContext = .none
     var isStale: Bool = false
     var lastSuccessfulFetch: Date?
-    /// Observed directly so changes propagate live while the popover is open.
-    @ObservedObject var refreshState: MenuBarManager
+    var lastRefreshError: AppError?
+    var nextRetryInterval: TimeInterval?
     @StateObject private var profileManager = ProfileManager.shared
 
     // Get the display mode from active profile's icon config
@@ -517,7 +518,7 @@ struct SmartUsageDashboard: View {
     private func stalenessLabel(at now: Date) -> String {
         // Error description
         let errorPart: String
-        if let error = refreshState.lastRefreshError {
+        if let error = lastRefreshError {
             switch error.code {
             case .apiRateLimited:
                 errorPart = "Rate limited"
@@ -542,13 +543,12 @@ struct SmartUsageDashboard: View {
         }
 
         // Retry countdown
-        if let next = refreshState.nextRefreshAt, next > now {
-            let remaining = next.timeIntervalSince(now)
+        if let interval = nextRetryInterval, interval > 0 {
             let retryPart: String
-            if remaining < 60 {
-                retryPart = "retrying in \(Int(remaining))s"
+            if interval < 60 {
+                retryPart = "retrying in \(Int(interval))s"
             } else {
-                retryPart = "retrying in \(Int(remaining / 60))m"
+                retryPart = "retrying in \(Int(interval / 60))m"
             }
             return "\(errorPart) – \(retryPart)"
         }
@@ -556,10 +556,44 @@ struct SmartUsageDashboard: View {
         return errorPart
     }
 
+    /// Actionable error message derived from the last refresh error
+    private var errorBannerText: String? {
+        guard let error = lastRefreshError else { return nil }
+        switch error.code {
+        case .apiRateLimited:
+            if let interval = nextRetryInterval {
+                return "Rate limited — retrying in \(Int(interval))s"
+            }
+            return "Rate limited — retrying soon"
+        case .apiUnauthorized:
+            return "Auth expired — re-sync in Settings"
+        case .sessionKeyNotFound:
+            return "No credentials — configure in Settings"
+        default:
+            let message = error.message
+            return message.count > 50 ? String(message.prefix(50)) + "…" : message
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
-            // Staleness indicator
-            if isStale {
+            // Staleness / error indicator
+            if lastRefreshError != nil && isStale {
+                // Actionable error banner
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.orange)
+
+                    Text(errorBannerText ?? "Refresh failed")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.orange)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 4)
+            } else if isStale {
+                // Stale data, no error (aged past threshold)
                 TimelineView(.periodic(from: .now, by: 15)) { context in
                     HStack(spacing: 4) {
                         Image(systemName: "clock.arrow.circlepath")
