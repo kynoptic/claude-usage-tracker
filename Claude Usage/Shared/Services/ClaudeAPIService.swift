@@ -578,6 +578,40 @@ class ClaudeAPIService: APIServiceProtocol {
         }
     }
 
+    /// Maps an HTTP status code from an OAuth endpoint to the appropriate AppError.
+    /// Internal (not private) to allow unit testing via `@testable import`.
+    func oauthError(statusCode: Int, data: Data, context: String) -> AppError {
+        let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? "Unable to read response"
+        let code: ErrorCode
+        let qualifier: String
+        let suggestion: String
+        switch statusCode {
+        case 401, 403:
+            code = .apiUnauthorized
+            qualifier = "authentication failed"
+            suggestion = "Please re-sync your CLI account in Settings."
+        case 429:
+            code = .apiRateLimited
+            qualifier = "rate limited"
+            suggestion = "Please wait a few minutes before trying again."
+        case 500...599:
+            code = .apiServerError
+            qualifier = "server error"
+            suggestion = "Claude's servers may be temporarily unavailable. Please try again later."
+        default:
+            code = .apiGenericError
+            qualifier = "request failed"
+            suggestion = "Please re-sync your CLI account in Settings."
+        }
+        return AppError(
+            code: code,
+            message: "\(context): \(qualifier)",
+            technicalDetails: "Status: \(statusCode)\nResponse: \(responsePreview)",
+            isRecoverable: true,
+            recoverySuggestion: suggestion
+        )
+    }
+
     // MARK: - Response Parsing
 
     private func parseUsageResponse(_ data: Data) throws -> ClaudeUsage {
@@ -714,34 +748,6 @@ class ClaudeAPIService: APIServiceProtocol {
         // Log warning if we couldn't parse
         LoggingService.shared.logWarning("Failed to parse utilization value: \(value) (type: \(type(of: value)))")
         return 0.0
-    }
-
-    /// Maps an HTTP status code from an OAuth endpoint to the appropriate AppError.
-    private func oauthError(statusCode: Int, data: Data, context: String) -> AppError {
-        let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? "Unable to read response"
-        let code: ErrorCode
-        let suggestion: String
-        switch statusCode {
-        case 401, 403:
-            code = .apiUnauthorized
-            suggestion = "Please re-sync your CLI account in Settings"
-        case 429:
-            code = .apiRateLimited
-            suggestion = "Please wait a few minutes before trying again"
-        case 500...599:
-            code = .apiServerError
-            suggestion = "Claude's servers may be temporarily unavailable. Please try again later."
-        default:
-            code = .apiGenericError
-            suggestion = "Please re-sync your CLI account in Settings"
-        }
-        return AppError(
-            code: code,
-            message: context,
-            technicalDetails: "Status: \(statusCode)\nResponse: \(responsePreview)",
-            isRecoverable: true,
-            recoverySuggestion: suggestion
-        )
     }
 
     // MARK: - Session Initialization
