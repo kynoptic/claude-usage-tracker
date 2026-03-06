@@ -88,26 +88,6 @@ cp -R "$DERIVED/Claude Usage.app" "/Applications/"
 
 Use `clean build` (not just `build`) when verifying a fix — incremental Release builds can reuse stale object files and ship the old behaviour.
 
-## Screenshot verification
-
-Render key UI components to PNGs for visual regression checking. No pixel assertions — screenshots are for human/AI review.
-
-```bash
-# Run screenshot tests only
-xcodebuild test -project "Claude Usage.xcodeproj" -scheme "Claude Usage" \
-  -only-testing:"Claude UsageTests/ScreenshotTests" \
-  -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
-
-# Before/after workflow
-./scripts/screenshot-check.sh before   # Baseline (before UI changes)
-# ... make changes ...
-./scripts/screenshot-check.sh after    # Post-change
-./scripts/screenshot-check.sh compare  # List pairs with size diff
-./scripts/screenshot-check.sh clean    # Remove artifacts
-```
-
-Output lands in `.screenshots/` (git-ignored). Cards are rendered with `metric: nil` to avoid `UsageHistoryStore` singleton and flip-animation state — front face only.
-
 ## Release
 
 1. Bump `MARKETING_VERSION` in `project.pbxproj`

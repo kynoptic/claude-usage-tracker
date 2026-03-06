@@ -142,9 +142,6 @@ pkg/
 release/
 *.zip
 
-# Screenshot verification artifacts
-.screenshots/
-
 .idea
 /APPEARANCE_SETTINGS_FIX.md
 /CLEAN_DATA_ARCHITECTURE_IMPLEMENTATION.md
