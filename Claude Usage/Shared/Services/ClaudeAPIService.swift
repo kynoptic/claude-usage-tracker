@@ -403,14 +403,7 @@ class ClaudeAPIService: APIServiceProtocol {
         }
 
         guard httpResponse.statusCode == 200 else {
-            let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? "Unable to read response"
-            throw AppError(
-                code: httpResponse.statusCode == 401 || httpResponse.statusCode == 403 ? .apiUnauthorized : .apiGenericError,
-                message: "OAuth fetch failed",
-                technicalDetails: "Status: \(httpResponse.statusCode)\nResponse: \(responsePreview)",
-                isRecoverable: true,
-                recoverySuggestion: "Please re-sync your CLI account in Settings"
-            )
+            throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth fetch failed")
         }
 
         return try parseUsageResponse(data)
@@ -472,14 +465,7 @@ class ClaudeAPIService: APIServiceProtocol {
             }
 
             guard httpResponse.statusCode == 200 else {
-                let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? "Unable to read response"
-                throw AppError(
-                    code: .apiUnauthorized,
-                    message: "OAuth authentication failed",
-                    technicalDetails: "Status: \(httpResponse.statusCode)\nResponse: \(responsePreview)",
-                    isRecoverable: true,
-                    recoverySuggestion: "Please re-sync your CLI account in Settings"
-                )
+                throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth authentication failed")
             }
 
             return try parseUsageResponse(data)
@@ -728,6 +714,34 @@ class ClaudeAPIService: APIServiceProtocol {
         // Log warning if we couldn't parse
         LoggingService.shared.logWarning("Failed to parse utilization value: \(value) (type: \(type(of: value)))")
         return 0.0
+    }
+
+    /// Maps an HTTP status code from an OAuth endpoint to the appropriate AppError.
+    private func oauthError(statusCode: Int, data: Data, context: String) -> AppError {
+        let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? "Unable to read response"
+        let code: ErrorCode
+        let suggestion: String
+        switch statusCode {
+        case 401, 403:
+            code = .apiUnauthorized
+            suggestion = "Please re-sync your CLI account in Settings"
+        case 429:
+            code = .apiRateLimited
+            suggestion = "Please wait a few minutes before trying again"
+        case 500...599:
+            code = .apiServerError
+            suggestion = "Claude's servers may be temporarily unavailable. Please try again later."
+        default:
+            code = .apiGenericError
+            suggestion = "Please re-sync your CLI account in Settings"
+        }
+        return AppError(
+            code: code,
+            message: context,
+            technicalDetails: "Status: \(statusCode)\nResponse: \(responsePreview)",
+            isRecoverable: true,
+            recoverySuggestion: suggestion
+        )
     }
 
     // MARK: - Session Initialization
