@@ -18,16 +18,22 @@ final class ScreenshotTests: XCTestCase {
     // MARK: - Properties
 
     /// Output directory: project root `.screenshots/`
+    /// Searches upward from the source file for `Claude Usage.xcodeproj` to find the project root,
+    /// which works regardless of whether `#file` resolves to the source tree or DerivedData.
     private static let outputDir: URL = {
-        // Navigate from this source file up to project root
-        let thisFile = URL(fileURLWithPath: #file)
-        let projectRoot = thisFile
-            .deletingLastPathComponent()   // Claude UsageTests/
-            .deletingLastPathComponent()   // project root
-        return projectRoot.appendingPathComponent(".screenshots")
+        var dir = URL(fileURLWithPath: #file).deletingLastPathComponent()
+        while dir.path != "/" {
+            let marker = dir.appendingPathComponent("Claude Usage.xcodeproj")
+            if FileManager.default.fileExists(atPath: marker.path) {
+                return dir.appendingPathComponent(".screenshots")
+            }
+            dir = dir.deletingLastPathComponent()
+        }
+        // Fallback: write next to the test file
+        return URL(fileURLWithPath: #file)
+            .deletingLastPathComponent()
+            .appendingPathComponent(".screenshots")
     }()
-
-    // MARK: - Fixed Dates
 
     /// Anchor date: 2025-01-15 12:00:00 UTC — deterministic across runs
     private static let anchorDate: Date = {
@@ -254,12 +260,16 @@ final class ScreenshotTests: XCTestCase {
         XCTAssertGreaterThan(fileSize, 0, "Screenshot \(name).png is empty")
     }
 
-    /// Generate deterministic chart snapshots spread across the session window
-    private func makeSnapshots(count: Int, maxPct: Double) -> [UsageSnapshot] {
-        let windowDuration = Constants.sessionWindow
+    /// Generate deterministic chart snapshots spread across a time window
+    private func makeSnapshots(
+        count: Int,
+        maxPct: Double,
+        window: TimeInterval = Constants.sessionWindow
+    ) -> [UsageSnapshot] {
+        precondition(count >= 2, "makeSnapshots requires count >= 2")
         return (0..<count).map { i in
             let fraction = Double(i) / Double(count - 1)
-            let date = Self.anchorDate.addingTimeInterval(fraction * windowDuration)
+            let date = Self.anchorDate.addingTimeInterval(fraction * window)
             // Gentle curve: percentage rises with slight acceleration
             let pct = maxPct * (fraction * fraction * 0.3 + fraction * 0.7)
             return UsageSnapshot(date: date, percentage: pct)

@@ -26,28 +26,37 @@ XCODEBUILD_FLAGS=(
 
 run_tests() {
     echo "Running screenshot tests..."
-    xcodebuild test "${XCODEBUILD_FLAGS[@]}" 2>&1 | tail -20
+    if ! xcodebuild test "${XCODEBUILD_FLAGS[@]}" 2>&1 | tail -40; then
+        echo "Error: Screenshot tests failed. Check output above."
+        return 1
+    fi
     echo ""
+}
+
+copy_screenshots() {
+    local dest="$1"
+    local label="$2"
+    mkdir -p "$dest"
+    cp "$SCREENSHOTS_DIR"/*.png "$dest/" 2>/dev/null || true
+    local count
+    count=$(find "$dest" -name '*.png' | wc -l | tr -d ' ')
+    if [ "$count" -eq 0 ]; then
+        echo "Warning: No screenshots were generated."
+        return 1
+    fi
+    echo "Captured $count $label screenshots in $dest"
 }
 
 cmd_before() {
     rm -rf "$BEFORE_DIR"
     run_tests
-    mkdir -p "$BEFORE_DIR"
-    cp "$SCREENSHOTS_DIR"/*.png "$BEFORE_DIR/" 2>/dev/null || true
-    local count
-    count=$(find "$BEFORE_DIR" -name '*.png' | wc -l | tr -d ' ')
-    echo "Captured $count baseline screenshots in $BEFORE_DIR"
+    copy_screenshots "$BEFORE_DIR" "baseline"
 }
 
 cmd_after() {
     rm -rf "$AFTER_DIR"
     run_tests
-    mkdir -p "$AFTER_DIR"
-    cp "$SCREENSHOTS_DIR"/*.png "$AFTER_DIR/" 2>/dev/null || true
-    local count
-    count=$(find "$AFTER_DIR" -name '*.png' | wc -l | tr -d ' ')
-    echo "Captured $count post-change screenshots in $AFTER_DIR"
+    copy_screenshots "$AFTER_DIR" "post-change"
 }
 
 cmd_compare() {
@@ -56,14 +65,23 @@ cmd_compare() {
         exit 1
     fi
 
+    local has_before has_after
+    has_before=$(find "$BEFORE_DIR" -name '*.png' | wc -l | tr -d ' ')
+    has_after=$(find "$AFTER_DIR" -name '*.png' | wc -l | tr -d ' ')
+    if [ "$has_before" -eq 0 ] && [ "$has_after" -eq 0 ]; then
+        echo "No screenshots found in either directory."
+        exit 1
+    fi
+
     echo "Screenshot pairs for review:"
     echo "─────────────────────────────"
     for before_file in "$BEFORE_DIR"/*.png; do
-        local name
+        [ -f "$before_file" ] || continue
+        local name after_file
         name=$(basename "$before_file")
-        local after_file="$AFTER_DIR/$name"
+        after_file="$AFTER_DIR/$name"
         if [ -f "$after_file" ]; then
-            local before_size after_size
+            local before_size after_size  # re-declared each iteration; harmless in bash
             before_size=$(stat -f%z "$before_file" 2>/dev/null || stat -c%s "$before_file")
             after_size=$(stat -f%z "$after_file" 2>/dev/null || stat -c%s "$after_file")
             if [ "$before_size" = "$after_size" ]; then
@@ -78,6 +96,7 @@ cmd_compare() {
 
     # Check for new screenshots
     for after_file in "$AFTER_DIR"/*.png; do
+        [ -f "$after_file" ] || continue
         local name
         name=$(basename "$after_file")
         if [ ! -f "$BEFORE_DIR/$name" ]; then
