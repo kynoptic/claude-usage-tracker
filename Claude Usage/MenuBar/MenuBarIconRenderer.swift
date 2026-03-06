@@ -275,6 +275,13 @@ final class MenuBarIconRenderer {
             let tickPath = NSBezierPath()
             tickPath.move(to: NSPoint(x: tickX, y: barY))
             tickPath.line(to: NSPoint(x: tickX, y: barY + barHeight))
+            let ctx = NSGraphicsContext.current!.cgContext
+            ctx.saveGState()
+            ctx.setBlendMode(.clear)
+            tickPath.lineWidth = 3.0
+            tickPath.lineCapStyle = .butt
+            tickPath.stroke()
+            ctx.restoreGState()
             NSColor.white.setStroke()
             tickPath.lineWidth = 1.5
             tickPath.stroke()
@@ -387,6 +394,13 @@ final class MenuBarIconRenderer {
                 let tickPath = NSBezierPath()
                 tickPath.move(to: NSPoint(x: tickX, y: barY))
                 tickPath.line(to: NSPoint(x: tickX, y: barY + barHeight))
+                let ctx = NSGraphicsContext.current!.cgContext
+                ctx.saveGState()
+                ctx.setBlendMode(.clear)
+                tickPath.lineWidth = 3.0
+                tickPath.lineCapStyle = .butt
+                tickPath.stroke()
+                ctx.restoreGState()
                 NSColor.white.setStroke()
                 tickPath.lineWidth = 1.5
                 tickPath.stroke()
@@ -530,6 +544,15 @@ final class MenuBarIconRenderer {
                 x: center.x + outerR * cos(tickAngle),
                 y: center.y + outerR * sin(tickAngle)
             ))
+            // Erase a transparent gap so the tick is visible in template/monochrome mode
+            let ctx = NSGraphicsContext.current!.cgContext
+            ctx.saveGState()
+            ctx.setBlendMode(.clear)
+            tickPath.lineWidth = 3.0
+            tickPath.lineCapStyle = .butt
+            tickPath.stroke()
+            ctx.restoreGState()
+            // Draw the tick on top
             NSColor.white.setStroke()
             tickPath.lineWidth = 1.5
             tickPath.stroke()
