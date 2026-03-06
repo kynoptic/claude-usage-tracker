@@ -83,6 +83,12 @@ final class StatuslineColorLevelTests: XCTestCase {
         XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 68, elapsedFraction: 0.5), 10)
     }
 
+    func testPacing_100PercentUsage_IsLevel10() {
+        // 100% used at 50% elapsed → projected 200% → ≥135% → LEVEL_10
+        // Verifies no overflow or degenerate result at max utilization in pacing mode.
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 100, elapsedFraction: 0.5), 10)
+    }
+
     // MARK: - Fallback mode: specific levels
 
     func testFallback_Level1() {

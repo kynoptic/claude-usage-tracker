@@ -151,6 +151,7 @@ LEVEL_7=$'\\033[38;5;172m'  # muted yellow-orange
 LEVEL_8=$'\\033[38;5;166m'  # darker orange
 LEVEL_9=$'\\033[38;5;160m'  # dark red
 LEVEL_10=$'\\033[38;5;124m' # deep red
+SESSION_SECS=18000  # 5-hour session window (Constants.sessionWindow)
 
 # Build components (without separators)
 dir_text=""
@@ -186,10 +187,10 @@ if [ "$show_usage" = "1" ]; then
           _now_epoch=$(date "+%s")
           if [ "$_marker_epoch" -gt "$_now_epoch" ]; then
             _remaining=$((_marker_epoch - _now_epoch))
-            _elapsed=$((18000 - _remaining))  # 18000 = 5 hours (Constants.sessionWindow)
-            if [ "$_elapsed" -ge 0 ] && [ "$_elapsed" -le 18000 ]; then
+            _elapsed=$(($SESSION_SECS - _remaining))
+            if [ "$_elapsed" -ge 0 ] && [ "$_elapsed" -le "$SESSION_SECS" ]; then
               elapsed_secs="$_elapsed"
-              elapsed_frac_pct=$(( (_elapsed * 100) / 18000 ))
+              elapsed_frac_pct=$(( (_elapsed * 100) / SESSION_SECS ))
             fi
           fi
         fi
@@ -197,6 +198,9 @@ if [ "$show_usage" = "1" ]; then
 
       # Select color level using pacing when available, absolute thresholds otherwise.
       # Logic mirrors UsageStatusCalculator.colorLevel (Swift) — keep in sync.
+      # 2>/dev/null guards against the -1 sentinel: an uninitialised variable or
+      # non-numeric value would cause [ -ge ] to print an error and return false,
+      # which is exactly the fallback behaviour we want.
       if [ "$elapsed_frac_pct" -ge 15 ] 2>/dev/null && [ "$utilization" -gt 0 ]; then
         # Pacing mode: projected = utilization * 100 / elapsed_frac_pct (integer %)
         projected=$(( (utilization * 100) / elapsed_frac_pct ))
@@ -252,9 +256,10 @@ if [ "$show_usage" = "1" ]; then
 
         # Calculate time marker position using pre-computed elapsed_secs
         marker_pos=-1
+        # 2>/dev/null: same sentinel guard as the color selection block above.
         if [ "$show_time_marker" = "1" ] && [ "$elapsed_secs" -ge 0 ] 2>/dev/null; then
-          # Floor-divide: map 0..18000 s elapsed → 0..10 bar positions
-          marker_pos=$(( (elapsed_secs * 10) / 18000 ))
+          # Floor-divide: map 0..$SESSION_SECS elapsed → 0..10 bar positions
+          marker_pos=$(( (elapsed_secs * 10) / SESSION_SECS ))
           [ "$marker_pos" -gt 10 ] && marker_pos=10
         fi
 
