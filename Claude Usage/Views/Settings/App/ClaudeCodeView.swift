@@ -211,7 +211,8 @@ struct ClaudeCodeView: View {
                 showUsage: showUsage,
                 showProgressBar: showProgressBar,
                 showResetTime: showResetTime,
-                showTimeMarker: showTimeMarker
+                showTimeMarker: showTimeMarker,
+                showGreyZone: DataStore.shared.loadShowGreyZone()
             )
 
             // Update Claude CLI settings.json

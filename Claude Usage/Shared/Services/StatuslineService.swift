@@ -122,6 +122,7 @@ if [ -f "$config_file" ]; then
   show_bar=$SHOW_PROGRESS_BAR
   show_reset=$SHOW_RESET_TIME
   show_time_marker=$SHOW_TIME_MARKER
+  show_grey_zone=${SHOW_GREY_ZONE:-0}
 else
   show_dir=1
   show_branch=1
@@ -129,6 +130,7 @@ else
   show_bar=1
   show_reset=1
   show_time_marker=1
+  show_grey_zone=0
 fi
 
 input=$(cat)
@@ -207,17 +209,19 @@ if [ "$show_usage" = "1" ]; then
       if [ "$elapsed_frac_pct" -gt 0 ] 2>/dev/null; then
         # Pacing mode: projected = utilization * 100 / elapsed_frac_pct (integer %)
         projected=$(( (utilization * 100) / elapsed_frac_pct ))
-        if   [ "$projected" -lt 90  ]; then usage_color="$LEVEL_3"   # grey/green
-        elif [ "$projected" -lt 110 ]; then usage_color="$LEVEL_5"   # yellow
-        elif [ "$projected" -le 150 ]; then usage_color="$LEVEL_7"   # orange
-        else                                 usage_color="$LEVEL_10"  # red
+        if   [ "$show_grey_zone" = "1" ] && [ "$projected" -lt 50  ]; then usage_color="$GRAY"     # grey (<50%)
+        elif [ "$projected" -lt 90  ]; then usage_color="$LEVEL_3"   # green (50–90%)
+        elif [ "$projected" -lt 110 ]; then usage_color="$LEVEL_5"   # yellow (90–110%)
+        elif [ "$projected" -le 150 ]; then usage_color="$LEVEL_7"   # orange (110–150%)
+        else                                 usage_color="$LEVEL_10"  # red (>150%)
         fi
       else
         # Fallback: raw utilization when timing data unavailable.
-        if   [ "$utilization" -lt 90  ]; then usage_color="$LEVEL_3"   # grey/green
-        elif [ "$utilization" -lt 110 ]; then usage_color="$LEVEL_5"   # yellow
-        elif [ "$utilization" -le 150 ]; then usage_color="$LEVEL_7"   # orange
-        else                                   usage_color="$LEVEL_10"  # red
+        if   [ "$show_grey_zone" = "1" ] && [ "$utilization" -lt 50  ]; then usage_color="$GRAY"     # grey (<50%)
+        elif [ "$utilization" -lt 90  ]; then usage_color="$LEVEL_3"   # green (50–90%)
+        elif [ "$utilization" -lt 110 ]; then usage_color="$LEVEL_5"   # yellow (90–110%)
+        elif [ "$utilization" -le 150 ]; then usage_color="$LEVEL_7"   # orange (110–150%)
+        else                                   usage_color="$LEVEL_10"  # red (>150%)
         fi
       fi
 
@@ -388,7 +392,8 @@ printf "%s\\n" "$output"
         showUsage: Bool,
         showProgressBar: Bool,
         showResetTime: Bool,
-        showTimeMarker: Bool = true
+        showTimeMarker: Bool = true,
+        showGreyZone: Bool = false
     ) throws {
         let configPath = Constants.ClaudePaths.claudeDirectory
             .appendingPathComponent("statusline-config.txt")
@@ -400,6 +405,7 @@ SHOW_USAGE=\(showUsage ? "1" : "0")
 SHOW_PROGRESS_BAR=\(showProgressBar ? "1" : "0")
 SHOW_RESET_TIME=\(showResetTime ? "1" : "0")
 SHOW_TIME_MARKER=\(showTimeMarker ? "1" : "0")
+SHOW_GREY_ZONE=\(showGreyZone ? "1" : "0")
 """
 
         try config.write(to: configPath, atomically: true, encoding: .utf8)
@@ -470,6 +476,22 @@ SHOW_TIME_MARKER=\(showTimeMarker ? "1" : "0")
     func updateScriptsIfInstalled() throws {
         guard isInstalled else { return }
         try installScripts(injectSessionKey: true)
+    }
+
+    /// Updates the grey zone setting in the statusline config file if statusline is installed.
+    /// Reads all other statusline settings from SharedDataStore to preserve them.
+    func updateGreyZoneIfInstalled(_ show: Bool) throws {
+        guard isInstalled else { return }
+        let store = SharedDataStore.shared
+        try updateConfiguration(
+            showDirectory: store.loadStatuslineShowDirectory(),
+            showBranch: store.loadStatuslineShowBranch(),
+            showUsage: store.loadStatuslineShowUsage(),
+            showProgressBar: store.loadStatuslineShowProgressBar(),
+            showResetTime: store.loadStatuslineShowResetTime(),
+            showTimeMarker: store.loadStatuslineShowTimeMarker(),
+            showGreyZone: show
+        )
     }
 
     /// Checks if active profile has a valid session key

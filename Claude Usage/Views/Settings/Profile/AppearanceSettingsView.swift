@@ -99,6 +99,7 @@ struct AppearanceSettingsView: View {
                                 set: { newValue in
                                     showGreyZone = newValue
                                     DataStore.shared.saveShowGreyZone(newValue)
+                                    try? StatuslineService.shared.updateGreyZoneIfInstalled(newValue)
                                     NotificationCenter.default.post(name: .menuBarIconConfigChanged, object: nil)
                                 }
                             )
