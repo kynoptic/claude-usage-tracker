@@ -48,7 +48,9 @@ struct PopoverContentView: View {
                 usage: displayUsage,
                 apiUsage: displayAPIUsage,
                 isStale: manager.isStale,
-                lastSuccessfulFetch: manager.lastSuccessfulFetch
+                lastSuccessfulFetch: manager.lastSuccessfulFetch,
+                lastRefreshError: manager.lastRefreshError,
+                nextRefreshAt: manager.nextRefreshAt
             )
 
             // Contextual Insights
@@ -492,6 +494,8 @@ struct SmartUsageDashboard: View {
     let apiUsage: APIUsage?
     var isStale: Bool = false
     var lastSuccessfulFetch: Date?
+    var lastRefreshError: AppError? = nil
+    var nextRefreshAt: Date? = nil
     @StateObject private var profileManager = ProfileManager.shared
 
     // Get the display mode from active profile's icon config
@@ -508,37 +512,67 @@ struct SmartUsageDashboard: View {
         DataStore.shared.loadAPITrackingEnabled()
     }
 
-    /// Formatted staleness label: explains why data is outdated
-    private var stalenessLabel: String {
-        guard let lastFetch = lastSuccessfulFetch else {
-            return "Rate limited – retrying soon"
-        }
-        let elapsed = Date().timeIntervalSince(lastFetch)
-        if elapsed < 60 {
-            return "Updated just now"
-        } else if elapsed < 3600 {
-            return "Updated \(Int(elapsed / 60))m ago"
+    /// Formatted staleness label: explains why data is outdated and when it will retry.
+    private func stalenessLabel(at now: Date) -> String {
+        // Error description
+        let errorPart: String
+        if let error = lastRefreshError {
+            switch error.code {
+            case .apiRateLimited:
+                errorPart = "Rate limited"
+            case .apiUnauthorized:
+                errorPart = "Auth failed (\(error.code.rawValue))"
+            case .networkUnavailable, .networkTimeout, .networkConnectionLost, .networkDNSFailed:
+                errorPart = "Network error (\(error.code.rawValue))"
+            default:
+                errorPart = "Fetch failed (\(error.code.rawValue))"
+            }
+        } else if let lastFetch = lastSuccessfulFetch {
+            let elapsed = now.timeIntervalSince(lastFetch)
+            if elapsed < 60 {
+                errorPart = "Updated just now"
+            } else if elapsed < 3600 {
+                errorPart = "Updated \(Int(elapsed / 60))m ago"
+            } else {
+                errorPart = "Updated \(Int(elapsed / 3600))h ago"
+            }
         } else {
-            return "Updated \(Int(elapsed / 3600))h ago"
+            errorPart = "No data yet"
         }
+
+        // Retry countdown
+        if let next = nextRefreshAt, next > now {
+            let remaining = next.timeIntervalSince(now)
+            let retryPart: String
+            if remaining < 60 {
+                retryPart = "retrying in \(Int(remaining))s"
+            } else {
+                retryPart = "retrying in \(Int(remaining / 60))m"
+            }
+            return "\(errorPart) – \(retryPart)"
+        }
+
+        return errorPart
     }
 
     var body: some View {
         VStack(spacing: 16) {
             // Staleness indicator
             if isStale {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.secondary)
+                TimelineView(.periodic(from: .now, by: 15)) { context in
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
 
-                    Text(stalenessLabel)
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.secondary)
+                        Text(stalenessLabel(at: context.date))
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
 
-                    Spacer()
+                        Spacer()
+                    }
+                    .padding(.horizontal, 4)
                 }
-                .padding(.horizontal, 4)
             }
 
             // Primary Usage Card

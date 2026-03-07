@@ -19,6 +19,12 @@ class MenuBarManager: NSObject, ObservableObject {
     /// Explicitly published so SwiftUI redraws when staleness changes.
     @Published private(set) var isStale: Bool = false
 
+    /// The last fetch error, nil when the most recent fetch succeeded.
+    @Published private(set) var lastRefreshError: AppError?
+
+    /// When the next automatic refresh is scheduled to fire.
+    @Published private(set) var nextRefreshAt: Date?
+
     /// Recomputes `isStale` from scheduler state and last-fetch timestamp.
     /// Call on MainActor after any scheduler state change.
     private func updateStaleness() {
@@ -564,6 +570,7 @@ class MenuBarManager: NSObject, ObservableObject {
         refreshTimer = nil
 
         let interval = pollingScheduler.currentInterval
+        nextRefreshAt = Date().addingTimeInterval(interval)
         refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
             self?.refreshUsage()
         }
@@ -815,8 +822,10 @@ class MenuBarManager: NSObject, ObservableObject {
                 if let usage = activeProfileUsage {
                     self.pollingScheduler.recordSuccess(usage: usage)
                     self.lastSuccessfulFetch = Date()
+                    self.lastRefreshError = nil
                 } else if hitRateLimit {
                     self.pollingScheduler.recordRateLimitError(retryAfter: rateLimitRetryAfter)
+                    self.lastRefreshError = AppError.apiRateLimited()
                 }
                 self.updateStaleness()
                 self.startAutoRefresh()
@@ -965,6 +974,7 @@ class MenuBarManager: NSObject, ObservableObject {
                 await MainActor.run {
                     self.pollingScheduler.recordSuccess(usage: newUsage)
                     self.lastSuccessfulFetch = Date()
+                    self.lastRefreshError = nil
                     self.updateStaleness()
                 }
 
@@ -983,6 +993,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     } else {
                         self.pollingScheduler.recordOtherError()
                     }
+                    self.lastRefreshError = appError
                     self.updateStaleness()
                     LoggingService.shared.logError("MenuBarManager: Failed to fetch usage - [\(appError.code.rawValue)] \(appError.message)")
                 }
