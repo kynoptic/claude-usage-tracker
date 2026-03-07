@@ -21,7 +21,7 @@ final class UsageStatusCalculator {
 
         // Pacing mode: only when enough of the session has elapsed and usage is non-zero.
         // Projected = fraction we'll have consumed by the end of the session at the current rate.
-        // Thresholds: green < 0.75, orange 0.75–0.95, red ≥ 0.95
+        // Thresholds: green < 0.75, yellow 0.75–0.95, red ≥ 0.95
         if let t = elapsedFraction, t >= 0.15, t < 1.0, u > 0 {
             let projected = u / t
             switch projected {
@@ -35,7 +35,7 @@ final class UsageStatusCalculator {
         if showRemaining {
             // Based on remaining percentage (like Mac battery)
             // > 20% remaining: safe (green)
-            // 10-20% remaining: moderate (orange)
+            // 10-20% remaining: moderate (yellow)
             // < 10% remaining: critical (red)
             let remainingPercentage = max(0, 100 - usedPercentage)
             switch remainingPercentage {
@@ -46,7 +46,7 @@ final class UsageStatusCalculator {
         } else {
             // Based on used percentage
             // 0-50% used: safe (green)
-            // 50-80% used: moderate (orange)
+            // 50-80% used: moderate (yellow)
             // 80-100% used: critical (red)
             switch usedPercentage {
             case 0..<50: return .safe
@@ -92,7 +92,7 @@ final class UsageStatusCalculator {
     ///
     /// Color band contract (mirrors `calculateStatus` severity):
     ///   - green  (safe)     → levels 1–3:  projected < 75%
-    ///   - orange (moderate) → levels 4–7:  projected 75–95%
+    ///   - yellow (moderate) → levels 4–7:  projected 75–95%
     ///   - red    (critical) → levels 8–10: projected ≥ 95%
     ///
     /// Pacing fires when `elapsedFraction` ≥ 0.15 and < 1.0 and utilization > 0.
@@ -115,7 +115,7 @@ final class UsageStatusCalculator {
                 if projected < 0.50 { return 2 }
                 return 3
             } else if projected < 0.95 {
-                // Orange range: sub-divide 75–95% into quarters
+                // Yellow range: sub-divide 75–95% into quarters
                 if projected < 0.80 { return 4 }
                 if projected < 0.85 { return 5 }
                 if projected < 0.90 { return 6 }
@@ -135,7 +135,7 @@ final class UsageStatusCalculator {
             if utilization < 34 { return 2 }
             return 3
         } else if utilization < 80 {
-            // Orange range: levels 4–7
+            // Yellow range: levels 4–7
             if utilization < 60 { return 4 }
             if utilization < 67 { return 5 }
             if utilization < 73 { return 6 }

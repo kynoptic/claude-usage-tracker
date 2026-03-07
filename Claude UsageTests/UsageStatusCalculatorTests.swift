@@ -22,7 +22,7 @@ final class UsageStatusCalculatorTests: XCTestCase {
     }
 
     func testUsedBasedThresholds_Moderate() {
-        // 50-79% used should be moderate (orange)
+        // 50-79% used should be moderate (yellow)
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 50, showRemaining: false),
             .moderate

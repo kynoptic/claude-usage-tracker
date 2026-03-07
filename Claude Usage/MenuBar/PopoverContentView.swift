@@ -681,7 +681,7 @@ struct SmartUsageCard: View {
     private var statusColor: Color {
         switch statusLevel {
         case .safe: return .green
-        case .moderate: return .orange
+        case .moderate: return .yellow
         case .critical: return .red
         }
     }
@@ -1084,7 +1084,7 @@ struct APIUsageCard: View {
     private var usageColor: Color {
         switch statusLevel {
         case .safe: return .green
-        case .moderate: return .orange
+        case .moderate: return .yellow
         case .critical: return .red
         }
     }

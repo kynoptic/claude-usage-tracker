@@ -26,7 +26,7 @@ final class StatuslineColorLevelTests: XCTestCase {
     private func expectedBand(for status: UsageStatusLevel) -> String {
         switch status {
         case .safe:     return "green"
-        case .moderate: return "orange"
+        case .moderate: return "yellow"
         case .critical: return "red"
         }
     }
@@ -220,8 +220,8 @@ final class StatuslineColorLevelTests: XCTestCase {
 
     // MARK: - Fallback boundary values (match UsageStatusCalculator absolute thresholds)
 
-    func testFallbackBoundary_50Pct_IsOrange() {
-        // UsageStatusCalculator: 50% used → .moderate → must be in orange band
+    func testFallbackBoundary_50Pct_IsYellow() {
+        // UsageStatusCalculator: 50% used → .moderate → must be in yellow band
         let level = UsageStatusCalculator.colorLevel(utilization: 50, elapsedFraction: nil)
         XCTAssertGreaterThanOrEqual(level, 4)
         XCTAssertLessThanOrEqual(level, 7)
@@ -239,8 +239,8 @@ final class StatuslineColorLevelTests: XCTestCase {
         XCTAssertLessThanOrEqual(level, 3)
     }
 
-    func testFallbackBoundary_79Pct_IsOrange() {
-        // UsageStatusCalculator: 79% used → .moderate → must be in orange band
+    func testFallbackBoundary_79Pct_IsYellow() {
+        // UsageStatusCalculator: 79% used → .moderate → must be in yellow band
         let level = UsageStatusCalculator.colorLevel(utilization: 79, elapsedFraction: nil)
         XCTAssertGreaterThanOrEqual(level, 4)
         XCTAssertLessThanOrEqual(level, 7)
