@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Action keywords in popover: "Underutilized 💤", "On track ✅", "Maximizing 🔥", "Overshooting ⚠️", "Way over 🛑"
 - Time-elapsed marker on session and weekly progress bars in popover, menu bar icons, and CLI statusline
 - Settings toggles for marker visibility in Appearance and Claude Code sections
+- Grey zone toggle syncs to statusline via `SHOW_GREY_ZONE` in `statusline-config.txt`
 - `fetchUsageData(oauthAccessToken:)` method for direct CLI OAuth usage fetch
 - `Constants.APIEndpoints.oauthUsage` for the OAuth usage endpoint
 - Localization strings for time marker toggle in all 8 languages

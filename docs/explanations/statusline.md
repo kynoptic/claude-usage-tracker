@@ -43,7 +43,7 @@ The zones map to specific colour levels:
 
 When `elapsedFraction` is nil, zero, or ≥ 1, the raw `usedPercentage` is used instead.
 
-> **Note:** The grey zone ("Show grey for underutilized sessions") is a Swift-only feature. The bash script cannot read UserDefaults, so it always maps projected < 90% to green (LEVEL_3).
+The grey zone setting syncs to the statusline automatically. When the **"Show grey for underutilized sessions"** toggle changes, `updateGreyZoneIfInstalled()` writes `SHOW_GREY_ZONE=1` (or `0`) to `statusline-config.txt`. The bash script reads this value at runtime and applies grey colour (LEVEL_3 with grey ANSI) for projected utilisation below 50% when enabled; otherwise it maps the sub-50% range to green.
 
 The comment in `statusline-command.sh` flags this contract: "Logic mirrors UsageStatusCalculator.colorLevel (Swift) — keep in sync." Any change to the Swift zone thresholds must be mirrored in the bash script. See [pacing-aware colour logic](pacing-colours.md) for the full zone specification.
 
@@ -64,6 +64,7 @@ SHOW_USAGE=1
 SHOW_PROGRESS_BAR=1
 SHOW_RESET_TIME=1
 SHOW_TIME_MARKER=1
+SHOW_GREY_ZONE=0
 ```
 
 `StatuslineService.updateConfiguration()` rewrites this file. The bash script sources it at the top of every execution, so changes take effect on the next prompt render without a restart.
