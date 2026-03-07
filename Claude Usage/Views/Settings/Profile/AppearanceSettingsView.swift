@@ -11,6 +11,7 @@ import SwiftUI
 struct AppearanceSettingsView: View {
     @ObservedObject private var profileManager = ProfileManager.shared
     @State private var configuration: MenuBarIconConfiguration = .default
+    @State private var showGreyZone: Bool = DataStore.shared.loadShowGreyZone()
     @State private var saveDebounceTimer: Timer?
 
     private var isMultiProfileMode: Bool {
@@ -86,6 +87,18 @@ struct AppearanceSettingsView: View {
                                 set: { newValue in
                                     configuration.showTimeMarker = newValue
                                     saveConfiguration()
+                                }
+                            )
+                        )
+
+                        SettingToggle(
+                            title: "Show grey for underutilized sessions",
+                            description: "When enabled, the icon turns grey when you're projected to use less than 50% of your session.",
+                            isOn: Binding(
+                                get: { showGreyZone },
+                                set: { newValue in
+                                    showGreyZone = newValue
+                                    DataStore.shared.saveShowGreyZone(newValue)
                                 }
                             )
                         )

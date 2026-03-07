@@ -705,21 +705,14 @@ struct SmartUsageCard: View {
         )
     }
 
-    /// Adaptive usage status derived from pacing context.
+    /// Pacing status for this usage card.
     private var usageStatus: UsageStatus {
-        // Build a context that uses rawElapsedFraction if the passed context has none
-        let effectiveContext = context.elapsedFraction != nil
-            ? context
-            : PacingContext(
-                elapsedFraction: rawElapsedFraction,
-                weeklyProjected: context.weeklyProjected,
-                avgSessionUtilization: context.avgSessionUtilization,
-                sessionCount: context.sessionCount
-            )
+        let elapsed = context.elapsedFraction ?? rawElapsedFraction
         return UsageStatusCalculator.calculateStatus(
             usedPercentage: usedPercentage,
             showRemaining: showRemaining,
-            context: effectiveContext
+            elapsedFraction: elapsed,
+            showGrey: DataStore.shared.loadShowGreyZone()
         )
     }
 
@@ -727,10 +720,11 @@ struct SmartUsageCard: View {
 
     private var statusIcon: String {
         switch usageStatus.zone {
-        case .green:    return "checkmark.circle.fill"
-        case .approach: return "flame.fill"
-        case .warning:  return "exclamationmark.triangle.fill"
-        case .critical: return "xmark.circle.fill"
+        case .grey:   return "moon.zzz.fill"
+        case .green:  return "checkmark.circle.fill"
+        case .yellow: return "flame.fill"
+        case .orange: return "exclamationmark.triangle.fill"
+        case .red:    return "xmark.circle.fill"
         }
     }
 
@@ -1111,12 +1105,12 @@ struct APIUsageCard: View {
         )
     }
 
-    /// Status derived from the new adaptive calculator (no pacing for API billing).
+    /// Status for API billing (no elapsed data).
     private var usageStatus: UsageStatus {
         UsageStatusCalculator.calculateStatus(
             usedPercentage: apiUsage.usagePercentage,
             showRemaining: showRemaining,
-            context: .none
+            elapsedFraction: nil
         )
     }
 

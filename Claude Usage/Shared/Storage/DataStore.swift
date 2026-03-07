@@ -447,6 +447,16 @@ class DataStore: StorageProvider {
         return config
     }
 
+    /// Saves show grey zone preference (default off)
+    func saveShowGreyZone(_ show: Bool) {
+        defaults.set(show, forKey: Constants.UserDefaultsKeys.showGreyZone)
+    }
+
+    /// Loads show grey zone preference (defaults to false)
+    func loadShowGreyZone() -> Bool {
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.showGreyZone)
+    }
+
     /// Saves show icon names preference
     func saveShowIconNames(_ show: Bool) {
         defaults.set(show, forKey: Constants.UserDefaultsKeys.showIconNames)

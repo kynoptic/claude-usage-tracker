@@ -7,74 +7,43 @@ final class UsageStatusTests: XCTestCase {
 
     func testUsageZone_Equatable() {
         XCTAssertEqual(UsageZone.green, UsageZone.green)
-        XCTAssertNotEqual(UsageZone.green, UsageZone.critical)
-        XCTAssertNotEqual(UsageZone.approach, UsageZone.warning)
-    }
-
-    func testUsageZone_asLegacyLevel_GreenIsSafe() {
-        XCTAssertEqual(UsageZone.green.asLegacyLevel(), .safe)
-    }
-
-    func testUsageZone_asLegacyLevel_ApproachIsSafe() {
-        XCTAssertEqual(UsageZone.approach.asLegacyLevel(), .safe)
-    }
-
-    func testUsageZone_asLegacyLevel_WarningIsModerate() {
-        XCTAssertEqual(UsageZone.warning.asLegacyLevel(), .moderate)
-    }
-
-    func testUsageZone_asLegacyLevel_CriticalIsCritical() {
-        XCTAssertEqual(UsageZone.critical.asLegacyLevel(), .critical)
+        XCTAssertNotEqual(UsageZone.green, UsageZone.red)
+        XCTAssertNotEqual(UsageZone.yellow, UsageZone.orange)
     }
 
     // MARK: - UsageStatus
 
     func testUsageStatus_Equatable() {
-        let a = UsageStatus(zone: .green, severity: 0.2, actionText: "On track ✅")
-        let b = UsageStatus(zone: .green, severity: 0.2, actionText: "On track ✅")
+        let a = UsageStatus(zone: .green, actionText: "On track ✅")
+        let b = UsageStatus(zone: .green, actionText: "On track ✅")
         XCTAssertEqual(a, b)
     }
 
-    func testUsageStatus_NotEqual_DifferentSeverity() {
-        let a = UsageStatus(zone: .green, severity: 0.2, actionText: "On track ✅")
-        let b = UsageStatus(zone: .green, severity: 0.3, actionText: "On track ✅")
+    func testUsageStatus_NotEqual_DifferentZone() {
+        let a = UsageStatus(zone: .green, actionText: "On track ✅")
+        let b = UsageStatus(zone: .yellow, actionText: "Maximizing 🔥")
         XCTAssertNotEqual(a, b)
-    }
-
-    func testUsageStatus_SeverityInRange() {
-        let status = UsageStatus(zone: .approach, severity: 0.45, actionText: "Maximizing usage 🔥")
-        XCTAssertGreaterThanOrEqual(status.severity, 0.0)
-        XCTAssertLessThanOrEqual(status.severity, 1.0)
     }
 
     // MARK: - PacingContext
 
-    func testPacingContext_None_AllNil() {
-        let ctx = PacingContext.none
-        XCTAssertNil(ctx.elapsedFraction)
-        XCTAssertNil(ctx.weeklyProjected)
-        XCTAssertNil(ctx.avgSessionUtilization)
-        XCTAssertEqual(ctx.sessionCount, 0)
+    func testPacingContext_None_ElapsedNil() {
+        XCTAssertNil(PacingContext.none.elapsedFraction)
     }
 
     func testPacingContext_Equatable() {
-        let a = PacingContext(elapsedFraction: 0.5, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
-        let b = PacingContext(elapsedFraction: 0.5, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
+        let a = PacingContext(elapsedFraction: 0.5)
+        let b = PacingContext(elapsedFraction: 0.5)
         XCTAssertEqual(a, b)
     }
 
-    func testPacingContext_SessionCount() {
-        let ctx = PacingContext(elapsedFraction: 0.3, weeklyProjected: 0.85, avgSessionUtilization: 0.75, sessionCount: 10)
-        XCTAssertEqual(ctx.sessionCount, 10)
-    }
-
     func testPacingContext_NotEqual_DifferentElapsed() {
-        let a = PacingContext(elapsedFraction: 0.3, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
-        let b = PacingContext(elapsedFraction: 0.6, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
+        let a = PacingContext(elapsedFraction: 0.3)
+        let b = PacingContext(elapsedFraction: 0.6)
         XCTAssertNotEqual(a, b)
     }
 
-    // MARK: - SessionRecord / WeeklyRecord Codable
+    // MARK: - SessionRecord / WeeklyRecord Codable (dormant history types)
 
     func testSessionRecord_Codable() throws {
         let record = SessionRecord(endedAt: Date(timeIntervalSince1970: 1_000_000), finalPercentage: 85.0, sessionLimit: 100_000)

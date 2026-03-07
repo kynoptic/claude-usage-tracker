@@ -51,9 +51,6 @@ class MenuBarManager: NSObject, ObservableObject {
     // Track when refresh was last triggered (for distinguishing user vs auto refresh)
     private var lastRefreshTriggerTime: Date = .distantPast
 
-    // Previous usage snapshot for session/weekly boundary detection
-    private var previousUsage: ClaudeUsage?
-
     // Popover for beautiful SwiftUI interface
     private var popover: NSPopover?
 
@@ -790,16 +787,7 @@ class MenuBarManager: NSObject, ObservableObject {
                             activeProfileUsage = newUsage
                             self.lastSuccessfulFetch = Date()
 
-                            // Detect session/weekly boundaries for the active profile only
-                            if let sessionRecord = BoundaryDetector.detectSession(previous: self.previousUsage, current: newUsage) {
-                                SessionHistoryStore.shared.record(session: sessionRecord)
-                            }
-                            if let weeklyRecord = BoundaryDetector.detectWeekly(previous: self.previousUsage, current: newUsage) {
-                                SessionHistoryStore.shared.record(weekly: weeklyRecord)
-                            }
-                            self.previousUsage = newUsage
-
-                            // Build adaptive pacing context (multi-profile: active profile only)
+                            // Build pacing context for active profile
                             self.pacingContext = self.buildPacingContext(for: newUsage)
                         }
                     }
@@ -841,34 +829,14 @@ class MenuBarManager: NSObject, ObservableObject {
         }
     }
 
-    /// Builds the adaptive pacing context for the given usage snapshot.
-    ///
-    /// Computes elapsedFraction from sessionResetTime, pulls weeklyProjected
-    /// and filtered session history from SessionHistoryStore.
+    /// Builds the pacing context for the given usage snapshot.
     private func buildPacingContext(for usage: ClaudeUsage) -> PacingContext {
-        let elapsedFraction = UsageStatusCalculator.elapsedFraction(
+        let elapsed = UsageStatusCalculator.elapsedFraction(
             resetTime: usage.sessionResetTime,
             duration: Constants.sessionWindow,
             showRemaining: false
         )
-        let weeklyProjected = SessionHistoryStore.shared.weeklyProjected(currentLimit: usage.weeklyLimit)
-        let allSessions = SessionHistoryStore.shared.sessions()
-        let filtered: [SessionRecord]
-        if usage.sessionLimit > 0 {
-            filtered = allSessions.filter { record in
-                abs(Double(record.sessionLimit) - Double(usage.sessionLimit)) / Double(usage.sessionLimit) < 0.10
-            }
-        } else {
-            filtered = []
-        }
-        let avg: Double? = filtered.isEmpty ? nil :
-            filtered.map { $0.finalPercentage / 100.0 }.reduce(0, +) / Double(filtered.count)
-        return PacingContext(
-            elapsedFraction: elapsedFraction,
-            weeklyProjected: weeklyProjected,
-            avgSessionUtilization: avg,
-            sessionCount: filtered.count
-        )
+        return PacingContext(elapsedFraction: elapsed)
     }
 
     /// Fetches usage data for a specific profile using its credentials
@@ -982,16 +950,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     // Single-profile path — mutually exclusive with multi-profile recordAll
                     UsageHistoryStore.shared.recordAll(from: newUsage)
 
-                    // Detect session/weekly boundaries and persist to history
-                    if let sessionRecord = BoundaryDetector.detectSession(previous: self.previousUsage, current: newUsage) {
-                        SessionHistoryStore.shared.record(session: sessionRecord)
-                    }
-                    if let weeklyRecord = BoundaryDetector.detectWeekly(previous: self.previousUsage, current: newUsage) {
-                        SessionHistoryStore.shared.record(weekly: weeklyRecord)
-                    }
-                    self.previousUsage = newUsage
-
-                    // Build adaptive pacing context (single-profile path)
+                    // Build pacing context (single-profile path)
                     self.pacingContext = self.buildPacingContext(for: newUsage)
 
                     // Update all menu bar icons
