@@ -25,6 +25,10 @@ class MenuBarManager: NSObject, ObservableObject {
     /// When the next automatic refresh is scheduled to fire.
     @Published private(set) var nextRefreshAt: Date?
 
+    /// Adaptive pacing context for the active profile's current session.
+    /// Updated after each successful fetch. Consumers pass this into UsageStatusCalculator.
+    @Published private(set) var pacingContext: PacingContext = .none
+
     /// Recomputes `isStale` from scheduler state and last-fetch timestamp.
     /// Call on MainActor after any scheduler state change.
     private func updateStaleness() {
@@ -793,6 +797,9 @@ class MenuBarManager: NSObject, ObservableObject {
                                 SessionHistoryStore.shared.record(weekly: weeklyRecord)
                             }
                             self.previousUsage = newUsage
+
+                            // Build adaptive pacing context (multi-profile: active profile only)
+                            self.pacingContext = self.buildPacingContext(for: newUsage)
                         }
                     }
                 } catch {
@@ -831,6 +838,36 @@ class MenuBarManager: NSObject, ObservableObject {
                 self.startAutoRefresh()
             }
         }
+    }
+
+    /// Builds the adaptive pacing context for the given usage snapshot.
+    ///
+    /// Computes elapsedFraction from sessionResetTime, pulls weeklyProjected
+    /// and filtered session history from SessionHistoryStore.
+    private func buildPacingContext(for usage: ClaudeUsage) -> PacingContext {
+        let elapsedFraction = UsageStatusCalculator.elapsedFraction(
+            resetTime: usage.sessionResetTime,
+            duration: Constants.sessionWindow,
+            showRemaining: false
+        )
+        let weeklyProjected = SessionHistoryStore.shared.weeklyProjected(currentLimit: usage.weeklyLimit)
+        let allSessions = SessionHistoryStore.shared.sessions()
+        let filtered: [SessionRecord]
+        if usage.sessionLimit > 0 {
+            filtered = allSessions.filter { record in
+                abs(Double(record.sessionLimit) - Double(usage.sessionLimit)) / Double(usage.sessionLimit) < 0.10
+            }
+        } else {
+            filtered = []
+        }
+        let avg: Double? = filtered.isEmpty ? nil :
+            filtered.map { $0.finalPercentage / 100.0 }.reduce(0, +) / Double(filtered.count)
+        return PacingContext(
+            elapsedFraction: elapsedFraction,
+            weeklyProjected: weeklyProjected,
+            avgSessionUtilization: avg,
+            sessionCount: filtered.count
+        )
     }
 
     /// Fetches usage data for a specific profile using its credentials
@@ -952,6 +989,9 @@ class MenuBarManager: NSObject, ObservableObject {
                         SessionHistoryStore.shared.record(weekly: weeklyRecord)
                     }
                     self.previousUsage = newUsage
+
+                    // Build adaptive pacing context (single-profile path)
+                    self.pacingContext = self.buildPacingContext(for: newUsage)
 
                     // Update all menu bar icons
                     self.updateAllStatusBarIcons()
