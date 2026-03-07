@@ -18,7 +18,8 @@ struct BurnUpChartView: View {
     /// real data point produces a visible area fill.
     private var displaySnapshots: [UsageSnapshot] {
         let origin = UsageSnapshot(date: windowStart, percentage: 0.0)
-        var points = [origin] + snapshots
+        let windowSnapshots = snapshots.filter { $0.date >= windowStart }
+        var points = [origin] + windowSnapshots
 
         // Downsample if needed (skip origin when counting)
         if points.count > Self.maxPoints {
