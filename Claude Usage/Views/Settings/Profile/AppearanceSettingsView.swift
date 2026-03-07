@@ -11,6 +11,7 @@ import SwiftUI
 struct AppearanceSettingsView: View {
     @ObservedObject private var profileManager = ProfileManager.shared
     @State private var configuration: MenuBarIconConfiguration = .default
+    @State private var showGreyZone: Bool = DataStore.shared.loadShowGreyZone()
     @State private var saveDebounceTimer: Timer?
 
     private var isMultiProfileMode: Bool {
@@ -86,6 +87,20 @@ struct AppearanceSettingsView: View {
                                 set: { newValue in
                                     configuration.showTimeMarker = newValue
                                     saveConfiguration()
+                                }
+                            )
+                        )
+
+                        SettingToggle(
+                            title: "appearance.show_grey_title".localized,
+                            description: "appearance.show_grey_description".localized,
+                            isOn: Binding(
+                                get: { showGreyZone },
+                                set: { newValue in
+                                    showGreyZone = newValue
+                                    DataStore.shared.saveShowGreyZone(newValue)
+                                    try? StatuslineService.shared.updateGreyZoneIfInstalled(newValue)
+                                    NotificationCenter.default.post(name: .menuBarIconConfigChanged, object: nil)
                                 }
                             )
                         )

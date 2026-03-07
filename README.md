@@ -4,7 +4,7 @@ Native macOS menu bar app that monitors your Claude AI usage limits in real time
 
 - **Multi-profile support** – manage multiple Claude accounts with isolated credentials
 - **Multi-display mode** – show all profiles simultaneously in the menu bar
-- **Pace-aware status colours** – green/orange/red based on projected end-of-session usage, not raw percentage
+- **Pace-aware status colours** – five discrete zones (grey/green/yellow/orange/red) driven by projected end-of-session utilisation
 - **Time-elapsed marker** – shows current position within the session window on the progress bar
 - **Terminal statusline** – live usage in your Claude Code prompt
 - **Privacy-first** – local storage, no telemetry, no cloud sync

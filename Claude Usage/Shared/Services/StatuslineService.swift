@@ -122,6 +122,7 @@ if [ -f "$config_file" ]; then
   show_bar=$SHOW_PROGRESS_BAR
   show_reset=$SHOW_RESET_TIME
   show_time_marker=$SHOW_TIME_MARKER
+  show_grey_zone=${SHOW_GREY_ZONE:-0}
 else
   show_dir=1
   show_branch=1
@@ -129,6 +130,7 @@ else
   show_bar=1
   show_reset=1
   show_time_marker=1
+  show_grey_zone=0
 fi
 
 input=$(cat)
@@ -140,11 +142,11 @@ GRAY=$'\\033[0;90m'
 YELLOW=$'\\033[0;33m'
 RESET=$'\\033[0m'
 
-# 10-level gradient: dark green → bright red (mirrors new HSB severity bands)
-# Levels 1–3: green (severity 0.0–0.4, usage < 90%)
-# Levels 4–5: yellow-green / amber (approach zone 90–100%)
-# Levels 6–9: orange to deep-red (warning zone 100–150%)
-# Level  10:  bright red (critical, >150%)
+# 10-level ANSI palette — five zones use levels 3 / 5 / 7 / 10.
+# grey/green (< 90%)  → LEVEL_3
+# yellow     (90–110%) → LEVEL_5
+# orange     (110–150%)→ LEVEL_7
+# red        (> 150%) → LEVEL_10
 LEVEL_1=$'\\033[38;5;22m'   # dark green
 LEVEL_2=$'\\033[38;5;28m'   # soft green
 LEVEL_3=$'\\033[38;5;34m'   # medium green
@@ -200,54 +202,26 @@ if [ "$show_usage" = "1" ]; then
         fi
       fi
 
-      # Select color level using pacing when available, absolute thresholds otherwise.
-      # Logic mirrors UsageStatusCalculator.colorLevel (Swift) — keep in sync.
-      # 2>/dev/null guards against the -1 sentinel: an uninitialised variable or
-      # non-numeric value would cause [ -ge ] to print an error and return false,
-      # which is exactly the fallback behaviour we want.
-      if [ "$elapsed_frac_pct" -ge 15 ] 2>/dev/null && [ "$utilization" -gt 0 ]; then
+      # Select color level. Mirrors UsageStatusCalculator.colorLevel (Swift) — keep in sync.
+      # Five zones: grey/green → LEVEL_3, yellow → LEVEL_5, orange → LEVEL_7, red → LEVEL_10.
+      # Projection fires whenever elapsed > 0; no minimum-elapsed guard.
+      # 2>/dev/null guards against the -1 sentinel so non-numeric values fall through to else.
+      if [ "$elapsed_frac_pct" -gt 0 ] 2>/dev/null; then
         # Pacing mode: projected = utilization * 100 / elapsed_frac_pct (integer %)
-        # Zones mirror UsageStatusCalculator: green <90%, approach 90–100%,
-        # warning 100–120% (redThr at default avgRate), critical >120%.
         projected=$(( (utilization * 100) / elapsed_frac_pct ))
-        if [ "$projected" -lt 90 ]; then
-          if [ "$projected" -lt 30 ]; then usage_color="$LEVEL_1"
-          elif [ "$projected" -lt 60 ]; then usage_color="$LEVEL_2"
-          else usage_color="$LEVEL_3"
-          fi
-        elif [ "$projected" -lt 100 ]; then
-          if [ "$projected" -lt 95 ]; then usage_color="$LEVEL_4"
-          else usage_color="$LEVEL_5"
-          fi
-        elif [ "$projected" -lt 120 ]; then
-          if [ "$projected" -lt 105 ]; then usage_color="$LEVEL_6"
-          elif [ "$projected" -lt 110 ]; then usage_color="$LEVEL_7"
-          elif [ "$projected" -lt 115 ]; then usage_color="$LEVEL_8"
-          else usage_color="$LEVEL_9"
-          fi
-        else
-          usage_color="$LEVEL_10"
+        if   [ "$show_grey_zone" = "1" ] && [ "$projected" -lt 50  ]; then usage_color="$GRAY"     # grey (<50%)
+        elif [ "$projected" -lt 90  ]; then usage_color="$LEVEL_3"   # green (50–90%)
+        elif [ "$projected" -lt 110 ]; then usage_color="$LEVEL_5"   # yellow (90–110%)
+        elif [ "$projected" -le 150 ]; then usage_color="$LEVEL_7"   # orange (110–150%)
+        else                                 usage_color="$LEVEL_10"  # red (>150%)
         fi
       else
-        # Fallback: absolute thresholds matching UsageStatusCalculator (used-based)
-        # green <90%, approach 90–100%, warning 100–150%, critical >150%.
-        if [ "$utilization" -lt 90 ]; then
-          if [ "$utilization" -lt 30 ]; then usage_color="$LEVEL_1"
-          elif [ "$utilization" -lt 60 ]; then usage_color="$LEVEL_2"
-          else usage_color="$LEVEL_3"
-          fi
-        elif [ "$utilization" -lt 100 ]; then
-          if [ "$utilization" -lt 95 ]; then usage_color="$LEVEL_4"
-          else usage_color="$LEVEL_5"
-          fi
-        elif [ "$utilization" -lt 150 ]; then
-          if [ "$utilization" -lt 113 ]; then usage_color="$LEVEL_6"
-          elif [ "$utilization" -lt 125 ]; then usage_color="$LEVEL_7"
-          elif [ "$utilization" -lt 138 ]; then usage_color="$LEVEL_8"
-          else usage_color="$LEVEL_9"
-          fi
-        else
-          usage_color="$LEVEL_10"
+        # Fallback: raw utilization when timing data unavailable.
+        if   [ "$show_grey_zone" = "1" ] && [ "$utilization" -lt 50  ]; then usage_color="$GRAY"     # grey (<50%)
+        elif [ "$utilization" -lt 90  ]; then usage_color="$LEVEL_3"   # green (50–90%)
+        elif [ "$utilization" -lt 110 ]; then usage_color="$LEVEL_5"   # yellow (90–110%)
+        elif [ "$utilization" -le 150 ]; then usage_color="$LEVEL_7"   # orange (110–150%)
+        else                                   usage_color="$LEVEL_10"  # red (>150%)
         fi
       fi
 
@@ -418,7 +392,8 @@ printf "%s\\n" "$output"
         showUsage: Bool,
         showProgressBar: Bool,
         showResetTime: Bool,
-        showTimeMarker: Bool = true
+        showTimeMarker: Bool = true,
+        showGreyZone: Bool = false
     ) throws {
         let configPath = Constants.ClaudePaths.claudeDirectory
             .appendingPathComponent("statusline-config.txt")
@@ -430,6 +405,7 @@ SHOW_USAGE=\(showUsage ? "1" : "0")
 SHOW_PROGRESS_BAR=\(showProgressBar ? "1" : "0")
 SHOW_RESET_TIME=\(showResetTime ? "1" : "0")
 SHOW_TIME_MARKER=\(showTimeMarker ? "1" : "0")
+SHOW_GREY_ZONE=\(showGreyZone ? "1" : "0")
 """
 
         try config.write(to: configPath, atomically: true, encoding: .utf8)
@@ -500,6 +476,22 @@ SHOW_TIME_MARKER=\(showTimeMarker ? "1" : "0")
     func updateScriptsIfInstalled() throws {
         guard isInstalled else { return }
         try installScripts(injectSessionKey: true)
+    }
+
+    /// Updates the grey zone setting in the statusline config file if statusline is installed.
+    /// Reads all other statusline settings from SharedDataStore to preserve them.
+    func updateGreyZoneIfInstalled(_ show: Bool) throws {
+        guard isInstalled else { return }
+        let store = SharedDataStore.shared
+        try updateConfiguration(
+            showDirectory: store.loadStatuslineShowDirectory(),
+            showBranch: store.loadStatuslineShowBranch(),
+            showUsage: store.loadStatuslineShowUsage(),
+            showProgressBar: store.loadStatuslineShowProgressBar(),
+            showResetTime: store.loadStatuslineShowResetTime(),
+            showTimeMarker: store.loadStatuslineShowTimeMarker(),
+            showGreyZone: show
+        )
     }
 
     /// Checks if active profile has a valid session key

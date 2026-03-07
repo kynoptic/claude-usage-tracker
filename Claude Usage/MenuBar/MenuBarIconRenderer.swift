@@ -132,11 +132,11 @@ final class MenuBarIconRenderer {
                 duration: Constants.sessionWindow,
                 showRemaining: false
             )
-            let ctx = PacingContext(elapsedFraction: sessionElapsed, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
             let status = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
-                context: ctx
+                elapsedFraction: sessionElapsed,
+                showGrey: DataStore.shared.loadShowGreyZone()
             )
 
             return MetricData(
@@ -157,11 +157,11 @@ final class MenuBarIconRenderer {
                 duration: Constants.weeklyWindow,
                 showRemaining: false
             )
-            let ctx = PacingContext(elapsedFraction: weekElapsed, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
             let status = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
-                context: ctx
+                elapsedFraction: weekElapsed,
+                showGrey: DataStore.shared.loadShowGreyZone()
             )
 
             let displayText: String
@@ -184,7 +184,7 @@ final class MenuBarIconRenderer {
                 return MetricData(
                     percentage: showRemaining ? 100 : 0,  // 100% remaining or 0% used when no data
                     displayText: "N/A",
-                    status: UsageStatus(zone: .green, severity: 0.0, actionText: ""),
+                    status: UsageStatus(zone: .green, actionText: ""),
                     sessionResetTime: nil
                 )
             }
@@ -197,7 +197,7 @@ final class MenuBarIconRenderer {
             let status = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
-                context: .none
+                elapsedFraction: nil
             )
 
             let displayText: String

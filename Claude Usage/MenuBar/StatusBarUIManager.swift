@@ -238,20 +238,18 @@ final class StatusBarUIManager {
                 duration: Constants.weeklyWindow,
                 showRemaining: false
             )
-            // Note: statusline always uses a no-history context (weeklyProjected /
-            // avgSessionUtilization = nil). The menu bar receives a richer PacingContext
-            // from MenuBarManager once history accumulates, so the two can diverge for
-            // the same usage level. This is a known gap — the statusline will be wired
-            // to SessionHistoryStore in a follow-up.
+            let showGrey = DataStore.shared.loadShowGreyZone()
             let sessionStatus = UsageStatusCalculator.calculateStatus(
                 usedPercentage: sessionUsed,
                 showRemaining: showRemaining,
-                context: PacingContext(elapsedFraction: sessionElapsed, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
+                elapsedFraction: sessionElapsed,
+                showGrey: showGrey
             )
             let weekStatus = UsageStatusCalculator.calculateStatus(
                 usedPercentage: weekUsed,
                 showRemaining: showRemaining,
-                context: PacingContext(elapsedFraction: weekElapsed, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
+                elapsedFraction: weekElapsed,
+                showGrey: showGrey
             )
 
             // Use multi-profile config's useSystemColor as monochrome mode

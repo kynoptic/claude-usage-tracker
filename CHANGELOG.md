@@ -9,16 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Smart adaptive pacing system: continuous severity (0–1) drives smooth HSB colour interpolation (green → yellow → red) instead of three hard-coded buckets
-- `UsageStatus` (zone + severity + actionText) and `UsageZone` (green/approach/warning/critical) as the new core status model
-- `PacingContext` carries historical and timing data for adaptive threshold computation
-- `SessionHistoryStore` persists up to 20 session records and 8 weekly records for personalised pacing
-- `BoundaryDetector` detects session and weekly resets from successive API responses and records them automatically
-- Adaptive approach threshold (90–94%) and red threshold personalised from historical average session utilisation
-- Weekly projected utilisation modulates thresholds: light weekly use → earlier green, heavy use → tighter targets
-- Action keywords in popover: "Underutilized 💤", "On track ✅", "Maximizing usage 🔥", "Overshooting ⚠️", "Way over 🛑"
+- Five-zone pacing system: icon colour driven by projected end-of-session utilisation across grey, green, yellow, orange, and red zones using Apple system colours
+- `UsageStatus` (zone + actionText) and `UsageZone` as the core status model
+- Grey zone opt-in via "Show grey for underutilized sessions" toggle in Appearance settings (default off)
+- Action keywords in popover: "Underutilized 💤", "On track ✅", "Maximizing 🔥", "Overshooting ⚠️", "Way over 🛑"
 - Time-elapsed marker on session and weekly progress bars in popover, menu bar icons, and CLI statusline
 - Settings toggles for marker visibility in Appearance and Claude Code sections
+- Grey zone toggle syncs to statusline via `SHOW_GREY_ZONE` in `statusline-config.txt`
 - `fetchUsageData(oauthAccessToken:)` method for direct CLI OAuth usage fetch
 - `Constants.APIEndpoints.oauthUsage` for the OAuth usage endpoint
 - Localization strings for time marker toggle in all 8 languages
@@ -34,10 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Zone boundaries shifted: green now extends to 90% (was 50%); critical requires projected overage beyond historical average (not a fixed 80%)
-- `UsageStatusCalculator.calculateStatus()` primary API now returns `UsageStatus`; old `UsageStatusLevel` API deprecated with forwarding stubs
-- Statusline ANSI LEVEL_4–10 colours updated to match new HSB gradient; bash pacing and fallback thresholds updated to new zone boundaries
-- Pacing activates after 15% of session elapsed; falls back to absolute thresholds when timing unavailable
+- Icon colour now uses five flat colour zones (grey/green/yellow/orange/red) based on projected utilisation instead of three buckets
+- `UsageStatusCalculator.calculateStatus()` primary API now returns `UsageStatus`; removed deprecated `UsageStatusLevel` enum and forwarding stubs
+- Statusline colour levels mapped to five zones: grey/green → 3, yellow → 5, orange → 7, red → 10
+- Projection falls back to raw `usedPercentage` when elapsed fraction is nil, zero, or ≥ 1
 
 ## [2.3.0] - 2026-01-23
 

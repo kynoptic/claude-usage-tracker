@@ -1,6 +1,6 @@
 import Foundation
 
-/// Persists session and weekly boundary records for adaptive pacing calculations.
+/// Persists session and weekly boundary records (dormant -- reserved for future history display).
 /// Architecture mirrors UsageHistoryStore: serial DispatchQueue, file-based JSON,
 /// testable via `init(storageDirectory:)`.
 final class SessionHistoryStore {

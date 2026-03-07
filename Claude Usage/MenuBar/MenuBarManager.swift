@@ -3,7 +3,6 @@ import SwiftUI
 import Combine
 
 class MenuBarManager: NSObject, ObservableObject {
-    private var statusItem: NSStatusItem?  // Legacy - kept for backwards compatibility
     private var statusBarUIManager: StatusBarUIManager?
     private var refreshTimer: Timer?
     private var pollingScheduler = PollingScheduler()
@@ -51,9 +50,6 @@ class MenuBarManager: NSObject, ObservableObject {
     // Track when refresh was last triggered (for distinguishing user vs auto refresh)
     private var lastRefreshTriggerTime: Date = .distantPast
 
-    // Previous usage snapshot for session/weekly boundary detection
-    private var previousUsage: ClaudeUsage?
-
     // Popover for beautiful SwiftUI interface
     private var popover: NSPopover?
 
@@ -88,9 +84,6 @@ class MenuBarManager: NSObject, ObservableObject {
     // Observer for refresh interval changes
     private var refreshIntervalObserver: NSKeyValueObservation?
 
-    // Observer for appearance changes
-    private var appearanceObserver: NSKeyValueObservation?
-
     // Observer for icon style changes
     private var iconStyleObserver: NSObjectProtocol?
 
@@ -104,8 +97,6 @@ class MenuBarManager: NSObject, ObservableObject {
     private var displayModeObserver: NSObjectProtocol?
 
     // MARK: - Image Caching (CPU Optimization)
-    private var cachedImage: NSImage?
-    private var cachedImageKey: String = ""
     private var updateDebounceTimer: Timer?
     private var cachedIsDarkMode: Bool = false
 
@@ -207,9 +198,6 @@ class MenuBarManager: NSObject, ObservableObject {
         // Start auto-start session service (5-minute cycle for all profiles)
         autoStartService.start()
 
-        // Observe appearance changes
-        observeAppearanceChanges()
-
         // Observe icon configuration changes
         observeIconConfigChanges()
 
@@ -229,8 +217,6 @@ class MenuBarManager: NSObject, ObservableObject {
         cancellables.removeAll()  // Clean up Combine subscriptions
         refreshIntervalObserver?.invalidate()
         refreshIntervalObserver = nil
-        appearanceObserver?.invalidate()
-        appearanceObserver = nil
         if let iconStyleObserver = iconStyleObserver {
             NotificationCenter.default.removeObserver(iconStyleObserver)
             self.iconStyleObserver = nil
@@ -253,7 +239,6 @@ class MenuBarManager: NSObject, ObservableObject {
         }
         detachedWindow?.close()
         detachedWindow = nil
-        statusItem = nil
         statusBarUIManager?.cleanup()
         statusBarUIManager = nil
     }
@@ -561,13 +546,6 @@ class MenuBarManager: NSObject, ObservableObject {
         )
     }
 
-    // Legacy method kept for backwards compatibility (now uses new system)
-    private func updateStatusButton(_ button: NSStatusBarButton, usage: ClaudeUsage) {
-        // This method is deprecated but kept for any remaining references
-        // The new system handles updates through updateAllStatusBarIcons()
-        updateAllStatusBarIcons()
-    }
-
     // MARK: - Icon Style: Battery (Classic)
 
     private func startAutoRefresh() {
@@ -599,25 +577,6 @@ class MenuBarManager: NSObject, ObservableObject {
         }
     }
 
-    private func observeAppearanceChanges() {
-        // Observe appearance changes on NSApp (fires less frequently than button)
-        // This optimization reduces redundant redraws
-        appearanceObserver = NSApp.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, change in
-            guard let self = self,
-                  let button = self.statusItem?.button else { return }
-
-            // Cache the dark mode state to avoid querying it during layout
-            let isDark = change.newValue?.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-
-            DispatchQueue.main.async {
-                self.cachedIsDarkMode = isDark
-                // Clear cache to force redraw with new appearance
-                self.cachedImageKey = ""
-                self.updateStatusButton(button, usage: self.usage)
-            }
-        }
-    }
-
     private func observeIconStyleChanges() {
         // Observe icon style changes from settings (now consolidated with menuBarIconConfigChanged)
         iconStyleObserver = NotificationCenter.default.addObserver(
@@ -626,8 +585,6 @@ class MenuBarManager: NSObject, ObservableObject {
             queue: .main
         ) { [weak self] _ in
             guard let self = self else { return }
-            // Clear cache to force redraw with new style
-            self.cachedImageKey = ""
             self.updateAllStatusBarIcons()
         }
     }
@@ -790,16 +747,7 @@ class MenuBarManager: NSObject, ObservableObject {
                             activeProfileUsage = newUsage
                             self.lastSuccessfulFetch = Date()
 
-                            // Detect session/weekly boundaries for the active profile only
-                            if let sessionRecord = BoundaryDetector.detectSession(previous: self.previousUsage, current: newUsage) {
-                                SessionHistoryStore.shared.record(session: sessionRecord)
-                            }
-                            if let weeklyRecord = BoundaryDetector.detectWeekly(previous: self.previousUsage, current: newUsage) {
-                                SessionHistoryStore.shared.record(weekly: weeklyRecord)
-                            }
-                            self.previousUsage = newUsage
-
-                            // Build adaptive pacing context (multi-profile: active profile only)
+                            // Build pacing context for active profile
                             self.pacingContext = self.buildPacingContext(for: newUsage)
                         }
                     }
@@ -841,34 +789,14 @@ class MenuBarManager: NSObject, ObservableObject {
         }
     }
 
-    /// Builds the adaptive pacing context for the given usage snapshot.
-    ///
-    /// Computes elapsedFraction from sessionResetTime, pulls weeklyProjected
-    /// and filtered session history from SessionHistoryStore.
+    /// Builds the pacing context for the given usage snapshot.
     private func buildPacingContext(for usage: ClaudeUsage) -> PacingContext {
-        let elapsedFraction = UsageStatusCalculator.elapsedFraction(
+        let elapsed = UsageStatusCalculator.elapsedFraction(
             resetTime: usage.sessionResetTime,
             duration: Constants.sessionWindow,
             showRemaining: false
         )
-        let weeklyProjected = SessionHistoryStore.shared.weeklyProjected(currentLimit: usage.weeklyLimit)
-        let allSessions = SessionHistoryStore.shared.sessions()
-        let filtered: [SessionRecord]
-        if usage.sessionLimit > 0 {
-            filtered = allSessions.filter { record in
-                abs(Double(record.sessionLimit) - Double(usage.sessionLimit)) / Double(usage.sessionLimit) < 0.10
-            }
-        } else {
-            filtered = []
-        }
-        let avg: Double? = filtered.isEmpty ? nil :
-            filtered.map { $0.finalPercentage / 100.0 }.reduce(0, +) / Double(filtered.count)
-        return PacingContext(
-            elapsedFraction: elapsedFraction,
-            weeklyProjected: weeklyProjected,
-            avgSessionUtilization: avg,
-            sessionCount: filtered.count
-        )
+        return PacingContext(elapsedFraction: elapsed)
     }
 
     /// Fetches usage data for a specific profile using its credentials
@@ -982,16 +910,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     // Single-profile path — mutually exclusive with multi-profile recordAll
                     UsageHistoryStore.shared.recordAll(from: newUsage)
 
-                    // Detect session/weekly boundaries and persist to history
-                    if let sessionRecord = BoundaryDetector.detectSession(previous: self.previousUsage, current: newUsage) {
-                        SessionHistoryStore.shared.record(session: sessionRecord)
-                    }
-                    if let weeklyRecord = BoundaryDetector.detectWeekly(previous: self.previousUsage, current: newUsage) {
-                        SessionHistoryStore.shared.record(weekly: weeklyRecord)
-                    }
-                    self.previousUsage = newUsage
-
-                    // Build adaptive pacing context (single-profile path)
+                    // Build pacing context (single-profile path)
                     self.pacingContext = self.buildPacingContext(for: newUsage)
 
                     // Update all menu bar icons

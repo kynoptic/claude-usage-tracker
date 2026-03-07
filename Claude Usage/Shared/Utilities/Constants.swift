@@ -54,6 +54,9 @@ enum Constants {
         static let apiIconOrder = "apiIconOrder"
         static let apiDisplayMode = "apiDisplayMode"
 
+        // Pacing
+        static let showGreyZone = "showGreyZone"
+
         // Localization
         static let appLanguage = "appLanguage"
     }

@@ -24,23 +24,28 @@ If no session key is available, a placeholder script is installed that prints `E
 > [!IMPORTANT]
 > The statusline only supports the claude.ai session-key auth method. CLI OAuth does not work here because the statusline script runs as a standalone process that cannot access the app's OAuth token. A manually configured session key is always required.
 
-## Color logic
+## Colour logic
 
-Color selection mirrors `UsageStatusCalculator.colorLevel()` exactly. The bash script replicates the same pacing algorithm in shell arithmetic:
+Colour selection mirrors `UsageStatusCalculator.colorLevel()` exactly. The bash script replicates the same zone logic in shell arithmetic:
 
 1. Compute elapsed session fraction from the `resets_at` timestamp
-2. If elapsed fraction ≥ 15%: use pacing mode — project end-of-session usage and map to a 1–10 color level
-3. Otherwise: fall back to absolute thresholds
+2. Project end-of-session usage: `projected = usedPercentage / elapsedFraction`
+3. Map the projection to one of five colour zones
 
-The 10 levels map to three severity bands:
+The zones map to specific colour levels:
 
-| Levels | Colour | Projected usage |
-|--------|--------|-----------------|
-| 1–3 | Green | < 75% |
-| 4–7 | Orange | 75–95% |
-| 8–10 | Red | ≥ 95% |
+| Zone | Projected | Colour level |
+|------|-----------|-------------|
+| Grey / Green | < 90% | 3 |
+| Yellow | 90–110% | 5 |
+| Orange | 110–150% | 7 |
+| Red | > 150% | 10 |
 
-The comment in `statusline-command.sh` explicitly flags this contract: "Logic mirrors UsageStatusCalculator.colorLevel (Swift) — keep in sync." Any change to the Swift pacing thresholds must be mirrored in the bash script. See [pacing-aware colour logic](pacing-colours.md) for the full threshold specification.
+When `elapsedFraction` is nil, zero, or ≥ 1, the raw `usedPercentage` is used instead.
+
+The grey zone setting syncs to the statusline automatically. When the **"Show grey for underutilized sessions"** toggle changes, `updateGreyZoneIfInstalled()` writes `SHOW_GREY_ZONE=1` (or `0`) to `statusline-config.txt`. The bash script reads this value at runtime and applies grey colour (LEVEL_3 with grey ANSI) for projected utilisation below 50% when enabled; otherwise it maps the sub-50% range to green.
+
+The comment in `statusline-command.sh` flags this contract: "Logic mirrors UsageStatusCalculator.colorLevel (Swift) — keep in sync." Any change to the Swift zone thresholds must be mirrored in the bash script. See [pacing-aware colour logic](pacing-colours.md) for the full zone specification.
 
 ## Time marker
 
@@ -59,6 +64,7 @@ SHOW_USAGE=1
 SHOW_PROGRESS_BAR=1
 SHOW_RESET_TIME=1
 SHOW_TIME_MARKER=1
+SHOW_GREY_ZONE=0
 ```
 
 `StatuslineService.updateConfiguration()` rewrites this file. The bash script sources it at the top of every execution, so changes take effect on the next prompt render without a restart.
