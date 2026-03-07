@@ -241,12 +241,12 @@ final class StatusBarUIManager {
             let sessionStatus = UsageStatusCalculator.calculateStatus(
                 usedPercentage: sessionUsed,
                 showRemaining: showRemaining,
-                elapsedFraction: sessionElapsed
+                context: PacingContext(elapsedFraction: sessionElapsed, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
             )
             let weekStatus = UsageStatusCalculator.calculateStatus(
                 usedPercentage: weekUsed,
                 showRemaining: showRemaining,
-                elapsedFraction: weekElapsed
+                context: PacingContext(elapsedFraction: weekElapsed, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
             )
 
             // Use multi-profile config's useSystemColor as monochrome mode

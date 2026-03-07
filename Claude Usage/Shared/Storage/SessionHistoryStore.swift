@@ -5,7 +5,7 @@ import Foundation
 /// testable via `init(storageDirectory:)`.
 final class SessionHistoryStore {
 
-    static let shared = SessionHistoryStore()
+    nonisolated(unsafe) static let shared = SessionHistoryStore()
 
     // MARK: - Properties
 
@@ -32,6 +32,8 @@ final class SessionHistoryStore {
     init(storageDirectory: URL) {
         self.storageDirectory = storageDirectory
     }
+
+    nonisolated deinit {}
 
     // MARK: - Public Methods
 

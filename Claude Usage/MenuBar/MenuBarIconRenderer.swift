@@ -775,8 +775,8 @@ final class MenuBarIconRenderer {
     func createConcentricIconWithLabel(
         sessionPercentage: Double,
         weekPercentage: Double,
-        sessionStatus: UsageStatusLevel,
-        weekStatus: UsageStatusLevel,
+        sessionStatus: UsageStatus,
+        weekStatus: UsageStatus,
         profileName: String,
         monochromeMode: Bool,
         isDarkMode: Bool,
@@ -892,8 +892,8 @@ final class MenuBarIconRenderer {
     func createMultiProfileProgressBar(
         sessionPercentage: Double,
         weekPercentage: Double?,
-        sessionStatus: UsageStatusLevel,
-        weekStatus: UsageStatusLevel,
+        sessionStatus: UsageStatus,
+        weekStatus: UsageStatus,
         profileName: String?,
         monochromeMode: Bool,
         isDarkMode: Bool,
@@ -966,7 +966,7 @@ final class MenuBarIconRenderer {
     /// Creates a minimal dot indicator for multi-profile mode
     func createCompactDot(
         percentage: Double,
-        status: UsageStatusLevel,
+        status: UsageStatus,
         profileInitial: String?,
         monochromeMode: Bool,
         isDarkMode: Bool,

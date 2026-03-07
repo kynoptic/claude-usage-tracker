@@ -93,7 +93,8 @@ final class SessionHistoryStoreTests: XCTestCase {
         let store = makeStore()
         store.record(weekly: weekly(percentage: 80.0, limit: 1_000_000))
         let projected = store.weeklyProjected(currentLimit: 1_000_000)
-        XCTAssertEqual(projected, 0.80, accuracy: 0.001)
+        XCTAssertNotNil(projected)
+        XCTAssertEqual(projected ?? 0, 0.80, accuracy: 0.001)
     }
 
     func testWeeklyProjected_SmallDelta_Included() {
