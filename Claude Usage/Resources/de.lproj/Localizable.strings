@@ -413,6 +413,8 @@
 "appearance.show_remaining_description" = "Verbleibende Kapazität statt genutzter Prozentsatz anzeigen (wie macOS-Batterie)";
 "appearance.show_time_marker_title" = "Zeitverlaufsmarkierung anzeigen";
 "appearance.show_time_marker_description" = "Markierung auf Fortschrittsbalken anzeigen, die den verstrichenen Zeitanteil darstellt";
+"appearance.show_grey_title" = "Grau bei Unterauslastung anzeigen";
+"appearance.show_grey_description" = "Wenn aktiviert, wird das Symbol grau, wenn voraussichtlich weniger als 50 % der Sitzung genutzt werden.";
 "appearance.multiprofile_locked_title" = "Darstellungseinstellungen gesperrt";
 "appearance.multiprofile_locked_description" = "Diese Einstellungen sind deaktiviert, während die Mehrfach-Profil-Anzeige aktiv ist. Jedes Profil verwendet im Mehrfach-Profil-Modus seine eigene Darstellung.";
 "appearance.disable_multiprofile" = "Mehrfach-Profil-Anzeige ausschalten";

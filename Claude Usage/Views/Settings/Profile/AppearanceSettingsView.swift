@@ -92,13 +92,14 @@ struct AppearanceSettingsView: View {
                         )
 
                         SettingToggle(
-                            title: "Show grey for underutilized sessions",
-                            description: "When enabled, the icon turns grey when you're projected to use less than 50% of your session.",
+                            title: "appearance.show_grey_title".localized,
+                            description: "appearance.show_grey_description".localized,
                             isOn: Binding(
                                 get: { showGreyZone },
                                 set: { newValue in
                                     showGreyZone = newValue
                                     DataStore.shared.saveShowGreyZone(newValue)
+                                    NotificationCenter.default.post(name: .menuBarIconConfigChanged, object: nil)
                                 }
                             )
                         )

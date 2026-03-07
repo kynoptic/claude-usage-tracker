@@ -411,6 +411,8 @@
 "appearance.show_remaining_description" = "Exibir capacidade restante em vez da porcentagem usada (como a bateria do macOS)";
 "appearance.show_time_marker_title" = "Mostrar marcador de tempo decorrido";
 "appearance.show_time_marker_description" = "Exibir uma marca nas barras de progresso indicando o tempo decorrido no período";
+"appearance.show_grey_title" = "Mostrar cinza para sessões subutilizadas";
+"appearance.show_grey_description" = "Quando ativado, o ícone fica cinza quando a projeção de uso é inferior a 50% da sessão.";
 "appearance.multiprofile_locked_title" = "Configurações de Aparência Bloqueadas";
 "appearance.multiprofile_locked_description" = "Estas configurações estão desativadas enquanto a Exibição Multi-Perfil está ativa. Cada perfil usa sua própria aparência no modo multi-perfil.";
 "appearance.disable_multiprofile" = "Desativar Exibição Multi-Perfil";
