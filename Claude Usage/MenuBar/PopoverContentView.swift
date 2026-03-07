@@ -697,13 +697,14 @@ struct SmartUsageCard: View {
     }
 
     var body: some View {
-        ZStack {
-            frontContent
-                .opacity(isFlipped ? 0 : 1)
-
-            backContent
-                .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
-                .opacity(isFlipped ? 1 : 0)
+        Group {
+            if isFlipped {
+                backContent
+                    .transition(.opacity)
+            } else {
+                frontContent
+                    .transition(.opacity)
+            }
         }
         .padding(isPrimary ? 16 : 12)
         .background(
@@ -711,8 +712,7 @@ struct SmartUsageCard: View {
                 .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
         )
         .contentShape(Rectangle())
-        .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
-        .animation(.easeInOut(duration: 0.4), value: isFlipped)
+        .animation(.easeInOut(duration: 0.3), value: isFlipped)
         .opacity(isStale ? 0.7 : 1.0)
         .onTapGesture { if metric != nil { isFlipped.toggle() } }
         .accessibilityHint(metric != nil ? "Double tap to \(isFlipped ? "hide" : "show") usage chart" : "")
@@ -797,7 +797,6 @@ struct SmartUsageCard: View {
 
     private var backContent: some View {
         VStack(spacing: isPrimary ? 8 : 4) {
-            // Mini header with back hint
             HStack {
                 Text(title)
                     .font(.system(size: isPrimary ? 11 : 9, weight: .semibold))
