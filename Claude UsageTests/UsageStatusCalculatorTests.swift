@@ -221,6 +221,18 @@ final class UsageStatusCalculatorTests: XCTestCase {
         XCTAssertEqual(zone(50, showGrey: true, greyThreshold: 0.5), .green)
     }
 
+    func testGreyThreshold_SliderMin_0point1() {
+        // threshold=0.1: projected 5% → grey, projected 10% → green
+        XCTAssertEqual(zone(5, showGrey: true, greyThreshold: 0.1), .grey)
+        XCTAssertEqual(zone(10, showGrey: true, greyThreshold: 0.1), .green)
+    }
+
+    func testGreyThreshold_SliderMax_0point8() {
+        // threshold=0.8: projected 79% → grey, projected 80% → green
+        XCTAssertEqual(zone(79, showGrey: true, greyThreshold: 0.8), .grey)
+        XCTAssertEqual(zone(80, showGrey: true, greyThreshold: 0.8), .green)
+    }
+
     // MARK: - Display percentage (unchanged helper)
 
     func testGetDisplayPercentage_UsedMode() {

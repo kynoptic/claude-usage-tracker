@@ -428,7 +428,7 @@
 "appearance.show_time_marker_title" = "経過時間マーカーを表示";
 "appearance.show_time_marker_description" = "期間内の経過時間を示すマーカーをプログレスバーに表示";
 "appearance.show_grey_title" = "低使用率セッションをグレーで表示";
-"appearance.show_grey_description" = "有効にすると、セッションの使用率が50%未満と予測される場合にアイコンがグレーになります。";
+"appearance.show_grey_description" = "When enabled, the icon turns grey when your projected usage is below the configured threshold.";
 "appearance.grey_threshold_title" = "Grey zone threshold";
 "appearance.grey_threshold_description" = "Usage projected below this percentage is considered underutilized.";
 "appearance.multiprofile_locked_title" = "外観設定がロックされています";

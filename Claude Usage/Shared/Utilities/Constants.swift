@@ -107,6 +107,9 @@ enum Constants {
         static let similarityTolerance: Double = 1.0  // percentage points
     }
 
+    // Pacing defaults
+    static let greyThresholdDefault: Double = 0.5
+
     // Session window (5 hours in seconds)
     static let sessionWindow: TimeInterval = 5 * 60 * 60
 

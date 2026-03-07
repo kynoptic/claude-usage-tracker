@@ -31,7 +31,7 @@ final class UsageStatusCalculator {
         showRemaining: Bool,
         elapsedFraction: Double?,
         showGrey: Bool = false,
-        greyThreshold: Double = 0.5
+        greyThreshold: Double = Constants.greyThresholdDefault
     ) -> UsageStatus {
         let u = usedPercentage / 100.0
 
@@ -67,6 +67,7 @@ final class UsageStatusCalculator {
     ///   orange       → 7
     ///   red          → 10
     /// ```
+    // showGrey/greyThreshold not forwarded — colorLevel always treats grey as green
     static func colorLevel(utilization: Int, elapsedFraction: Double?) -> Int {
         let status = calculateStatus(
             usedPercentage: Double(utilization),
