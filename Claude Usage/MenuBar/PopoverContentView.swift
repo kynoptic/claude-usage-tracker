@@ -47,6 +47,7 @@ struct PopoverContentView: View {
             SmartUsageDashboard(
                 usage: displayUsage,
                 apiUsage: displayAPIUsage,
+                sessionContext: manager.pacingContext,
                 isStale: manager.isStale,
                 lastSuccessfulFetch: manager.lastSuccessfulFetch,
                 lastRefreshError: manager.lastRefreshError,
@@ -492,6 +493,7 @@ struct SmartHeader: View {
 struct SmartUsageDashboard: View {
     let usage: ClaudeUsage
     let apiUsage: APIUsage?
+    var sessionContext: PacingContext = .none
     var isStale: Bool = false
     var lastSuccessfulFetch: Date?
     var lastRefreshError: AppError? = nil
@@ -586,7 +588,8 @@ struct SmartUsageDashboard: View {
                 periodDuration: Constants.sessionWindow,
                 showTimeMarker: showTimeMarker,
                 metric: .session,
-                isStale: isStale
+                isStale: isStale,
+                context: sessionContext
             )
 
             // Secondary Usage Cards
@@ -674,6 +677,7 @@ struct SmartUsageCard: View {
     var showTimeMarker: Bool = true
     var metric: UsageMetric? = nil
     var isStale: Bool = false
+    var context: PacingContext = .none
 
     @State private var isFlipped = false
 
@@ -702,30 +706,31 @@ struct SmartUsageCard: View {
         )
     }
 
-    /// Status level based on display mode and session pacing
-    private var statusLevel: UsageStatusLevel {
-        // rawElapsedFraction is always the elapsed direction (not inverted for showRemaining),
-        // so pacing logic computes projected usage correctly regardless of display mode.
-        UsageStatusCalculator.calculateStatus(
+    /// Adaptive usage status derived from pacing context.
+    private var usageStatus: UsageStatus {
+        // Build a context that uses rawElapsedFraction if the passed context has none
+        let effectiveContext = context.elapsedFraction != nil
+            ? context
+            : PacingContext(
+                elapsedFraction: rawElapsedFraction,
+                weeklyProjected: context.weeklyProjected,
+                avgSessionUtilization: context.avgSessionUtilization,
+                sessionCount: context.sessionCount
+            )
+        return UsageStatusCalculator.calculateStatus(
             usedPercentage: usedPercentage,
             showRemaining: showRemaining,
-            elapsedFraction: rawElapsedFraction
+            context: effectiveContext
         )
     }
 
-    /// Color based on status level
-    private var statusColor: Color {
-        switch statusLevel {
-        case .safe: return .green
-        case .moderate: return .yellow
-        case .critical: return .red
-        }
-    }
+    private var statusColor: Color { .usageStatus(usageStatus) }
 
     private var statusIcon: String {
-        switch statusLevel {
-        case .safe: return "checkmark.circle.fill"
-        case .moderate: return "exclamationmark.triangle.fill"
+        switch usageStatus.zone {
+        case .green:    return "checkmark.circle.fill"
+        case .approach: return "flame.fill"
+        case .warning:  return "exclamationmark.triangle.fill"
         case .critical: return "xmark.circle.fill"
         }
     }
@@ -1107,22 +1112,16 @@ struct APIUsageCard: View {
         )
     }
 
-    /// Status level based on display mode
-    private var statusLevel: UsageStatusLevel {
+    /// Status derived from the new adaptive calculator (no pacing for API billing).
+    private var usageStatus: UsageStatus {
         UsageStatusCalculator.calculateStatus(
             usedPercentage: apiUsage.usagePercentage,
-            showRemaining: showRemaining
+            showRemaining: showRemaining,
+            context: .none
         )
     }
 
-    /// Color based on status level
-    private var usageColor: Color {
-        switch statusLevel {
-        case .safe: return .green
-        case .moderate: return .yellow
-        case .critical: return .red
-        }
-    }
+    private var usageColor: Color { .usageStatus(usageStatus) }
 
     var body: some View {
         VStack(spacing: 12) {
