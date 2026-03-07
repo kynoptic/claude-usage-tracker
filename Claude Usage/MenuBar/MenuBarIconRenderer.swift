@@ -135,7 +135,8 @@ final class MenuBarIconRenderer {
             let status = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
-                elapsedFraction: sessionElapsed
+                elapsedFraction: sessionElapsed,
+                showGrey: DataStore.shared.loadShowGreyZone()
             )
 
             return MetricData(
@@ -159,7 +160,8 @@ final class MenuBarIconRenderer {
             let status = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
-                elapsedFraction: weekElapsed
+                elapsedFraction: weekElapsed,
+                showGrey: DataStore.shared.loadShowGreyZone()
             )
 
             let displayText: String

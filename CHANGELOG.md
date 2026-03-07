@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Five-zone pacing system: icon colour driven by projected end-of-session utilisation across grey, green, yellow, orange, and red zones using Apple system colours
 - `UsageStatus` (zone + actionText) and `UsageZone` as the core status model
 - Grey zone opt-in via "Show grey for underutilized sessions" toggle in Appearance settings (default off)
-- Action keywords in popover: "Underutilized", "On track", "Maximizing usage", "Overshooting", "Way over"
+- Action keywords in popover: "Underutilized 💤", "On track ✅", "Maximizing 🔥", "Overshooting ⚠️", "Way over 🛑"
 - Time-elapsed marker on session and weekly progress bars in popover, menu bar icons, and CLI statusline
 - Settings toggles for marker visibility in Appearance and Claude Code sections
 - `fetchUsageData(oauthAccessToken:)` method for direct CLI OAuth usage fetch
@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Icon colour now uses five flat colour zones (grey/green/yellow/orange/red) based on projected utilisation instead of three buckets
-- `UsageStatusCalculator.calculateStatus()` primary API now returns `UsageStatus`; old `UsageStatusLevel` API deprecated with forwarding stubs
+- `UsageStatusCalculator.calculateStatus()` primary API now returns `UsageStatus`; removed deprecated `UsageStatusLevel` enum and forwarding stubs
 - Statusline colour levels mapped to five zones: grey/green → 3, yellow → 5, orange → 7, red → 10
 - Projection falls back to raw `usedPercentage` when elapsed fraction is nil, zero, or ≥ 1
 

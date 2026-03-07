@@ -43,6 +43,8 @@ The zones map to specific colour levels:
 
 When `elapsedFraction` is nil, zero, or ≥ 1, the raw `usedPercentage` is used instead.
 
+> **Note:** The grey zone ("Show grey for underutilized sessions") is a Swift-only feature. The bash script cannot read UserDefaults, so it always maps projected < 90% to green (LEVEL_3).
+
 The comment in `statusline-command.sh` flags this contract: "Logic mirrors UsageStatusCalculator.colorLevel (Swift) — keep in sync." Any change to the Swift zone thresholds must be mirrored in the bash script. See [pacing-aware colour logic](pacing-colours.md) for the full zone specification.
 
 ## Time marker
