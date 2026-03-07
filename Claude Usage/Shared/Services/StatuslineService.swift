@@ -123,6 +123,7 @@ if [ -f "$config_file" ]; then
   show_reset=$SHOW_RESET_TIME
   show_time_marker=$SHOW_TIME_MARKER
   show_grey_zone=${SHOW_GREY_ZONE:-0}
+  grey_threshold=${GREY_THRESHOLD:-50}
 else
   show_dir=1
   show_branch=1
@@ -131,6 +132,7 @@ else
   show_reset=1
   show_time_marker=1
   show_grey_zone=0
+  grey_threshold=50
 fi
 
 input=$(cat)
@@ -209,16 +211,16 @@ if [ "$show_usage" = "1" ]; then
       if [ "$elapsed_frac_pct" -gt 0 ] 2>/dev/null; then
         # Pacing mode: projected = utilization * 100 / elapsed_frac_pct (integer %)
         projected=$(( (utilization * 100) / elapsed_frac_pct ))
-        if   [ "$show_grey_zone" = "1" ] && [ "$projected" -lt 50  ]; then usage_color="$GRAY"     # grey (<50%)
-        elif [ "$projected" -lt 90  ]; then usage_color="$LEVEL_3"   # green (50–90%)
+        if   [ "$show_grey_zone" = "1" ] && [ "$projected" -lt $grey_threshold ]; then usage_color="$GRAY"     # grey (< threshold)
+        elif [ "$projected" -lt 90  ]; then usage_color="$LEVEL_3"   # green (threshold–90%)
         elif [ "$projected" -lt 110 ]; then usage_color="$LEVEL_5"   # yellow (90–110%)
         elif [ "$projected" -le 150 ]; then usage_color="$LEVEL_7"   # orange (110–150%)
         else                                 usage_color="$LEVEL_10"  # red (>150%)
         fi
       else
         # Fallback: raw utilization when timing data unavailable.
-        if   [ "$show_grey_zone" = "1" ] && [ "$utilization" -lt 50  ]; then usage_color="$GRAY"     # grey (<50%)
-        elif [ "$utilization" -lt 90  ]; then usage_color="$LEVEL_3"   # green (50–90%)
+        if   [ "$show_grey_zone" = "1" ] && [ "$utilization" -lt $grey_threshold ]; then usage_color="$GRAY"     # grey (< threshold)
+        elif [ "$utilization" -lt 90  ]; then usage_color="$LEVEL_3"   # green (threshold–90%)
         elif [ "$utilization" -lt 110 ]; then usage_color="$LEVEL_5"   # yellow (90–110%)
         elif [ "$utilization" -le 150 ]; then usage_color="$LEVEL_7"   # orange (110–150%)
         else                                   usage_color="$LEVEL_10"  # red (>150%)
@@ -393,7 +395,8 @@ printf "%s\\n" "$output"
         showProgressBar: Bool,
         showResetTime: Bool,
         showTimeMarker: Bool = true,
-        showGreyZone: Bool = false
+        showGreyZone: Bool = false,
+        greyThreshold: Double = Constants.greyThresholdDefault
     ) throws {
         let configPath = Constants.ClaudePaths.claudeDirectory
             .appendingPathComponent("statusline-config.txt")
@@ -406,6 +409,7 @@ SHOW_PROGRESS_BAR=\(showProgressBar ? "1" : "0")
 SHOW_RESET_TIME=\(showResetTime ? "1" : "0")
 SHOW_TIME_MARKER=\(showTimeMarker ? "1" : "0")
 SHOW_GREY_ZONE=\(showGreyZone ? "1" : "0")
+GREY_THRESHOLD=\(Int(greyThreshold * 100))
 """
 
         try config.write(to: configPath, atomically: true, encoding: .utf8)
@@ -472,10 +476,22 @@ SHOW_GREY_ZONE=\(showGreyZone ? "1" : "0")
                FileManager.default.fileExists(atPath: bashScript.path)
     }
 
-    /// Updates scripts only if already installed (installation is optional)
+    /// Updates scripts only if already installed (installation is optional).
+    /// Also syncs the config file so UserDefaults settings (including greyThreshold) are reflected.
     func updateScriptsIfInstalled() throws {
         guard isInstalled else { return }
         try installScripts(injectSessionKey: true)
+        let store = SharedDataStore.shared
+        try updateConfiguration(
+            showDirectory: store.loadStatuslineShowDirectory(),
+            showBranch: store.loadStatuslineShowBranch(),
+            showUsage: store.loadStatuslineShowUsage(),
+            showProgressBar: store.loadStatuslineShowProgressBar(),
+            showResetTime: store.loadStatuslineShowResetTime(),
+            showTimeMarker: store.loadStatuslineShowTimeMarker(),
+            showGreyZone: DataStore.shared.loadShowGreyZone(),
+            greyThreshold: DataStore.shared.loadGreyThreshold()
+        )
     }
 
     /// Updates the grey zone setting in the statusline config file if statusline is installed.
@@ -490,7 +506,8 @@ SHOW_GREY_ZONE=\(showGreyZone ? "1" : "0")
             showProgressBar: store.loadStatuslineShowProgressBar(),
             showResetTime: store.loadStatuslineShowResetTime(),
             showTimeMarker: store.loadStatuslineShowTimeMarker(),
-            showGreyZone: show
+            showGreyZone: show,
+            greyThreshold: DataStore.shared.loadGreyThreshold()
         )
     }
 
