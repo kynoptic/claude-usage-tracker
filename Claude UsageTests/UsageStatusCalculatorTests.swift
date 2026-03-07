@@ -4,59 +4,63 @@ import XCTest
 final class UsageStatusCalculatorTests: XCTestCase {
 
     // MARK: - Used-Based Thresholds (showRemaining = false)
+    // New zone semantics: green+approach (0–99%) → .safe; warning (100–150%) → .moderate;
+    // critical (>150%) → .critical. approachStart=0.90 (no history), redThr fallback=1.5.
 
     func testUsedBasedThresholds_Safe() {
-        // 0-49% used should be safe (green)
+        // 0–99% used: both green and approach zones map to .safe via deprecated forwarder
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 0, showRemaining: false),
             .safe
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 25, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 50, showRemaining: false),
             .safe
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 49, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 89, showRemaining: false),
+            .safe
+        )
+        // Approach zone (90–99%) also resolves to .safe
+        XCTAssertEqual(
+            UsageStatusCalculator.calculateStatus(usedPercentage: 95, showRemaining: false),
             .safe
         )
     }
 
     func testUsedBasedThresholds_Moderate() {
-        // 50-79% used should be moderate (yellow)
+        // 100–150% used → warning zone → .moderate
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 50, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 100, showRemaining: false),
             .moderate
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 65, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 120, showRemaining: false),
             .moderate
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 79, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 150, showRemaining: false),
             .moderate
         )
     }
 
     func testUsedBasedThresholds_Critical() {
-        // 80-100% used should be critical (red)
+        // >150% used → critical zone → .critical (redThr fallback = 1.5)
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 80, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 151, showRemaining: false),
             .critical
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 95, showRemaining: false),
-            .critical
-        )
-        XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 100, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 200, showRemaining: false),
             .critical
         )
     }
 
     // MARK: - Remaining-Based Thresholds (showRemaining = true)
+    // showRemaining flips display only; pacing uses raw usedPercentage internally.
 
     func testRemainingBasedThresholds_Safe() {
-        // >20% remaining (0-79% used) should be safe
+        // 0–99% used → .safe regardless of display mode
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 0, showRemaining: true),
             .safe
@@ -66,39 +70,35 @@ final class UsageStatusCalculatorTests: XCTestCase {
             .safe
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 79, showRemaining: true),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 95, showRemaining: true),
             .safe
         )
     }
 
     func testRemainingBasedThresholds_Moderate() {
-        // 10-19% remaining (81-90% used) should be moderate
+        // 100–150% used → .moderate
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 81, showRemaining: true),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 100, showRemaining: true),
             .moderate
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 85, showRemaining: true),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 130, showRemaining: true),
             .moderate
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 90, showRemaining: true),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 150, showRemaining: true),
             .moderate
         )
     }
 
     func testRemainingBasedThresholds_Critical() {
-        // <10% remaining (>90% used) should be critical
+        // >150% used → .critical
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 91, showRemaining: true),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 151, showRemaining: true),
             .critical
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 95, showRemaining: true),
-            .critical
-        )
-        XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 100, showRemaining: true),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 200, showRemaining: true),
             .critical
         )
     }
@@ -138,50 +138,50 @@ final class UsageStatusCalculatorTests: XCTestCase {
     // MARK: - Edge Cases
 
     func testBoundaryConditions_UsedMode() {
-        // Test exact boundary values for used-based thresholds
+        // New boundaries: green→approach at 90%; approach→warning at 100%; warning→critical at 150%
+        // green and approach both → .safe via deprecated forwarder
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 49.9, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 89.9, showRemaining: false),
             .safe
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 50.0, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 90.0, showRemaining: false),
+            .safe  // approach zone still → .safe
+        )
+        XCTAssertEqual(
+            UsageStatusCalculator.calculateStatus(usedPercentage: 99.9, showRemaining: false),
+            .safe
+        )
+        XCTAssertEqual(
+            UsageStatusCalculator.calculateStatus(usedPercentage: 100.0, showRemaining: false),
             .moderate
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 79.9, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 150.0, showRemaining: false),
             .moderate
         )
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 80.0, showRemaining: false),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 150.1, showRemaining: false),
             .critical
         )
     }
 
     func testBoundaryConditions_RemainingMode() {
-        // Test exact boundary values for remaining-based thresholds
-        // 21% remaining (79% used) = safe
+        // showRemaining=true does not affect zone calculation; same boundaries as usedMode
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 79, showRemaining: true),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 89, showRemaining: true),
             .safe
         )
-        // 20% remaining (80% used) = safe (20 is included in 20... range)
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 80, showRemaining: true),
-            .safe
+            UsageStatusCalculator.calculateStatus(usedPercentage: 95, showRemaining: true),
+            .safe  // approach
         )
-        // 19% remaining (81% used) = moderate
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 81, showRemaining: true),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 100, showRemaining: true),
             .moderate
         )
-        // 10% remaining (90% used) = moderate (10 is included in 10..<20 range)
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 90, showRemaining: true),
-            .moderate
-        )
-        // 9% remaining (91% used) = critical
-        XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 91, showRemaining: true),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 151, showRemaining: true),
             .critical
         )
     }
@@ -204,52 +204,72 @@ final class UsageStatusCalculatorTests: XCTestCase {
     }
 
     // MARK: - Pacing (elapsedFraction provided)
+    // At t=0.5 with no history: redThr = (1 - 0.80*(1-0.5))/0.5 = 1.20, approachStart = 0.90.
+    // projected = used / t = used / 0.5. Zones: green<0.90, approach 0.90–1.0, warning 1.0–1.20,
+    // critical >1.20. Via deprecated forwarder: green+approach → .safe, warning → .moderate,
+    // critical → .critical.
 
     func testPacing_Safe_LowProjected() {
-        // 30% used at 50% elapsed → projected 0.60 → safe
+        // 30% used at 50% elapsed → projected 0.60 < 0.90 → green → .safe
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 30, showRemaining: false, elapsedFraction: 0.5),
             .safe
         )
     }
 
-    func testPacing_Moderate_MediumProjected() {
-        // 40% used at 50% elapsed → projected 0.80 → moderate
+    func testPacing_Safe_MidProjected() {
+        // 40% used at 50% elapsed → projected 0.80 < 0.90 → green → .safe
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 40, showRemaining: false, elapsedFraction: 0.5),
+            .safe
+        )
+    }
+
+    func testPacing_Safe_ApproachZone() {
+        // 46% used at 50% elapsed → projected 0.92 → approach zone → .safe
+        XCTAssertEqual(
+            UsageStatusCalculator.calculateStatus(usedPercentage: 46, showRemaining: false, elapsedFraction: 0.5),
+            .safe
+        )
+    }
+
+    func testPacing_Moderate_WarningZone() {
+        // 55% used at 50% elapsed → projected 1.10, redThr=1.20 → warning → .moderate
+        XCTAssertEqual(
+            UsageStatusCalculator.calculateStatus(usedPercentage: 55, showRemaining: false, elapsedFraction: 0.5),
             .moderate
         )
     }
 
     func testPacing_Critical_HighProjected() {
-        // 60% used at 50% elapsed → projected 1.20 → critical
+        // 61% used at 50% elapsed → projected 1.22 > redThr 1.20 → critical → .critical
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 60, showRemaining: false, elapsedFraction: 0.5),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 61, showRemaining: false, elapsedFraction: 0.5),
             .critical
         )
     }
 
-    func testPacing_HighUsedLateSession_Moderate() {
-        // 80% used at 90% elapsed → projected 0.89 → moderate (not red as absolute would give)
+    func testPacing_HighUsedLateSession_Safe() {
+        // 80% used at 90% elapsed → projected 0.889 < 0.90 → green → .safe
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 80, showRemaining: false, elapsedFraction: 0.9),
-            .moderate
+            .safe
         )
     }
 
     func testPacing_EarlySession_FallsBackToAbsolute() {
-        // 60% used at only 10% elapsed (too early) → fallback → moderate (absolute 50–80%)
+        // 60% used at only 10% elapsed (too early for pacing) → fallback → 60% < 90% → .safe
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 60, showRemaining: false, elapsedFraction: 0.10),
-            .moderate
+            .safe
         )
     }
 
     func testPacing_NilElapsed_FallsBackToAbsolute() {
-        // nil elapsed → absolute thresholds
+        // nil elapsed → fallback; 60% < 90% → .safe
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 60, showRemaining: false, elapsedFraction: nil),
-            .moderate
+            .safe
         )
     }
 
@@ -262,8 +282,7 @@ final class UsageStatusCalculatorTests: XCTestCase {
     }
 
     func testPacing_BoundaryAtExactly15Percent_Activates() {
-        // Exactly 15% elapsed → pacing activates
-        // 10% used at 15% elapsed → projected 0.667 → safe
+        // Exactly 15% elapsed → pacing activates; 10% used → projected 0.667 → .safe
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 10, showRemaining: false, elapsedFraction: 0.15),
             .safe
@@ -271,31 +290,23 @@ final class UsageStatusCalculatorTests: XCTestCase {
     }
 
     func testPacing_JustBelow15Percent_FallsBack() {
-        // 14% elapsed → fallback; 60% used → moderate (absolute 50–80%)
+        // 14% elapsed → fallback; 60% → absolute green (<90%) → .safe
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 60, showRemaining: false, elapsedFraction: 0.14),
-            .moderate
+            .safe
         )
     }
 
-    func testPacing_ProjectedBoundary_75Percent_IsModerate() {
-        // 37.5% used at 50% elapsed → projected exactly 0.75 → moderate
+    func testPacing_ProjectedBoundary_AtRedThreshold_IsModerate() {
+        // 60% used at 50% elapsed → projected exactly 1.20 = redThr → warning (not critical)
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 37.5, showRemaining: false, elapsedFraction: 0.5),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 60, showRemaining: false, elapsedFraction: 0.5),
             .moderate
-        )
-    }
-
-    func testPacing_ProjectedBoundary_95Percent_IsCritical() {
-        // 47.5% used at 50% elapsed → projected exactly 0.95 → critical
-        XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 47.5, showRemaining: false, elapsedFraction: 0.5),
-            .critical
         )
     }
 
     func testPacing_ShowRemaining_Safe() {
-        // 30% used at 50% elapsed → projected 0.60 → safe (display mode does not affect pacing)
+        // display mode does not affect pacing; 30% @ 50% → projected 0.60 → .safe
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 30, showRemaining: true, elapsedFraction: 0.5),
             .safe
@@ -303,27 +314,26 @@ final class UsageStatusCalculatorTests: XCTestCase {
     }
 
     func testPacing_ShowRemaining_Moderate() {
-        // 40% used at 50% elapsed → projected 0.80 → moderate (display mode does not affect pacing)
+        // 55% @ 50% → projected 1.10 → warning → .moderate
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 40, showRemaining: true, elapsedFraction: 0.5),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 55, showRemaining: true, elapsedFraction: 0.5),
             .moderate
         )
     }
 
-    func testPacing_ShowRemaining_HighProjected_Critical() {
-        // 55% used at 50% elapsed → projected 1.10 → critical (regardless of display mode)
+    func testPacing_ShowRemaining_Critical() {
+        // 61% @ 50% → projected 1.22 > 1.20 → critical → .critical
         XCTAssertEqual(
-            UsageStatusCalculator.calculateStatus(usedPercentage: 55, showRemaining: true, elapsedFraction: 0.5),
+            UsageStatusCalculator.calculateStatus(usedPercentage: 61, showRemaining: true, elapsedFraction: 0.5),
             .critical
         )
     }
 
     func testPacing_FullSession_FallsBackToAbsolute() {
-        // t = 1.0 is excluded from pacing (avoid division artefacts at the boundary)
-        // 80% used → critical via absolute
+        // t = 1.0 excluded from pacing; 80% used → absolute green (<90%) → .safe
         XCTAssertEqual(
             UsageStatusCalculator.calculateStatus(usedPercentage: 80, showRemaining: false, elapsedFraction: 1.0),
-            .critical
+            .safe
         )
     }
 

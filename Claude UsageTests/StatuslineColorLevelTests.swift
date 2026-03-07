@@ -4,21 +4,26 @@ import XCTest
 /// Tests for UsageStatusCalculator.colorLevel — verifies the 10-level ANSI gradient
 /// used by the statusline bash script matches the menu bar's pacing-aware severity bands.
 ///
-/// Color band contract:
-///   green  → LEVEL 1–3  (safe:     projected < 75%)
-///   orange → LEVEL 4–7  (moderate: projected 75–95%)
-///   red    → LEVEL 8–10 (critical: projected ≥ 95%)
+/// Color band contract (new zone semantics):
+///   green  → LEVEL 1–5  (green zone <90%, approach zone 90–100%, both → .safe)
+///   orange → LEVEL 6–9  (warning zone 100–150% → .moderate)
+///   red    → LEVEL 10   (critical zone >150% → .critical)
 ///
-/// Levels are assigned within each band by sub-dividing the projected range evenly.
+/// At t=0.5 with no history: redThr = 1.20, approachStart = 0.90.
+/// Pacing zone boundaries (projected = used/t):
+///   green   projected <0.90 → levels 1–3
+///   approach projected 0.90–1.0 → levels 4–5
+///   warning  projected 1.0–1.20 → levels 6–9
+///   critical projected >1.20 → level 10
 final class StatuslineColorLevelTests: XCTestCase {
 
     // MARK: - Helpers
 
     private func band(for level: Int) -> String {
         switch level {
-        case 1...3:  return "green"
-        case 4...7:  return "orange"
-        case 8...10: return "red"
+        case 1...5:  return "green"
+        case 6...9:  return "orange"
+        case 10:     return "red"
         default:     return "unknown(\(level))"
         }
     }
@@ -26,119 +31,123 @@ final class StatuslineColorLevelTests: XCTestCase {
     private func expectedBand(for status: UsageStatusLevel) -> String {
         switch status {
         case .safe:     return "green"
-        case .moderate: return "yellow"
+        case .moderate: return "orange"
         case .critical: return "red"
         }
     }
 
-    // MARK: - Pacing mode: specific levels
+    // MARK: - Pacing mode: specific levels (t=0.5, no history)
 
     func testPacing_Level1_LowProjected() {
-        // 10% used at 50% elapsed → projected 20% → < 25% → LEVEL_1
+        // 10% used at 50% elapsed → projected 20% < 30% → LEVEL_1
         XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 10, elapsedFraction: 0.5), 1)
     }
 
     func testPacing_Level2_MidLowProjected() {
-        // 15% used at 50% elapsed → projected 30% → 25–50% → LEVEL_2
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 15, elapsedFraction: 0.5), 2)
+        // 20% used at 50% elapsed → projected 40% → 30–60% → LEVEL_2
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 20, elapsedFraction: 0.5), 2)
     }
 
     func testPacing_Level3_UpperGreenProjected() {
-        // 30% used at 50% elapsed → projected 60% → 50–75% → LEVEL_3
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 30, elapsedFraction: 0.5), 3)
+        // 40% used at 50% elapsed → projected 80% → 60–90% → LEVEL_3
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 40, elapsedFraction: 0.5), 3)
     }
 
-    func testPacing_Level4_JustIntoOrange() {
-        // 38% used at 50% elapsed → projected 76% → 75–80% → LEVEL_4
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 38, elapsedFraction: 0.5), 4)
+    func testPacing_Level4_ApproachZoneLow() {
+        // 46% used at 50% elapsed → projected 92% → approach zone lower half → LEVEL_4
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 46, elapsedFraction: 0.5), 4)
     }
 
-    func testPacing_Level5_MidOrange() {
-        // 41% used at 50% elapsed → projected 82% → 80–85% → LEVEL_5
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 41, elapsedFraction: 0.5), 5)
+    func testPacing_Level5_ApproachZoneHigh() {
+        // 48% used at 50% elapsed → projected 96% → approach zone upper half → LEVEL_5
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 48, elapsedFraction: 0.5), 5)
     }
 
-    func testPacing_Level6_UpperMidOrange() {
-        // 44% used at 50% elapsed → projected 88% → 85–90% → LEVEL_6
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 44, elapsedFraction: 0.5), 6)
+    func testPacing_Level6_JustIntoWarning() {
+        // 51% used at 50% elapsed → projected 102% → warning zone low → LEVEL_6
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 51, elapsedFraction: 0.5), 6)
     }
 
-    func testPacing_Level7_TopOrange() {
-        // 46% used at 50% elapsed → projected 92% → 90–95% → LEVEL_7
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 46, elapsedFraction: 0.5), 7)
+    func testPacing_Level7_MidWarning() {
+        // 54% used at 50% elapsed → projected 108% → LEVEL_7
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 54, elapsedFraction: 0.5), 7)
     }
 
-    func testPacing_Level8_JustIntoRed() {
-        // 50% used at 50% elapsed → projected 100% → 95–115% → LEVEL_8
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 50, elapsedFraction: 0.5), 8)
+    func testPacing_Level8_UpperMidWarning() {
+        // 57% used at 50% elapsed → projected 114% → LEVEL_8
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 57, elapsedFraction: 0.5), 8)
     }
 
-    func testPacing_Level9_DeeperRed() {
-        // 58% used at 50% elapsed → projected 116% → 115–135% → LEVEL_9
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 58, elapsedFraction: 0.5), 9)
+    func testPacing_Level9_TopWarning() {
+        // 60% used at 50% elapsed → projected 120% = redThr (not >, stays warning) → LEVEL_9
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 60, elapsedFraction: 0.5), 9)
     }
 
-    func testPacing_Level10_MaxRed() {
-        // 68% used at 50% elapsed → projected 136% → ≥135% → LEVEL_10
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 68, elapsedFraction: 0.5), 10)
+    func testPacing_Level10_Critical() {
+        // 61% used at 50% elapsed → projected 122% > redThr 120% → critical → LEVEL_10
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 61, elapsedFraction: 0.5), 10)
     }
 
     func testPacing_100PercentUsage_IsLevel10() {
-        // 100% used at 50% elapsed → projected 200% → ≥135% → LEVEL_10
-        // Verifies no overflow or degenerate result at max utilization in pacing mode.
+        // 100% used at 50% elapsed → projected 200% → critical → LEVEL_10
         XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 100, elapsedFraction: 0.5), 10)
     }
 
-    // MARK: - Fallback mode: specific levels
+    // MARK: - Fallback mode: specific levels (nil elapsed, redThr=1.5, approachStart=0.90)
+    // Green band (severity 0–0.4): levels 1–3 map to used 0–90%.
+    //   Level 1: 0–30%; Level 2: 30–60%; Level 3: 60–90%.
+    // Approach band (severity 0.4–0.5): levels 4–5 map to used 90–100%.
+    // Warning band (severity 0.5–0.9): levels 6–9 map to used 100–150%.
+    // Critical (severity 1.0): level 10, used >150%.
 
     func testFallback_Level1() {
-        // 8% used, no pacing → < 17% → LEVEL_1
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 8, elapsedFraction: nil), 1)
+        // 10% used → green zone deep → LEVEL_1
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 10, elapsedFraction: nil), 1)
     }
 
     func testFallback_Level2() {
-        // 25% used → 17–34% → LEVEL_2
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 25, elapsedFraction: nil), 2)
+        // 40% used → green zone mid → LEVEL_2
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 40, elapsedFraction: nil), 2)
     }
 
     func testFallback_Level3() {
-        // 40% used → 34–50% → LEVEL_3
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 40, elapsedFraction: nil), 3)
+        // 70% used → green zone upper → LEVEL_3
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 70, elapsedFraction: nil), 3)
     }
 
     func testFallback_Level4() {
-        // 55% used → 50–60% → LEVEL_4
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 55, elapsedFraction: nil), 4)
+        // 92% used → approach zone lower → LEVEL_4
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 92, elapsedFraction: nil), 4)
     }
 
     func testFallback_Level5() {
-        // 63% used → 60–67% → LEVEL_5
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 63, elapsedFraction: nil), 5)
+        // 96% used → approach zone upper → LEVEL_5
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 96, elapsedFraction: nil), 5)
     }
 
     func testFallback_Level6() {
-        // 70% used → 67–73% → LEVEL_6
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 70, elapsedFraction: nil), 6)
+        // 101% used → warning zone low → LEVEL_6
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 101, elapsedFraction: nil), 6)
     }
 
     func testFallback_Level7() {
-        // 76% used → 73–80% → LEVEL_7
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 76, elapsedFraction: nil), 7)
+        // 130% used → warning zone mid → LEVEL_7
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 130, elapsedFraction: nil), 7)
     }
 
     func testFallback_Level8() {
-        // 82% used → 80–87% → LEVEL_8
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 82, elapsedFraction: nil), 8)
+        // 140% used → warning zone upper-mid → LEVEL_8
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 140, elapsedFraction: nil), 8)
     }
 
     func testFallback_Level9() {
-        // 89% used → 87–93% → LEVEL_9
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 89, elapsedFraction: nil), 9)
+        // 148% used → warning zone top → LEVEL_9
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 148, elapsedFraction: nil), 9)
     }
 
     func testFallback_Level10() {
-        // 95% used → ≥93% → LEVEL_10
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 95, elapsedFraction: nil), 10)
+        // 151% used → critical zone → LEVEL_10
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 151, elapsedFraction: nil), 10)
     }
 
     // MARK: - Edge cases
@@ -152,52 +161,58 @@ final class StatuslineColorLevelTests: XCTestCase {
         XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 0, elapsedFraction: nil), 1)
     }
 
-    func testEdge_100PercentFallback_IsLevel10() {
-        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 100, elapsedFraction: nil), 10)
+    func testEdge_100PercentFallback_IsLevel6() {
+        // 100% used → warning zone start → LEVEL_6 (not level 10 as old test expected)
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 100, elapsedFraction: nil), 6)
     }
 
     func testEdge_EarlySession_FallsBackToAbsolute() {
-        // elapsed = 10% (< 15 threshold) → fallback; 60% used → orange (4–7)
+        // elapsed = 10% (< 15% threshold) → fallback; 60% used → green zone → LEVEL_3
         let level = UsageStatusCalculator.colorLevel(utilization: 60, elapsedFraction: 0.10)
-        XCTAssertGreaterThanOrEqual(level, 4)
-        XCTAssertLessThanOrEqual(level, 7)
+        XCTAssertLessThanOrEqual(level, 5)  // green band (1–5)
     }
 
     func testEdge_ExactlyAt15Percent_PacingActivates() {
-        // 15% elapsed → pacing fires; 10% used → projected 67% → green (1–3)
+        // 15% elapsed → pacing fires; 10% used → projected 67% → green (1–5)
         let level = UsageStatusCalculator.colorLevel(utilization: 10, elapsedFraction: 0.15)
-        XCTAssertLessThanOrEqual(level, 3)
+        XCTAssertLessThanOrEqual(level, 5)
     }
 
     func testEdge_FullSession_FallsBackToAbsolute() {
-        // elapsed = 1.0 → pacing excluded; 80% used → red (8–10)
+        // elapsed = 1.0 → pacing excluded; 80% used → green zone → LEVEL_3
         let level = UsageStatusCalculator.colorLevel(utilization: 80, elapsedFraction: 1.0)
-        XCTAssertGreaterThanOrEqual(level, 8)
+        XCTAssertLessThanOrEqual(level, 5)  // still green band
     }
 
     // MARK: - Severity band agreement with UsageStatusCalculator
 
     /// Verifies that for any (utilization, elapsedFraction) pair the colorLevel band
-    /// (green/orange/red) matches the severity returned by calculateStatus.
+    /// (green/orange/red) matches the deprecated calculateStatus zone.
     func testSeverityAgreement_Matrix() {
         let scenarios: [(utilization: Int, elapsed: Double?, note: String)] = [
-            // Pacing: safe
+            // Pacing: green
             (10, 0.5,  "10% @ 50% → projected 20% → green"),
-            (30, 0.5,  "30% @ 50% → projected 60% → green"),
-            // Pacing: moderate
-            (38, 0.5,  "38% @ 50% → projected 76% → orange"),
-            (44, 0.5,  "44% @ 50% → projected 88% → orange"),
+            (40, 0.5,  "40% @ 50% → projected 80% → green"),
+            // Pacing: approach (still .safe)
+            (46, 0.5,  "46% @ 50% → projected 92% → approach → green band"),
+            // Pacing: warning → .moderate → orange band
+            (55, 0.5,  "55% @ 50% → projected 110% → warning → orange"),
             // Pacing: critical
-            (50, 0.5,  "50% @ 50% → projected 100% → red"),
-            (50, 0.3,  "50% @ 30% → projected 167% → red"),
-            // Fallback: all three bands
-            (30, nil,  "30% no pacing → green"),
-            (65, nil,  "65% no pacing → orange"),
-            (85, nil,  "85% no pacing → red"),
-            // Fallback: early session
-            (60, 0.10, "60% @ 10% elapsed → fallback → orange"),
+            (61, 0.5,  "61% @ 50% → projected 122% → critical → red"),
+            (80, 0.3,  "80% @ 30% → projected 267% → critical → red"),
+            // Fallback: green
+            (10,  nil, "10% fallback → green"),
+            (70,  nil, "70% fallback → green"),
+            // Fallback: approach (still .safe)
+            (92,  nil, "92% fallback → approach → green band"),
+            // Fallback: warning → .moderate
+            (101, nil, "101% fallback → warning → orange"),
+            // Fallback: critical
+            (151, nil, "151% fallback → critical → red"),
+            // Fallback: early session (pacing skipped)
+            (60, 0.10, "60% @ 10% elapsed → fallback → green"),
             // Fallback: session complete
-            (80, 1.0,  "80% @ 100% elapsed → fallback → red"),
+            (80, 1.0,  "80% @ 100% elapsed → fallback → green"),
         ]
 
         for scenario in scenarios {
@@ -218,31 +233,37 @@ final class StatuslineColorLevelTests: XCTestCase {
         }
     }
 
-    // MARK: - Fallback boundary values (match UsageStatusCalculator absolute thresholds)
+    // MARK: - Fallback boundary values (match new zone semantics)
 
-    func testFallbackBoundary_50Pct_IsYellow() {
-        // UsageStatusCalculator: 50% used → .moderate → must be in yellow band
-        let level = UsageStatusCalculator.colorLevel(utilization: 50, elapsedFraction: nil)
+    func testFallbackBoundary_89Pct_IsGreen() {
+        // 89% used → green zone → green band (1–5)
+        let level = UsageStatusCalculator.colorLevel(utilization: 89, elapsedFraction: nil)
+        XCTAssertLessThanOrEqual(level, 5)
+    }
+
+    func testFallbackBoundary_90Pct_IsGreenBand() {
+        // 90% used → approach zone → still .safe → green band
+        let level = UsageStatusCalculator.colorLevel(utilization: 90, elapsedFraction: nil)
         XCTAssertGreaterThanOrEqual(level, 4)
-        XCTAssertLessThanOrEqual(level, 7)
+        XCTAssertLessThanOrEqual(level, 5)
     }
 
-    func testFallbackBoundary_80Pct_IsRed() {
-        // UsageStatusCalculator: 80% used → .critical → must be in red band
-        let level = UsageStatusCalculator.colorLevel(utilization: 80, elapsedFraction: nil)
-        XCTAssertGreaterThanOrEqual(level, 8)
+    func testFallbackBoundary_100Pct_IsOrange() {
+        // 100% used → warning zone → .moderate → orange band (6–9)
+        let level = UsageStatusCalculator.colorLevel(utilization: 100, elapsedFraction: nil)
+        XCTAssertGreaterThanOrEqual(level, 6)
+        XCTAssertLessThanOrEqual(level, 9)
     }
 
-    func testFallbackBoundary_49Pct_IsGreen() {
-        // UsageStatusCalculator: 49% used → .safe → must be in green band
-        let level = UsageStatusCalculator.colorLevel(utilization: 49, elapsedFraction: nil)
-        XCTAssertLessThanOrEqual(level, 3)
+    func testFallbackBoundary_150Pct_IsOrange() {
+        // 150% used = redThr exactly → still warning → orange band
+        let level = UsageStatusCalculator.colorLevel(utilization: 150, elapsedFraction: nil)
+        XCTAssertGreaterThanOrEqual(level, 6)
+        XCTAssertLessThanOrEqual(level, 9)
     }
 
-    func testFallbackBoundary_79Pct_IsYellow() {
-        // UsageStatusCalculator: 79% used → .moderate → must be in yellow band
-        let level = UsageStatusCalculator.colorLevel(utilization: 79, elapsedFraction: nil)
-        XCTAssertGreaterThanOrEqual(level, 4)
-        XCTAssertLessThanOrEqual(level, 7)
+    func testFallbackBoundary_151Pct_IsRed() {
+        // 151% used → critical → LEVEL_10
+        XCTAssertEqual(UsageStatusCalculator.colorLevel(utilization: 151, elapsedFraction: nil), 10)
     }
 }
