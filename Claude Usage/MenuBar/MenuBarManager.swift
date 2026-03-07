@@ -3,7 +3,6 @@ import SwiftUI
 import Combine
 
 class MenuBarManager: NSObject, ObservableObject {
-    private var statusItem: NSStatusItem?  // Legacy - kept for backwards compatibility
     private var statusBarUIManager: StatusBarUIManager?
     private var refreshTimer: Timer?
     private var pollingScheduler = PollingScheduler()
@@ -85,9 +84,6 @@ class MenuBarManager: NSObject, ObservableObject {
     // Observer for refresh interval changes
     private var refreshIntervalObserver: NSKeyValueObservation?
 
-    // Observer for appearance changes
-    private var appearanceObserver: NSKeyValueObservation?
-
     // Observer for icon style changes
     private var iconStyleObserver: NSObjectProtocol?
 
@@ -101,8 +97,6 @@ class MenuBarManager: NSObject, ObservableObject {
     private var displayModeObserver: NSObjectProtocol?
 
     // MARK: - Image Caching (CPU Optimization)
-    private var cachedImage: NSImage?
-    private var cachedImageKey: String = ""
     private var updateDebounceTimer: Timer?
     private var cachedIsDarkMode: Bool = false
 
@@ -204,9 +198,6 @@ class MenuBarManager: NSObject, ObservableObject {
         // Start auto-start session service (5-minute cycle for all profiles)
         autoStartService.start()
 
-        // Observe appearance changes
-        observeAppearanceChanges()
-
         // Observe icon configuration changes
         observeIconConfigChanges()
 
@@ -226,8 +217,6 @@ class MenuBarManager: NSObject, ObservableObject {
         cancellables.removeAll()  // Clean up Combine subscriptions
         refreshIntervalObserver?.invalidate()
         refreshIntervalObserver = nil
-        appearanceObserver?.invalidate()
-        appearanceObserver = nil
         if let iconStyleObserver = iconStyleObserver {
             NotificationCenter.default.removeObserver(iconStyleObserver)
             self.iconStyleObserver = nil
@@ -250,7 +239,6 @@ class MenuBarManager: NSObject, ObservableObject {
         }
         detachedWindow?.close()
         detachedWindow = nil
-        statusItem = nil
         statusBarUIManager?.cleanup()
         statusBarUIManager = nil
     }
@@ -558,13 +546,6 @@ class MenuBarManager: NSObject, ObservableObject {
         )
     }
 
-    // Legacy method kept for backwards compatibility (now uses new system)
-    private func updateStatusButton(_ button: NSStatusBarButton, usage: ClaudeUsage) {
-        // This method is deprecated but kept for any remaining references
-        // The new system handles updates through updateAllStatusBarIcons()
-        updateAllStatusBarIcons()
-    }
-
     // MARK: - Icon Style: Battery (Classic)
 
     private func startAutoRefresh() {
@@ -596,25 +577,6 @@ class MenuBarManager: NSObject, ObservableObject {
         }
     }
 
-    private func observeAppearanceChanges() {
-        // Observe appearance changes on NSApp (fires less frequently than button)
-        // This optimization reduces redundant redraws
-        appearanceObserver = NSApp.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, change in
-            guard let self = self,
-                  let button = self.statusItem?.button else { return }
-
-            // Cache the dark mode state to avoid querying it during layout
-            let isDark = change.newValue?.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-
-            DispatchQueue.main.async {
-                self.cachedIsDarkMode = isDark
-                // Clear cache to force redraw with new appearance
-                self.cachedImageKey = ""
-                self.updateStatusButton(button, usage: self.usage)
-            }
-        }
-    }
-
     private func observeIconStyleChanges() {
         // Observe icon style changes from settings (now consolidated with menuBarIconConfigChanged)
         iconStyleObserver = NotificationCenter.default.addObserver(
@@ -623,8 +585,6 @@ class MenuBarManager: NSObject, ObservableObject {
             queue: .main
         ) { [weak self] _ in
             guard let self = self else { return }
-            // Clear cache to force redraw with new style
-            self.cachedImageKey = ""
             self.updateAllStatusBarIcons()
         }
     }
