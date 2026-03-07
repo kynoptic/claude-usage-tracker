@@ -50,8 +50,7 @@ struct PopoverContentView: View {
                 sessionContext: manager.pacingContext,
                 isStale: manager.isStale,
                 lastSuccessfulFetch: manager.lastSuccessfulFetch,
-                lastRefreshError: manager.lastRefreshError,
-                nextRefreshAt: manager.nextRefreshAt
+                refreshState: manager
             )
 
             // Contextual Insights
@@ -496,8 +495,8 @@ struct SmartUsageDashboard: View {
     var sessionContext: PacingContext = .none
     var isStale: Bool = false
     var lastSuccessfulFetch: Date?
-    var lastRefreshError: AppError? = nil
-    var nextRefreshAt: Date? = nil
+    /// Observed directly so changes propagate live while the popover is open.
+    @ObservedObject var refreshState: MenuBarManager
     @StateObject private var profileManager = ProfileManager.shared
 
     // Get the display mode from active profile's icon config
@@ -518,7 +517,7 @@ struct SmartUsageDashboard: View {
     private func stalenessLabel(at now: Date) -> String {
         // Error description
         let errorPart: String
-        if let error = lastRefreshError {
+        if let error = refreshState.lastRefreshError {
             switch error.code {
             case .apiRateLimited:
                 errorPart = "Rate limited"
@@ -543,7 +542,7 @@ struct SmartUsageDashboard: View {
         }
 
         // Retry countdown
-        if let next = nextRefreshAt, next > now {
+        if let next = refreshState.nextRefreshAt, next > now {
             let remaining = next.timeIntervalSince(now)
             let retryPart: String
             if remaining < 60 {
