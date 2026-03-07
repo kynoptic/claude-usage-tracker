@@ -47,8 +47,10 @@ struct PopoverContentView: View {
             SmartUsageDashboard(
                 usage: displayUsage,
                 apiUsage: displayAPIUsage,
+                sessionContext: manager.pacingContext,
                 isStale: manager.isStale,
-                lastSuccessfulFetch: manager.lastSuccessfulFetch
+                lastSuccessfulFetch: manager.lastSuccessfulFetch,
+                refreshState: manager
             )
 
             // Contextual Insights
@@ -490,8 +492,11 @@ struct SmartHeader: View {
 struct SmartUsageDashboard: View {
     let usage: ClaudeUsage
     let apiUsage: APIUsage?
+    var sessionContext: PacingContext = .none
     var isStale: Bool = false
     var lastSuccessfulFetch: Date?
+    /// Observed directly so changes propagate live while the popover is open.
+    @ObservedObject var refreshState: MenuBarManager
     @StateObject private var profileManager = ProfileManager.shared
 
     // Get the display mode from active profile's icon config
@@ -508,35 +513,67 @@ struct SmartUsageDashboard: View {
         DataStore.shared.loadAPITrackingEnabled()
     }
 
-    /// Formatted "Updated X ago" label for stale data
-    private var stalenessLabel: String? {
-        guard isStale, let lastFetch = lastSuccessfulFetch else { return nil }
-        let elapsed = Date().timeIntervalSince(lastFetch)
-        if elapsed < 60 {
-            return "Updated just now"
-        } else if elapsed < 3600 {
-            return "Updated \(Int(elapsed / 60))m ago"
+    /// Formatted staleness label: explains why data is outdated and when it will retry.
+    private func stalenessLabel(at now: Date) -> String {
+        // Error description
+        let errorPart: String
+        if let error = refreshState.lastRefreshError {
+            switch error.code {
+            case .apiRateLimited:
+                errorPart = "Rate limited"
+            case .apiUnauthorized:
+                errorPart = "Auth failed (\(error.code.rawValue))"
+            case .networkUnavailable, .networkTimeout, .networkConnectionLost, .networkDNSFailed:
+                errorPart = "Network error (\(error.code.rawValue))"
+            default:
+                errorPart = "Fetch failed (\(error.code.rawValue))"
+            }
+        } else if let lastFetch = lastSuccessfulFetch {
+            let elapsed = now.timeIntervalSince(lastFetch)
+            if elapsed < 60 {
+                errorPart = "Updated just now"
+            } else if elapsed < 3600 {
+                errorPart = "Updated \(Int(elapsed / 60))m ago"
+            } else {
+                errorPart = "Updated \(Int(elapsed / 3600))h ago"
+            }
         } else {
-            return "Updated \(Int(elapsed / 3600))h ago"
+            errorPart = "No data yet"
         }
+
+        // Retry countdown
+        if let next = refreshState.nextRefreshAt, next > now {
+            let remaining = next.timeIntervalSince(now)
+            let retryPart: String
+            if remaining < 60 {
+                retryPart = "retrying in \(Int(remaining))s"
+            } else {
+                retryPart = "retrying in \(Int(remaining / 60))m"
+            }
+            return "\(errorPart) – \(retryPart)"
+        }
+
+        return errorPart
     }
 
     var body: some View {
         VStack(spacing: 16) {
             // Staleness indicator
             if isStale {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.secondary)
+                TimelineView(.periodic(from: .now, by: 15)) { context in
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
 
-                    Text(stalenessLabel ?? "Data may be outdated")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(.secondary)
+                        Text(stalenessLabel(at: context.date))
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
 
-                    Spacer()
+                        Spacer()
+                    }
+                    .padding(.horizontal, 4)
                 }
-                .padding(.horizontal, 4)
             }
 
             // Primary Usage Card
@@ -550,7 +587,8 @@ struct SmartUsageDashboard: View {
                 periodDuration: Constants.sessionWindow,
                 showTimeMarker: showTimeMarker,
                 metric: .session,
-                isStale: isStale
+                isStale: isStale,
+                context: sessionContext
             )
 
             // Secondary Usage Cards
@@ -638,6 +676,7 @@ struct SmartUsageCard: View {
     var showTimeMarker: Bool = true
     var metric: UsageMetric? = nil
     var isStale: Bool = false
+    var context: PacingContext = .none
 
     @State private var isFlipped = false
 
@@ -666,42 +705,44 @@ struct SmartUsageCard: View {
         )
     }
 
-    /// Status level based on display mode and session pacing
-    private var statusLevel: UsageStatusLevel {
-        // rawElapsedFraction is always the elapsed direction (not inverted for showRemaining),
-        // so pacing logic computes projected usage correctly regardless of display mode.
-        UsageStatusCalculator.calculateStatus(
+    /// Adaptive usage status derived from pacing context.
+    private var usageStatus: UsageStatus {
+        // Build a context that uses rawElapsedFraction if the passed context has none
+        let effectiveContext = context.elapsedFraction != nil
+            ? context
+            : PacingContext(
+                elapsedFraction: rawElapsedFraction,
+                weeklyProjected: context.weeklyProjected,
+                avgSessionUtilization: context.avgSessionUtilization,
+                sessionCount: context.sessionCount
+            )
+        return UsageStatusCalculator.calculateStatus(
             usedPercentage: usedPercentage,
             showRemaining: showRemaining,
-            elapsedFraction: rawElapsedFraction
+            context: effectiveContext
         )
     }
 
-    /// Color based on status level
-    private var statusColor: Color {
-        switch statusLevel {
-        case .safe: return .green
-        case .moderate: return .orange
-        case .critical: return .red
-        }
-    }
+    private var statusColor: Color { .usageStatus(usageStatus) }
 
     private var statusIcon: String {
-        switch statusLevel {
-        case .safe: return "checkmark.circle.fill"
-        case .moderate: return "exclamationmark.triangle.fill"
+        switch usageStatus.zone {
+        case .green:    return "checkmark.circle.fill"
+        case .approach: return "flame.fill"
+        case .warning:  return "exclamationmark.triangle.fill"
         case .critical: return "xmark.circle.fill"
         }
     }
 
     var body: some View {
-        ZStack {
-            frontContent
-                .opacity(isFlipped ? 0 : 1)
-
-            backContent
-                .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
-                .opacity(isFlipped ? 1 : 0)
+        Group {
+            if isFlipped {
+                backContent
+                    .transition(.opacity)
+            } else {
+                frontContent
+                    .transition(.opacity)
+            }
         }
         .padding(isPrimary ? 16 : 12)
         .background(
@@ -709,8 +750,7 @@ struct SmartUsageCard: View {
                 .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
         )
         .contentShape(Rectangle())
-        .rotation3DEffect(.degrees(isFlipped ? 180 : 0), axis: (x: 0, y: 1, z: 0))
-        .animation(.easeInOut(duration: 0.4), value: isFlipped)
+        .animation(.easeInOut(duration: 0.3), value: isFlipped)
         .opacity(isStale ? 0.7 : 1.0)
         .onTapGesture { if metric != nil { isFlipped.toggle() } }
         .accessibilityHint(metric != nil ? "Double tap to \(isFlipped ? "hide" : "show") usage chart" : "")
@@ -795,7 +835,6 @@ struct SmartUsageCard: View {
 
     private var backContent: some View {
         VStack(spacing: isPrimary ? 8 : 4) {
-            // Mini header with back hint
             HStack {
                 Text(title)
                     .font(.system(size: isPrimary ? 11 : 9, weight: .semibold))
@@ -1072,22 +1111,16 @@ struct APIUsageCard: View {
         )
     }
 
-    /// Status level based on display mode
-    private var statusLevel: UsageStatusLevel {
+    /// Status derived from the new adaptive calculator (no pacing for API billing).
+    private var usageStatus: UsageStatus {
         UsageStatusCalculator.calculateStatus(
             usedPercentage: apiUsage.usagePercentage,
-            showRemaining: showRemaining
+            showRemaining: showRemaining,
+            context: .none
         )
     }
 
-    /// Color based on status level
-    private var usageColor: Color {
-        switch statusLevel {
-        case .safe: return .green
-        case .moderate: return .orange
-        case .critical: return .red
-        }
-    }
+    private var usageColor: Color { .usageStatus(usageStatus) }
 
     var body: some View {
         VStack(spacing: 12) {

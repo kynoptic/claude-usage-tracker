@@ -19,6 +19,16 @@ class MenuBarManager: NSObject, ObservableObject {
     /// Explicitly published so SwiftUI redraws when staleness changes.
     @Published private(set) var isStale: Bool = false
 
+    /// The last fetch error, nil when the most recent fetch succeeded.
+    @Published private(set) var lastRefreshError: AppError?
+
+    /// When the next automatic refresh is scheduled to fire.
+    @Published private(set) var nextRefreshAt: Date?
+
+    /// Adaptive pacing context for the active profile's current session.
+    /// Updated after each successful fetch. Consumers pass this into UsageStatusCalculator.
+    @Published private(set) var pacingContext: PacingContext = .none
+
     /// Recomputes `isStale` from scheduler state and last-fetch timestamp.
     /// Call on MainActor after any scheduler state change.
     private func updateStaleness() {
@@ -40,6 +50,9 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // Track when refresh was last triggered (for distinguishing user vs auto refresh)
     private var lastRefreshTriggerTime: Date = .distantPast
+
+    // Previous usage snapshot for session/weekly boundary detection
+    private var previousUsage: ClaudeUsage?
 
     // Popover for beautiful SwiftUI interface
     private var popover: NSPopover?
@@ -210,6 +223,7 @@ class MenuBarManager: NSObject, ObservableObject {
     func cleanup() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        nextRefreshAt = nil  // prevent stale countdown after polling stops
         networkMonitor.stopMonitoring()
         autoStartService.stop()
         cancellables.removeAll()  // Clean up Combine subscriptions
@@ -561,6 +575,7 @@ class MenuBarManager: NSObject, ObservableObject {
         refreshTimer = nil
 
         let interval = pollingScheduler.currentInterval
+        nextRefreshAt = Date().addingTimeInterval(interval)
         refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
             self?.refreshUsage()
         }
@@ -774,6 +789,18 @@ class MenuBarManager: NSObject, ObservableObject {
                             self.usage = newUsage
                             activeProfileUsage = newUsage
                             self.lastSuccessfulFetch = Date()
+
+                            // Detect session/weekly boundaries for the active profile only
+                            if let sessionRecord = BoundaryDetector.detectSession(previous: self.previousUsage, current: newUsage) {
+                                SessionHistoryStore.shared.record(session: sessionRecord)
+                            }
+                            if let weeklyRecord = BoundaryDetector.detectWeekly(previous: self.previousUsage, current: newUsage) {
+                                SessionHistoryStore.shared.record(weekly: weeklyRecord)
+                            }
+                            self.previousUsage = newUsage
+
+                            // Build adaptive pacing context (multi-profile: active profile only)
+                            self.pacingContext = self.buildPacingContext(for: newUsage)
                         }
                     }
                 } catch {
@@ -803,13 +830,45 @@ class MenuBarManager: NSObject, ObservableObject {
                 if let usage = activeProfileUsage {
                     self.pollingScheduler.recordSuccess(usage: usage)
                     self.lastSuccessfulFetch = Date()
+                    self.lastRefreshError = nil
                 } else if hitRateLimit {
                     self.pollingScheduler.recordRateLimitError(retryAfter: rateLimitRetryAfter)
+                    self.lastRefreshError = AppError.apiRateLimited()
                 }
                 self.updateStaleness()
                 self.startAutoRefresh()
             }
         }
+    }
+
+    /// Builds the adaptive pacing context for the given usage snapshot.
+    ///
+    /// Computes elapsedFraction from sessionResetTime, pulls weeklyProjected
+    /// and filtered session history from SessionHistoryStore.
+    private func buildPacingContext(for usage: ClaudeUsage) -> PacingContext {
+        let elapsedFraction = UsageStatusCalculator.elapsedFraction(
+            resetTime: usage.sessionResetTime,
+            duration: Constants.sessionWindow,
+            showRemaining: false
+        )
+        let weeklyProjected = SessionHistoryStore.shared.weeklyProjected(currentLimit: usage.weeklyLimit)
+        let allSessions = SessionHistoryStore.shared.sessions()
+        let filtered: [SessionRecord]
+        if usage.sessionLimit > 0 {
+            filtered = allSessions.filter { record in
+                abs(Double(record.sessionLimit) - Double(usage.sessionLimit)) / Double(usage.sessionLimit) < 0.10
+            }
+        } else {
+            filtered = []
+        }
+        let avg: Double? = filtered.isEmpty ? nil :
+            filtered.map { $0.finalPercentage / 100.0 }.reduce(0, +) / Double(filtered.count)
+        return PacingContext(
+            elapsedFraction: elapsedFraction,
+            weeklyProjected: weeklyProjected,
+            avgSessionUtilization: avg,
+            sessionCount: filtered.count
+        )
     }
 
     /// Fetches usage data for a specific profile using its credentials
@@ -923,6 +982,18 @@ class MenuBarManager: NSObject, ObservableObject {
                     // Single-profile path — mutually exclusive with multi-profile recordAll
                     UsageHistoryStore.shared.recordAll(from: newUsage)
 
+                    // Detect session/weekly boundaries and persist to history
+                    if let sessionRecord = BoundaryDetector.detectSession(previous: self.previousUsage, current: newUsage) {
+                        SessionHistoryStore.shared.record(session: sessionRecord)
+                    }
+                    if let weeklyRecord = BoundaryDetector.detectWeekly(previous: self.previousUsage, current: newUsage) {
+                        SessionHistoryStore.shared.record(weekly: weeklyRecord)
+                    }
+                    self.previousUsage = newUsage
+
+                    // Build adaptive pacing context (single-profile path)
+                    self.pacingContext = self.buildPacingContext(for: newUsage)
+
                     // Update all menu bar icons
                     self.updateAllStatusBarIcons()
 
@@ -944,6 +1015,7 @@ class MenuBarManager: NSObject, ObservableObject {
                 await MainActor.run {
                     self.pollingScheduler.recordSuccess(usage: newUsage)
                     self.lastSuccessfulFetch = Date()
+                    self.lastRefreshError = nil
                     self.updateStaleness()
                 }
 
@@ -962,6 +1034,7 @@ class MenuBarManager: NSObject, ObservableObject {
                     } else {
                         self.pollingScheduler.recordOtherError()
                     }
+                    self.lastRefreshError = appError
                     self.updateStaleness()
                     LoggingService.shared.logError("MenuBarManager: Failed to fetch usage - [\(appError.code.rawValue)] \(appError.message)")
                 }
@@ -1161,31 +1234,11 @@ class MenuBarManager: NSObject, ObservableObject {
 // MARK: - NSPopoverDelegate
 extension MenuBarManager: NSPopoverDelegate {
     func popoverShouldDetach(_ popover: NSPopover) -> Bool {
-        // Allow popover to be detached by dragging
-        return true
-    }
-
-    func detachableWindow(for popover: NSPopover) -> NSWindow? {
-        // Stop monitoring for outside clicks when detaching
-        stopMonitoringForOutsideClicks()
-
-        // Create a new window with NEW content view controller
-        // This prevents the popover from losing its content
-        let newContentViewController = createContentViewController()
-
-        let window = NSWindow(contentViewController: newContentViewController)
-        window.title = "app.window.main".localized
-        window.styleMask = [.titled, .closable]  // Close-only, minimal and clean
-        window.setContentSize(NSSize(width: 320, height: 600))
-        window.isReleasedWhenClosed = false
-        window.level = .floating  // Keep it above other windows
-        window.isRestorable = false  // Don't persist across app restarts
-        window.delegate = self
-
-        // Store reference to the detached window
-        detachedWindow = window
-
-        return window
+        // Detachment disabled: dragging while a card-flip animation is in-flight causes
+        // NSPopover._dragFromScreenLocation: to open an inner run loop that flushes a
+        // CA transaction, which hits a baseline-constraint exception on the
+        // rotation3DEffect view and crashes via NSApplication._crashOnException:.
+        return false
     }
 }
 

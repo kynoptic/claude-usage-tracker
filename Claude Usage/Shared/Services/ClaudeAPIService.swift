@@ -474,6 +474,16 @@ class ClaudeAPIService: APIServiceProtocol {
             }
 
             guard httpResponse.statusCode == 200 else {
+                // On 429, fall back to the claude.ai session key endpoint if one is available.
+                // That endpoint has more lenient rate limits and is what the statusline uses.
+                if httpResponse.statusCode == 429,
+                   let sessionKey = ProfileManager.shared.activeProfile?.claudeSessionKey,
+                   (try? sessionKeyValidator.validate(sessionKey)) != nil {
+                    LoggingService.shared.log("ClaudeAPIService: OAuth rate limited — falling back to claude.ai session endpoint")
+                    let orgId = try await fetchOrganizationId(sessionKey: sessionKey)
+                    let usageData = try await performRequest(endpoint: "/organizations/\(orgId)/usage", sessionKey: sessionKey)
+                    return try parseUsageResponse(usageData)
+                }
                 throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth authentication failed", httpResponse: httpResponse)
             }
 

@@ -140,17 +140,21 @@ GRAY=$'\\033[0;90m'
 YELLOW=$'\\033[0;33m'
 RESET=$'\\033[0m'
 
-# 10-level gradient: dark green → deep red
+# 10-level gradient: dark green → bright red (mirrors new HSB severity bands)
+# Levels 1–3: green (severity 0.0–0.4, usage < 90%)
+# Levels 4–5: yellow-green / amber (approach zone 90–100%)
+# Levels 6–9: orange to deep-red (warning zone 100–150%)
+# Level  10:  bright red (critical, >150%)
 LEVEL_1=$'\\033[38;5;22m'   # dark green
 LEVEL_2=$'\\033[38;5;28m'   # soft green
 LEVEL_3=$'\\033[38;5;34m'   # medium green
-LEVEL_4=$'\\033[38;5;100m'  # green-yellowish dark
-LEVEL_5=$'\\033[38;5;142m'  # olive/yellow-green dark
-LEVEL_6=$'\\033[38;5;178m'  # muted yellow
-LEVEL_7=$'\\033[38;5;172m'  # muted yellow-orange
-LEVEL_8=$'\\033[38;5;166m'  # darker orange
-LEVEL_9=$'\\033[38;5;160m'  # dark red
-LEVEL_10=$'\\033[38;5;124m' # deep red
+LEVEL_4=$'\\033[38;5;190m'  # yellow-green
+LEVEL_5=$'\\033[38;5;220m'  # gold/amber
+LEVEL_6=$'\\033[38;5;214m'  # orange-yellow
+LEVEL_7=$'\\033[38;5;208m'  # orange
+LEVEL_8=$'\\033[38;5;202m'  # orange-red
+LEVEL_9=$'\\033[38;5;160m'  # deep red
+LEVEL_10=$'\\033[38;5;196m' # bright red
 SESSION_SECS=18000  # 5-hour session window (Constants.sessionWindow)
 
 # Build components (without separators)
@@ -203,42 +207,47 @@ if [ "$show_usage" = "1" ]; then
       # which is exactly the fallback behaviour we want.
       if [ "$elapsed_frac_pct" -ge 15 ] 2>/dev/null && [ "$utilization" -gt 0 ]; then
         # Pacing mode: projected = utilization * 100 / elapsed_frac_pct (integer %)
+        # Zones mirror UsageStatusCalculator: green <90%, approach 90–100%,
+        # warning 100–120% (redThr at default avgRate), critical >120%.
         projected=$(( (utilization * 100) / elapsed_frac_pct ))
-        if [ "$projected" -lt 75 ]; then
-          if [ "$projected" -lt 25 ]; then usage_color="$LEVEL_1"
-          elif [ "$projected" -lt 50 ]; then usage_color="$LEVEL_2"
+        if [ "$projected" -lt 90 ]; then
+          if [ "$projected" -lt 30 ]; then usage_color="$LEVEL_1"
+          elif [ "$projected" -lt 60 ]; then usage_color="$LEVEL_2"
           else usage_color="$LEVEL_3"
           fi
-        elif [ "$projected" -lt 95 ]; then
-          if [ "$projected" -lt 80 ]; then usage_color="$LEVEL_4"
-          elif [ "$projected" -lt 85 ]; then usage_color="$LEVEL_5"
-          elif [ "$projected" -lt 90 ]; then usage_color="$LEVEL_6"
-          else usage_color="$LEVEL_7"
+        elif [ "$projected" -lt 100 ]; then
+          if [ "$projected" -lt 95 ]; then usage_color="$LEVEL_4"
+          else usage_color="$LEVEL_5"
+          fi
+        elif [ "$projected" -lt 120 ]; then
+          if [ "$projected" -lt 105 ]; then usage_color="$LEVEL_6"
+          elif [ "$projected" -lt 110 ]; then usage_color="$LEVEL_7"
+          elif [ "$projected" -lt 115 ]; then usage_color="$LEVEL_8"
+          else usage_color="$LEVEL_9"
           fi
         else
-          if [ "$projected" -lt 115 ]; then usage_color="$LEVEL_8"
-          elif [ "$projected" -lt 135 ]; then usage_color="$LEVEL_9"
-          else usage_color="$LEVEL_10"
-          fi
+          usage_color="$LEVEL_10"
         fi
       else
         # Fallback: absolute thresholds matching UsageStatusCalculator (used-based)
-        if [ "$utilization" -lt 50 ]; then
-          if [ "$utilization" -lt 17 ]; then usage_color="$LEVEL_1"
-          elif [ "$utilization" -lt 34 ]; then usage_color="$LEVEL_2"
+        # green <90%, approach 90–100%, warning 100–150%, critical >150%.
+        if [ "$utilization" -lt 90 ]; then
+          if [ "$utilization" -lt 30 ]; then usage_color="$LEVEL_1"
+          elif [ "$utilization" -lt 60 ]; then usage_color="$LEVEL_2"
           else usage_color="$LEVEL_3"
           fi
-        elif [ "$utilization" -lt 80 ]; then
-          if [ "$utilization" -lt 60 ]; then usage_color="$LEVEL_4"
-          elif [ "$utilization" -lt 67 ]; then usage_color="$LEVEL_5"
-          elif [ "$utilization" -lt 73 ]; then usage_color="$LEVEL_6"
-          else usage_color="$LEVEL_7"
+        elif [ "$utilization" -lt 100 ]; then
+          if [ "$utilization" -lt 95 ]; then usage_color="$LEVEL_4"
+          else usage_color="$LEVEL_5"
+          fi
+        elif [ "$utilization" -lt 150 ]; then
+          if [ "$utilization" -lt 113 ]; then usage_color="$LEVEL_6"
+          elif [ "$utilization" -lt 125 ]; then usage_color="$LEVEL_7"
+          elif [ "$utilization" -lt 138 ]; then usage_color="$LEVEL_8"
+          else usage_color="$LEVEL_9"
           fi
         else
-          if [ "$utilization" -lt 87 ]; then usage_color="$LEVEL_8"
-          elif [ "$utilization" -lt 93 ]; then usage_color="$LEVEL_9"
-          else usage_color="$LEVEL_10"
-          fi
+          usage_color="$LEVEL_10"
         fi
       fi
 
