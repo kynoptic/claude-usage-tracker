@@ -508,9 +508,11 @@ struct SmartUsageDashboard: View {
         DataStore.shared.loadAPITrackingEnabled()
     }
 
-    /// Formatted "Updated X ago" label for stale data
-    private var stalenessLabel: String? {
-        guard isStale, let lastFetch = lastSuccessfulFetch else { return nil }
+    /// Formatted staleness label: explains why data is outdated
+    private var stalenessLabel: String {
+        guard let lastFetch = lastSuccessfulFetch else {
+            return "Rate limited – retrying soon"
+        }
         let elapsed = Date().timeIntervalSince(lastFetch)
         if elapsed < 60 {
             return "Updated just now"
@@ -530,7 +532,7 @@ struct SmartUsageDashboard: View {
                         .font(.system(size: 9, weight: .medium))
                         .foregroundColor(.secondary)
 
-                    Text(stalenessLabel ?? "Data may be outdated")
+                    Text(stalenessLabel)
                         .font(.system(size: 9, weight: .medium))
                         .foregroundColor(.secondary)
 

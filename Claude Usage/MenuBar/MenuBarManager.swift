@@ -1161,31 +1161,11 @@ class MenuBarManager: NSObject, ObservableObject {
 // MARK: - NSPopoverDelegate
 extension MenuBarManager: NSPopoverDelegate {
     func popoverShouldDetach(_ popover: NSPopover) -> Bool {
-        // Allow popover to be detached by dragging
-        return true
-    }
-
-    func detachableWindow(for popover: NSPopover) -> NSWindow? {
-        // Stop monitoring for outside clicks when detaching
-        stopMonitoringForOutsideClicks()
-
-        // Create a new window with NEW content view controller
-        // This prevents the popover from losing its content
-        let newContentViewController = createContentViewController()
-
-        let window = NSWindow(contentViewController: newContentViewController)
-        window.title = "app.window.main".localized
-        window.styleMask = [.titled, .closable]  // Close-only, minimal and clean
-        window.setContentSize(NSSize(width: 320, height: 600))
-        window.isReleasedWhenClosed = false
-        window.level = .floating  // Keep it above other windows
-        window.isRestorable = false  // Don't persist across app restarts
-        window.delegate = self
-
-        // Store reference to the detached window
-        detachedWindow = window
-
-        return window
+        // Detachment disabled: dragging while a card-flip animation is in-flight causes
+        // NSPopover._dragFromScreenLocation: to open an inner run loop that flushes a
+        // CA transaction, which hits a baseline-constraint exception on the
+        // rotation3DEffect view and crashes via NSApplication._crashOnException:.
+        return false
     }
 }
 
