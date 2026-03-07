@@ -476,10 +476,22 @@ GREY_THRESHOLD=\(Int(greyThreshold * 100))
                FileManager.default.fileExists(atPath: bashScript.path)
     }
 
-    /// Updates scripts only if already installed (installation is optional)
+    /// Updates scripts only if already installed (installation is optional).
+    /// Also syncs the config file so UserDefaults settings (including greyThreshold) are reflected.
     func updateScriptsIfInstalled() throws {
         guard isInstalled else { return }
         try installScripts(injectSessionKey: true)
+        let store = SharedDataStore.shared
+        try updateConfiguration(
+            showDirectory: store.loadStatuslineShowDirectory(),
+            showBranch: store.loadStatuslineShowBranch(),
+            showUsage: store.loadStatuslineShowUsage(),
+            showProgressBar: store.loadStatuslineShowProgressBar(),
+            showResetTime: store.loadStatuslineShowResetTime(),
+            showTimeMarker: store.loadStatuslineShowTimeMarker(),
+            showGreyZone: DataStore.shared.loadShowGreyZone(),
+            greyThreshold: DataStore.shared.loadGreyThreshold()
+        )
     }
 
     /// Updates the grey zone setting in the statusline config file if statusline is installed.
