@@ -109,7 +109,7 @@ final class MenuBarIconRenderer {
     private struct MetricData {
         let percentage: Double
         let displayText: String
-        let statusLevel: UsageStatusLevel
+        let status: UsageStatus
         let sessionResetTime: Date?  // Only populated for session metric
     }
 
@@ -132,16 +132,17 @@ final class MenuBarIconRenderer {
                 duration: Constants.sessionWindow,
                 showRemaining: false
             )
-            let statusLevel = UsageStatusCalculator.calculateStatus(
+            let ctx = PacingContext(elapsedFraction: sessionElapsed, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
+            let status = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
-                elapsedFraction: sessionElapsed
+                context: ctx
             )
 
             return MetricData(
                 percentage: displayPercentage,
                 displayText: "\(Int(displayPercentage))%",
-                statusLevel: statusLevel,
+                status: status,
                 sessionResetTime: usage.sessionResetTime
             )
 
@@ -156,10 +157,11 @@ final class MenuBarIconRenderer {
                 duration: Constants.weeklyWindow,
                 showRemaining: false
             )
-            let statusLevel = UsageStatusCalculator.calculateStatus(
+            let ctx = PacingContext(elapsedFraction: weekElapsed, weeklyProjected: nil, avgSessionUtilization: nil, sessionCount: 0)
+            let status = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
-                elapsedFraction: weekElapsed
+                context: ctx
             )
 
             let displayText: String
@@ -173,7 +175,7 @@ final class MenuBarIconRenderer {
             return MetricData(
                 percentage: displayPercentage,
                 displayText: displayText,
-                statusLevel: statusLevel,
+                status: status,
                 sessionResetTime: nil
             )
 
@@ -182,7 +184,7 @@ final class MenuBarIconRenderer {
                 return MetricData(
                     percentage: showRemaining ? 100 : 0,  // 100% remaining or 0% used when no data
                     displayText: "N/A",
-                    statusLevel: .safe,
+                    status: UsageStatus(zone: .green, severity: 0.0, actionText: ""),
                     sessionResetTime: nil
                 )
             }
@@ -192,9 +194,10 @@ final class MenuBarIconRenderer {
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining
             )
-            let statusLevel = UsageStatusCalculator.calculateStatus(
+            let status = UsageStatusCalculator.calculateStatus(
                 usedPercentage: usedPercentage,
-                showRemaining: showRemaining
+                showRemaining: showRemaining,
+                context: .none
             )
 
             let displayText: String
@@ -210,7 +213,7 @@ final class MenuBarIconRenderer {
             return MetricData(
                 percentage: displayPercentage,
                 displayText: displayText,
-                statusLevel: statusLevel,
+                status: status,
                 sessionResetTime: nil
             )
         }
@@ -245,7 +248,7 @@ final class MenuBarIconRenderer {
         let foregroundColor = menuBarForegroundColor(isDarkMode: isDarkMode)
         let outlineColor: NSColor = foregroundColor
         let textColor: NSColor = foregroundColor
-        let fillColor: NSColor = monochromeMode ? foregroundColor : getColorForStatusLevel(metricData.statusLevel)
+        let fillColor: NSColor = monochromeMode ? foregroundColor : UsageStatusCalculator.color(for: metricData.status)
 
         let xOffset: CGFloat = 0
 
@@ -348,7 +351,7 @@ final class MenuBarIconRenderer {
         // Use isDarkMode to determine correct foreground color for menu bar
         let foregroundColor = menuBarForegroundColor(isDarkMode: isDarkMode)
         let textColor: NSColor = foregroundColor
-        let fillColor: NSColor = monochromeMode ? foregroundColor : getColorForStatusLevel(metricData.statusLevel)
+        let fillColor: NSColor = monochromeMode ? foregroundColor : UsageStatusCalculator.color(for: metricData.status)
         let backgroundColor: NSColor = foregroundColor.withAlphaComponent(0.2)
 
         var xOffset: CGFloat = 1
@@ -435,7 +438,7 @@ final class MenuBarIconRenderer {
 
         // Use isDarkMode to determine correct foreground color for menu bar
         let foregroundColor = menuBarForegroundColor(isDarkMode: isDarkMode)
-        let fillColor: NSColor = monochromeMode ? foregroundColor : getColorForStatusLevel(metricData.statusLevel)
+        let fillColor: NSColor = monochromeMode ? foregroundColor : UsageStatusCalculator.color(for: metricData.status)
 
         var fullText = ""
 
@@ -483,7 +486,7 @@ final class MenuBarIconRenderer {
         // Use isDarkMode to determine correct foreground color for menu bar
         let foregroundColor = menuBarForegroundColor(isDarkMode: isDarkMode)
         let textColor: NSColor = foregroundColor
-        let fillColor: NSColor = monochromeMode ? foregroundColor : getColorForStatusLevel(metricData.statusLevel)
+        let fillColor: NSColor = monochromeMode ? foregroundColor : UsageStatusCalculator.color(for: metricData.status)
 
         let xOffset: CGFloat = 1
 
@@ -579,7 +582,7 @@ final class MenuBarIconRenderer {
         // Use isDarkMode to determine correct foreground color for menu bar
         let foregroundColor = menuBarForegroundColor(isDarkMode: isDarkMode)
         let textColor: NSColor = foregroundColor
-        let fillColor: NSColor = monochromeMode ? foregroundColor : getColorForStatusLevel(metricData.statusLevel)
+        let fillColor: NSColor = monochromeMode ? foregroundColor : UsageStatusCalculator.color(for: metricData.status)
 
         var xOffset: CGFloat = 1
 
@@ -662,8 +665,8 @@ final class MenuBarIconRenderer {
     func createConcentricIcon(
         sessionPercentage: Double,
         weekPercentage: Double,
-        sessionStatus: UsageStatusLevel,
-        weekStatus: UsageStatusLevel,
+        sessionStatus: UsageStatus,
+        weekStatus: UsageStatus,
         profileInitial: String,
         monochromeMode: Bool,
         isDarkMode: Bool,
@@ -1101,29 +1104,18 @@ final class MenuBarIconRenderer {
         return isDarkMode ? .white : .black
     }
 
-    private func getColorForStatusLevel(_ level: UsageStatusLevel) -> NSColor {
-        switch level {
-        case .safe:
-            return NSColor.systemGreen
-        case .moderate:
-            return NSColor.systemYellow
-        case .critical:
-            return NSColor.systemRed
-        }
-    }
-
     /// Returns the appropriate color based on mode settings
     /// - Parameters:
-    ///   - status: The usage status level
+    ///   - status: The usage status
     ///   - monochromeMode: If true, return foreground color based on isDarkMode
     ///   - useSystemColor: If true, return foreground color (same as monochrome)
     ///   - isDarkMode: Whether the menu bar is in dark mode
     /// - Returns: The color to use for rendering
-    private func getColor(for status: UsageStatusLevel, monochromeMode: Bool, useSystemColor: Bool, isDarkMode: Bool) -> NSColor {
+    private func getColor(for status: UsageStatus, monochromeMode: Bool, useSystemColor: Bool, isDarkMode: Bool) -> NSColor {
         if monochromeMode || useSystemColor {
             return menuBarForegroundColor(isDarkMode: isDarkMode)
         } else {
-            return getColorForStatusLevel(status)
+            return UsageStatusCalculator.color(for: status)
         }
     }
 
