@@ -182,7 +182,9 @@
 "appearance.show_time_marker_title" = "경과 시간 표시기 표시";
 "appearance.show_time_marker_description" = "진행 막대에 기간 내 경과 시간을 나타내는 표시기 표시";
 "appearance.show_grey_title" = "저활용 세션에 회색 표시";
-"appearance.show_grey_description" = "활성화하면 세션 사용률이 50% 미만으로 예상될 때 아이콘이 회색으로 변합니다.";
+"appearance.show_grey_description" = "When enabled, the icon turns grey when your projected usage is below the configured threshold.";
+"appearance.grey_threshold_title" = "Grey zone threshold";
+"appearance.grey_threshold_description" = "Usage projected below this percentage is considered underutilized.";
 "appearance.multiprofile_locked_title" = "모양 설정 잠김";
 "appearance.multiprofile_locked_description" = "다중 프로필 표시가 활성화된 동안 이 설정은 비활성화됩니다. 다중 프로필 모드에서는 각 프로필이 자체 모양을 사용합니다.";
 "appearance.disable_multiprofile" = "다중 프로필 표시 끄기";

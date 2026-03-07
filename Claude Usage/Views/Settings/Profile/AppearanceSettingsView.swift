@@ -12,6 +12,7 @@ struct AppearanceSettingsView: View {
     @ObservedObject private var profileManager = ProfileManager.shared
     @State private var configuration: MenuBarIconConfiguration = .default
     @State private var showGreyZone: Bool = DataStore.shared.loadShowGreyZone()
+    @State private var greyThreshold: Double = DataStore.shared.loadGreyThreshold()
     @State private var saveDebounceTimer: Timer?
 
     private var isMultiProfileMode: Bool {
@@ -104,6 +105,32 @@ struct AppearanceSettingsView: View {
                                 }
                             )
                         )
+
+                        if showGreyZone {
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text("appearance.grey_threshold_title".localized)
+                                        .font(.system(size: 12, weight: .medium))
+                                    Spacer()
+                                    Text("\(Int(greyThreshold * 100))%")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                        .monospacedDigit()
+                                }
+                                Slider(value: Binding(
+                                    get: { greyThreshold },
+                                    set: { newValue in
+                                        greyThreshold = newValue
+                                        DataStore.shared.saveGreyThreshold(newValue)
+                                        NotificationCenter.default.post(name: .menuBarIconConfigChanged, object: nil)
+                                    }
+                                ), in: 0.1...0.8, step: 0.05)
+                                Text("appearance.grey_threshold_description".localized)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.leading, 16)
+                        }
                     }
                 }
                 .disabled(isMultiProfileMode)

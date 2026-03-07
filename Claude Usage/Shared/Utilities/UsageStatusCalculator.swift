@@ -8,8 +8,8 @@ import Cocoa
 ///
 /// Zone thresholds (projected %):
 /// ```
-///   grey   < 50%          (opt-in via showGrey)
-///   green  50–90%
+///   grey   < greyThreshold (opt-in via showGrey; default threshold 50%)
+///   green  greyThreshold–90%
 ///   yellow 90–110%
 ///   orange 110–150%
 ///   red    > 150%
@@ -24,12 +24,14 @@ final class UsageStatusCalculator {
     ///   - usedPercentage: Current usage 0–100+ (overage allowed).
     ///   - showRemaining: Unused for status; retained for API consistency.
     ///   - elapsedFraction: Fraction of session elapsed (0–1), or nil.
-    ///   - showGrey: When true, projected < 50% maps to `.grey`; otherwise `.green`.
+    ///   - showGrey: When true, projected below `greyThreshold` maps to `.grey`; otherwise `.green`.
+    ///   - greyThreshold: Fraction (0–1) below which usage is considered underutilized. Default `0.5`.
     static func calculateStatus(
         usedPercentage: Double,
         showRemaining: Bool,
         elapsedFraction: Double?,
-        showGrey: Bool = false
+        showGrey: Bool = false,
+        greyThreshold: Double = Constants.greyThresholdDefault
     ) -> UsageStatus {
         let u = usedPercentage / 100.0
 
@@ -42,9 +44,9 @@ final class UsageStatusCalculator {
 
         let zone: UsageZone
         switch projected {
-        case ..<0.5:
+        case ..<greyThreshold:
             zone = showGrey ? .grey : .green
-        case 0.5..<0.9:
+        case greyThreshold..<0.9:
             zone = .green
         case 0.9..<1.1:
             zone = .yellow
@@ -65,6 +67,7 @@ final class UsageStatusCalculator {
     ///   orange       → 7
     ///   red          → 10
     /// ```
+    // showGrey/greyThreshold not forwarded — colorLevel always treats grey as green
     static func colorLevel(utilization: Int, elapsedFraction: Double?) -> Int {
         let status = calculateStatus(
             usedPercentage: Double(utilization),

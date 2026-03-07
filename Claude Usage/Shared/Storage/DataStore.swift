@@ -457,6 +457,21 @@ class DataStore: StorageProvider {
         return defaults.bool(forKey: Constants.UserDefaultsKeys.showGreyZone)
     }
 
+    /// Saves grey zone threshold, clamped to 0.1...0.8.
+    func saveGreyThreshold(_ threshold: Double) {
+        let clamped = min(max(threshold, 0.1), 0.8)
+        defaults.set(clamped, forKey: Constants.UserDefaultsKeys.greyThreshold)
+    }
+
+    /// Loads grey zone threshold, clamped to 0.1...0.8. Defaults to `Constants.greyThresholdDefault` if never set.
+    func loadGreyThreshold() -> Double {
+        guard defaults.object(forKey: Constants.UserDefaultsKeys.greyThreshold) != nil else {
+            return Constants.greyThresholdDefault
+        }
+        let value = defaults.double(forKey: Constants.UserDefaultsKeys.greyThreshold)
+        return min(max(value, 0.1), 0.8)
+    }
+
     /// Saves show icon names preference
     func saveShowIconNames(_ show: Bool) {
         defaults.set(show, forKey: Constants.UserDefaultsKeys.showIconNames)
