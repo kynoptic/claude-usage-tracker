@@ -223,6 +223,7 @@ class MenuBarManager: NSObject, ObservableObject {
     func cleanup() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        nextRefreshAt = nil  // prevent stale countdown after polling stops
         networkMonitor.stopMonitoring()
         autoStartService.stop()
         cancellables.removeAll()  // Clean up Combine subscriptions

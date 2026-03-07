@@ -49,7 +49,7 @@ final class UsageStatusCalculator {
         if let t = t, t >= 0.15, t < 1.0 {
             redThr = redThreshold(t: t, effectiveAvgRate: effRate)
         } else {
-            redThr = 1.5  // Fallback: effectively unreachable via normal API
+            redThr = 1.5  // Fallback when timing unavailable; usedPercentage >150 → critical, 100–150 → warning
         }
 
         // Severity score

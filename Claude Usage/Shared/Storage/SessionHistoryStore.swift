@@ -145,6 +145,8 @@ final class SessionHistoryStore {
     }
 
     private func persistAsync(_ kind: Kind) {
+        // Always called while already on `queue`, so the nested async re-enters
+        // the same serial queue — cache access is safe with no additional locking.
         queue.async { [self] in
             do {
                 try fileManager.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
