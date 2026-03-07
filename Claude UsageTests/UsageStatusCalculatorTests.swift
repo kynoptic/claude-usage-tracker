@@ -19,13 +19,15 @@ final class UsageStatusCalculatorTests: XCTestCase {
     private func zone(
         _ used: Double,
         elapsed: Double? = nil,
-        showGrey: Bool = false
+        showGrey: Bool = false,
+        greyThreshold: Double = 0.5
     ) -> UsageZone {
         UsageStatusCalculator.calculateStatus(
             usedPercentage: used,
             showRemaining: false,
             elapsedFraction: elapsed,
-            showGrey: showGrey
+            showGrey: showGrey,
+            greyThreshold: greyThreshold
         ).zone
     }
 
@@ -179,6 +181,44 @@ final class UsageStatusCalculatorTests: XCTestCase {
     func testActionText_Red() {
         let s = UsageStatusCalculator.calculateStatus(usedPercentage: 160, showRemaining: false, elapsedFraction: nil)
         XCTAssertTrue(s.actionText.contains("Way over"), "got: \(s.actionText)")
+    }
+
+    // MARK: - Custom grey threshold
+
+    func testGreyThreshold_30pct_BelowThreshold_IsGrey() {
+        // threshold=0.3: projected 20% → grey
+        XCTAssertEqual(zone(20, showGrey: true, greyThreshold: 0.3), .grey)
+    }
+
+    func testGreyThreshold_30pct_AtThreshold_IsGreen() {
+        // threshold=0.3: projected 30% → green (≥ threshold)
+        XCTAssertEqual(zone(30, showGrey: true, greyThreshold: 0.3), .green)
+    }
+
+    func testGreyThreshold_30pct_AboveThreshold_IsGreen() {
+        // threshold=0.3: projected 40% → green
+        XCTAssertEqual(zone(40, showGrey: true, greyThreshold: 0.3), .green)
+    }
+
+    func testGreyThreshold_70pct_BelowThreshold_IsGrey() {
+        // threshold=0.7: projected 60% → grey
+        XCTAssertEqual(zone(60, showGrey: true, greyThreshold: 0.7), .grey)
+    }
+
+    func testGreyThreshold_70pct_AtThreshold_IsGreen() {
+        // threshold=0.7: projected 70% → green (≥ threshold)
+        XCTAssertEqual(zone(70, showGrey: true, greyThreshold: 0.7), .green)
+    }
+
+    func testGreyThreshold_CustomWithPacing() {
+        // threshold=0.3, 20% used at 80% elapsed → projected 25% → grey
+        XCTAssertEqual(zone(20, elapsed: 0.8, showGrey: true, greyThreshold: 0.3), .grey)
+    }
+
+    func testGreyThreshold_DefaultBehaviourUnchanged() {
+        // default threshold=0.5 still works as before
+        XCTAssertEqual(zone(49, showGrey: true, greyThreshold: 0.5), .grey)
+        XCTAssertEqual(zone(50, showGrey: true, greyThreshold: 0.5), .green)
     }
 
     // MARK: - Display percentage (unchanged helper)

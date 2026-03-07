@@ -56,6 +56,7 @@ enum Constants {
 
         // Pacing
         static let showGreyZone = "showGreyZone"
+        static let greyThreshold = "greyThreshold"
 
         // Localization
         static let appLanguage = "appLanguage"

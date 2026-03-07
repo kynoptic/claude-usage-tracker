@@ -712,7 +712,8 @@ struct SmartUsageCard: View {
             usedPercentage: usedPercentage,
             showRemaining: showRemaining,
             elapsedFraction: elapsed,
-            showGrey: DataStore.shared.loadShowGreyZone()
+            showGrey: DataStore.shared.loadShowGreyZone(),
+            greyThreshold: DataStore.shared.loadGreyThreshold()
         )
     }
 

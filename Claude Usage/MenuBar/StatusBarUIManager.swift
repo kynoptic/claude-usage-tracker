@@ -239,17 +239,20 @@ final class StatusBarUIManager {
                 showRemaining: false
             )
             let showGrey = DataStore.shared.loadShowGreyZone()
+            let greyThreshold = DataStore.shared.loadGreyThreshold()
             let sessionStatus = UsageStatusCalculator.calculateStatus(
                 usedPercentage: sessionUsed,
                 showRemaining: showRemaining,
                 elapsedFraction: sessionElapsed,
-                showGrey: showGrey
+                showGrey: showGrey,
+                greyThreshold: greyThreshold
             )
             let weekStatus = UsageStatusCalculator.calculateStatus(
                 usedPercentage: weekUsed,
                 showRemaining: showRemaining,
                 elapsedFraction: weekElapsed,
-                showGrey: showGrey
+                showGrey: showGrey,
+                greyThreshold: greyThreshold
             )
 
             // Use multi-profile config's useSystemColor as monochrome mode

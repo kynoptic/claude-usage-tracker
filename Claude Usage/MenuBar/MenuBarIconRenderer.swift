@@ -136,7 +136,8 @@ final class MenuBarIconRenderer {
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
                 elapsedFraction: sessionElapsed,
-                showGrey: DataStore.shared.loadShowGreyZone()
+                showGrey: DataStore.shared.loadShowGreyZone(),
+                greyThreshold: DataStore.shared.loadGreyThreshold()
             )
 
             return MetricData(
@@ -161,7 +162,8 @@ final class MenuBarIconRenderer {
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
                 elapsedFraction: weekElapsed,
-                showGrey: DataStore.shared.loadShowGreyZone()
+                showGrey: DataStore.shared.loadShowGreyZone(),
+                greyThreshold: DataStore.shared.loadGreyThreshold()
             )
 
             let displayText: String

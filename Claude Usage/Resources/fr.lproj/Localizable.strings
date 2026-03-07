@@ -399,6 +399,8 @@
 "appearance.show_time_marker_description" = "Afficher un repère sur les barres de progression indiquant le temps écoulé dans la période";
 "appearance.show_grey_title" = "Afficher en gris les sessions sous-utilisées";
 "appearance.show_grey_description" = "Lorsque activé, l'icône devient grise quand l'utilisation projetée est inférieure à 50 % de la session.";
+"appearance.grey_threshold_title" = "Grey zone threshold";
+"appearance.grey_threshold_description" = "Usage projected below this percentage is considered underutilized.";
 "appearance.multiprofile_locked_title" = "Paramètres d'Apparence Verrouillés";
 "appearance.multiprofile_locked_description" = "Ces paramètres sont désactivés pendant que l'Affichage Multi-Profil est actif. Chaque profil utilise sa propre apparence en mode multi-profil.";
 "appearance.disable_multiprofile" = "Désactiver l'Affichage Multi-Profil";
