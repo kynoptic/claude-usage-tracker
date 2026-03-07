@@ -7,34 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-03-07
+
+Projection-based pacing, burn-up charts, and resilient polling.
+
 ### Added
 
-- Five-zone pacing system: icon colour driven by projected end-of-session utilisation across grey, green, yellow, orange, and red zones using Apple system colours
-- `UsageStatus` (zone + actionText) and `UsageZone` as the core status model
-- Grey zone opt-in via "Show grey for underutilized sessions" toggle in Appearance settings (default off)
-- Action keywords in popover: "Underutilized 💤", "On track ✅", "Maximizing 🔥", "Overshooting ⚠️", "Way over 🛑"
-- Time-elapsed marker on session and weekly progress bars in popover, menu bar icons, and CLI statusline
-- Settings toggles for marker visibility in Appearance and Claude Code sections
-- Grey zone toggle syncs to statusline via `SHOW_GREY_ZONE` in `statusline-config.txt`
-- `fetchUsageData(oauthAccessToken:)` method for direct CLI OAuth usage fetch
-- `Constants.APIEndpoints.oauthUsage` for the OAuth usage endpoint
-- Localization strings for time marker toggle in all 8 languages
-
-### Fixed
-
-- Stale session data caused by silently expired cookie sessions not falling through to CLI OAuth
-- Auth priority: CLI OAuth (auto-refreshing) now preferred over cookie session key
-- CLI OAuth fallback in multi-profile `fetchUsageForProfile()` — tries OAuth first, cookie second
-- Token expiry ms/s normalization — millisecond `expiresAt` values were interpreted as seconds, making expired tokens appear valid
-- `elapsedFraction` returns 1.0 (or 0.0 in remaining mode) for expired sessions instead of nil
-- Menu bar arc now sweeps clockwise from 12 o'clock, matching standard progress conventions
+- Five-zone pacing colours (grey / green / yellow / orange / red) based on projected end-of-session utilisation, replacing the old three-bucket system
+- Configurable grey zone threshold (10–80%) in Appearance settings to flag underutilised sessions
+- Flip-card burn-up charts on usage cards showing historical usage progression with a pace line and "now" marker
+- Time-elapsed tick mark on menu bar icons, popover progress bars, and the CLI statusline
+- Staleness banner in the popover when data is outdated, with countdown to next retry
+- Adaptive polling with exponential backoff on 429 responses, honouring the server's Retry-After header
 
 ### Changed
 
-- Icon colour now uses five flat colour zones (grey/green/yellow/orange/red) based on projected utilisation instead of three buckets
-- `UsageStatusCalculator.calculateStatus()` primary API now returns `UsageStatus`; removed deprecated `UsageStatusLevel` enum and forwarding stubs
-- Statusline colour levels mapped to five zones: grey/green → 3, yellow → 5, orange → 7, red → 10
-- Projection falls back to raw `usedPercentage` when elapsed fraction is nil, zero, or ≥ 1
+- CLI OAuth tokens are now tried before cookie sessions, making authentication more reliable for Claude Code users
+- OAuth 429 responses fall back to the session endpoint before giving up
+- Popover can no longer be detached as a floating window (prevented a crash during card-flip animations)
+
+### Fixed
+
+- Circle and concentric-ring menu bar icons drew arcs counter-clockwise instead of clockwise from 12 o'clock
+- OAuth 429 errors were misclassified as "unauthorized", prompting unnecessary re-sync suggestions
+- Millisecond OAuth token expiry timestamps were interpreted as seconds, causing premature expiry
 
 ## [2.3.0] - 2026-01-23
 
