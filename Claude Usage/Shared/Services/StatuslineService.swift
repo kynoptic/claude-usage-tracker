@@ -151,6 +151,7 @@ LEVEL_7=$'\\033[38;5;172m'  # muted yellow-orange
 LEVEL_8=$'\\033[38;5;166m'  # darker orange
 LEVEL_9=$'\\033[38;5;160m'  # dark red
 LEVEL_10=$'\\033[38;5;124m' # deep red
+SESSION_SECS=18000  # 5-hour session window (Constants.sessionWindow)
 
 # Build components (without separators)
 dir_text=""
@@ -175,26 +176,70 @@ if [ "$show_usage" = "1" ]; then
     resets_at=$(echo "$swift_result" | cut -d'|' -f2)
 
     if [ -n "$utilization" ] && [ "$utilization" != "ERROR" ]; then
-      if [ "$utilization" -le 10 ]; then
-        usage_color="$LEVEL_1"
-      elif [ "$utilization" -le 20 ]; then
-        usage_color="$LEVEL_2"
-      elif [ "$utilization" -le 30 ]; then
-        usage_color="$LEVEL_3"
-      elif [ "$utilization" -le 40 ]; then
-        usage_color="$LEVEL_4"
-      elif [ "$utilization" -le 50 ]; then
-        usage_color="$LEVEL_5"
-      elif [ "$utilization" -le 60 ]; then
-        usage_color="$LEVEL_6"
-      elif [ "$utilization" -le 70 ]; then
-        usage_color="$LEVEL_7"
-      elif [ "$utilization" -le 80 ]; then
-        usage_color="$LEVEL_8"
-      elif [ "$utilization" -le 90 ]; then
-        usage_color="$LEVEL_9"
+      # Compute elapsed session fraction (integer %, -1 = unavailable)
+      # Used for both pacing-aware color selection and the time marker.
+      elapsed_secs=-1
+      elapsed_frac_pct=-1
+      if [ -n "$resets_at" ] && [ "$resets_at" != "null" ]; then
+        _marker_iso=$(echo "$resets_at" | sed 's/\\.[0-9]*Z$//')
+        _marker_epoch=$(date -ju -f "%Y-%m-%dT%H:%M:%S" "$_marker_iso" "+%s" 2>/dev/null)
+        if [ -n "$_marker_epoch" ]; then
+          _now_epoch=$(date "+%s")
+          if [ "$_marker_epoch" -gt "$_now_epoch" ]; then
+            _remaining=$((_marker_epoch - _now_epoch))
+            _elapsed=$(($SESSION_SECS - _remaining))
+            if [ "$_elapsed" -ge 0 ] && [ "$_elapsed" -le "$SESSION_SECS" ]; then
+              elapsed_secs="$_elapsed"
+              elapsed_frac_pct=$(( (_elapsed * 100) / SESSION_SECS ))
+            fi
+          fi
+        fi
+      fi
+
+      # Select color level using pacing when available, absolute thresholds otherwise.
+      # Logic mirrors UsageStatusCalculator.colorLevel (Swift) — keep in sync.
+      # 2>/dev/null guards against the -1 sentinel: an uninitialised variable or
+      # non-numeric value would cause [ -ge ] to print an error and return false,
+      # which is exactly the fallback behaviour we want.
+      if [ "$elapsed_frac_pct" -ge 15 ] 2>/dev/null && [ "$utilization" -gt 0 ]; then
+        # Pacing mode: projected = utilization * 100 / elapsed_frac_pct (integer %)
+        projected=$(( (utilization * 100) / elapsed_frac_pct ))
+        if [ "$projected" -lt 75 ]; then
+          if [ "$projected" -lt 25 ]; then usage_color="$LEVEL_1"
+          elif [ "$projected" -lt 50 ]; then usage_color="$LEVEL_2"
+          else usage_color="$LEVEL_3"
+          fi
+        elif [ "$projected" -lt 95 ]; then
+          if [ "$projected" -lt 80 ]; then usage_color="$LEVEL_4"
+          elif [ "$projected" -lt 85 ]; then usage_color="$LEVEL_5"
+          elif [ "$projected" -lt 90 ]; then usage_color="$LEVEL_6"
+          else usage_color="$LEVEL_7"
+          fi
+        else
+          if [ "$projected" -lt 115 ]; then usage_color="$LEVEL_8"
+          elif [ "$projected" -lt 135 ]; then usage_color="$LEVEL_9"
+          else usage_color="$LEVEL_10"
+          fi
+        fi
       else
-        usage_color="$LEVEL_10"
+        # Fallback: absolute thresholds matching UsageStatusCalculator (used-based)
+        if [ "$utilization" -lt 50 ]; then
+          if [ "$utilization" -lt 17 ]; then usage_color="$LEVEL_1"
+          elif [ "$utilization" -lt 34 ]; then usage_color="$LEVEL_2"
+          else usage_color="$LEVEL_3"
+          fi
+        elif [ "$utilization" -lt 80 ]; then
+          if [ "$utilization" -lt 60 ]; then usage_color="$LEVEL_4"
+          elif [ "$utilization" -lt 67 ]; then usage_color="$LEVEL_5"
+          elif [ "$utilization" -lt 73 ]; then usage_color="$LEVEL_6"
+          else usage_color="$LEVEL_7"
+          fi
+        else
+          if [ "$utilization" -lt 87 ]; then usage_color="$LEVEL_8"
+          elif [ "$utilization" -lt 93 ]; then usage_color="$LEVEL_9"
+          else usage_color="$LEVEL_10"
+          fi
+        fi
       fi
 
       if [ "$show_bar" = "1" ]; then
@@ -209,23 +254,13 @@ if [ "$show_usage" = "1" ]; then
         [ "$filled_blocks" -gt 10 ] && filled_blocks=10
         empty_blocks=$((10 - filled_blocks))
 
-        # Calculate time marker position (fraction of 5h session elapsed)
+        # Calculate time marker position using pre-computed elapsed_secs
         marker_pos=-1
-        if [ "$show_time_marker" = "1" ] && [ -n "$resets_at" ] && [ "$resets_at" != "null" ]; then
-          marker_iso=$(echo "$resets_at" | sed 's/\\.[0-9]*Z$//')
-          marker_epoch=$(date -ju -f "%Y-%m-%dT%H:%M:%S" "$marker_iso" "+%s" 2>/dev/null)
-          if [ -n "$marker_epoch" ]; then
-            now_epoch=$(date "+%s")
-            if [ "$marker_epoch" -gt "$now_epoch" ]; then
-              remaining=$((marker_epoch - now_epoch))
-              elapsed=$((18000 - remaining))  # 18000 = 5 hours (Constants.sessionWindow)
-              if [ "$elapsed" -ge 0 ] && [ "$elapsed" -le 18000 ]; then
-                # Floor-divide: map 0..18000 s elapsed → 0..10 bar positions
-                marker_pos=$(( (elapsed * 10) / 18000 ))
-                [ "$marker_pos" -gt 10 ] && marker_pos=10
-              fi
-            fi
-          fi
+        # 2>/dev/null: same sentinel guard as the color selection block above.
+        if [ "$show_time_marker" = "1" ] && [ "$elapsed_secs" -ge 0 ] 2>/dev/null; then
+          # Floor-divide: map 0..$SESSION_SECS elapsed → 0..10 bar positions
+          marker_pos=$(( (elapsed_secs * 10) / SESSION_SECS ))
+          [ "$marker_pos" -gt 10 ] && marker_pos=10
         fi
 
         # Build progress bar safely without seq
