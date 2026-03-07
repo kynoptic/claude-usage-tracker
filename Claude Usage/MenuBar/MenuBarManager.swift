@@ -41,6 +41,9 @@ class MenuBarManager: NSObject, ObservableObject {
     // Track when refresh was last triggered (for distinguishing user vs auto refresh)
     private var lastRefreshTriggerTime: Date = .distantPast
 
+    // Previous usage snapshot for session/weekly boundary detection
+    private var previousUsage: ClaudeUsage?
+
     // Popover for beautiful SwiftUI interface
     private var popover: NSPopover?
 
@@ -774,6 +777,15 @@ class MenuBarManager: NSObject, ObservableObject {
                             self.usage = newUsage
                             activeProfileUsage = newUsage
                             self.lastSuccessfulFetch = Date()
+
+                            // Detect session/weekly boundaries for the active profile only
+                            if let sessionRecord = BoundaryDetector.detectSession(previous: self.previousUsage, current: newUsage) {
+                                SessionHistoryStore.shared.record(session: sessionRecord)
+                            }
+                            if let weeklyRecord = BoundaryDetector.detectWeekly(previous: self.previousUsage, current: newUsage) {
+                                SessionHistoryStore.shared.record(weekly: weeklyRecord)
+                            }
+                            self.previousUsage = newUsage
                         }
                     }
                 } catch {
@@ -922,6 +934,15 @@ class MenuBarManager: NSObject, ObservableObject {
 
                     // Single-profile path — mutually exclusive with multi-profile recordAll
                     UsageHistoryStore.shared.recordAll(from: newUsage)
+
+                    // Detect session/weekly boundaries and persist to history
+                    if let sessionRecord = BoundaryDetector.detectSession(previous: self.previousUsage, current: newUsage) {
+                        SessionHistoryStore.shared.record(session: sessionRecord)
+                    }
+                    if let weeklyRecord = BoundaryDetector.detectWeekly(previous: self.previousUsage, current: newUsage) {
+                        SessionHistoryStore.shared.record(weekly: weeklyRecord)
+                    }
+                    self.previousUsage = newUsage
 
                     // Update all menu bar icons
                     self.updateAllStatusBarIcons()
