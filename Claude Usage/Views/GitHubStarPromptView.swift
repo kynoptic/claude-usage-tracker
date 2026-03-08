@@ -103,10 +103,6 @@ struct GitHubStarPromptView: View {
 // MARK: - Preview
 
 #Preview {
-    GitHubStarPromptView(
-        onStar: { print("Star clicked") },
-        onMaybeLater: { print("Maybe Later clicked") },
-        onDontAskAgain: { print("Don't Ask Again clicked") }
-    )
-    .padding(40)
+    GitHubStarPromptView(onStar: {}, onMaybeLater: {}, onDontAskAgain: {})
+        .padding(40)
 }

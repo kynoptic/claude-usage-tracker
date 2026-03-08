@@ -97,39 +97,40 @@ struct PersonalUsageView: View {
 
                         HStack(spacing: DesignTokens.Spacing.small) {
                             ForEach(1...3, id: \.self) { step in
-                                let stepEnum = WizardStep(rawValue: step)!
-                                let isCurrent = wizardState.currentStep == stepEnum
-                                let isCompleted = wizardState.currentStep > stepEnum
+                                if let stepEnum = WizardStep(rawValue: step) {
+                                    let isCurrent = wizardState.currentStep == stepEnum
+                                    let isCompleted = wizardState.currentStep > stepEnum
 
-                                HStack(spacing: DesignTokens.Spacing.extraSmall) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(isCompleted ? Color.green : (isCurrent ? Color.accentColor : Color.secondary.opacity(0.2)))
-                                            .frame(width: 20, height: 20)
+                                    HStack(spacing: DesignTokens.Spacing.extraSmall) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(isCompleted ? Color.green : (isCurrent ? Color.accentColor : Color.secondary.opacity(0.2)))
+                                                .frame(width: 20, height: 20)
 
-                                        if isCompleted {
-                                            Image(systemName: "checkmark")
-                                                .font(.system(size: 10, weight: .semibold))
-                                                .foregroundColor(.white)
-                                        } else {
-                                            Text("\(step)")
-                                                .font(.system(size: 11, weight: .medium))
-                                                .foregroundColor(isCurrent ? .white : .secondary)
+                                            if isCompleted {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 10, weight: .semibold))
+                                                    .foregroundColor(.white)
+                                            } else {
+                                                Text("\(step)")
+                                                    .font(.system(size: 11, weight: .medium))
+                                                    .foregroundColor(isCurrent ? .white : .secondary)
+                                            }
+                                        }
+
+                                        if isCurrent {
+                                            Text(stepTitle(for: step))
+                                                .font(DesignTokens.Typography.body)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.primary)
                                         }
                                     }
 
-                                    if isCurrent {
-                                        Text(stepTitle(for: step))
-                                            .font(DesignTokens.Typography.body)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.primary)
+                                    if step < 3 {
+                                        Rectangle()
+                                            .fill(isCompleted ? Color.green.opacity(0.3) : Color.secondary.opacity(0.2))
+                                            .frame(height: 1)
                                     }
-                                }
-
-                                if step < 3 {
-                                    Rectangle()
-                                        .fill(isCompleted ? Color.green.opacity(0.3) : Color.secondary.opacity(0.2))
-                                        .frame(height: 1)
                                 }
                             }
                         }

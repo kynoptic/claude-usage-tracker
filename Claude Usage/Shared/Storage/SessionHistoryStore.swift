@@ -22,7 +22,13 @@ final class SessionHistoryStore {
     // MARK: - Initialization
 
     init() {
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            LoggingService.shared.logError("SessionHistoryStore: applicationSupportDirectory unavailable; falling back to temporary directory")
+            self.storageDirectory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("Claude Usage")
+                .appendingPathComponent("History")
+            return
+        }
         self.storageDirectory = appSupport
             .appendingPathComponent("Claude Usage")
             .appendingPathComponent("History")

@@ -154,65 +154,40 @@ extension SettingsButton {
 
 #Preview("Primary Button") {
     VStack(spacing: Spacing.md) {
-        SettingsButton.primary(title: "Save Changes") {
-            print("Save")
-        }
-
-        SettingsButton.primary(title: "Connect", icon: "link") {
-            print("Connect")
-        }
+        SettingsButton.primary(title: "Save Changes") {}
+        SettingsButton.primary(title: "Connect", icon: "link") {}
     }
     .padding()
 }
 
 #Preview("Secondary Button") {
     VStack(spacing: Spacing.md) {
-        SettingsButton(title: "Cancel") {
-            print("Cancel")
-        }
-
-        SettingsButton(title: "Refresh", icon: "arrow.clockwise") {
-            print("Refresh")
-        }
+        SettingsButton(title: "Cancel") {}
+        SettingsButton(title: "Refresh", icon: "arrow.clockwise") {}
     }
     .padding()
 }
 
 #Preview("Destructive Button") {
     VStack(spacing: Spacing.md) {
-        SettingsButton.destructive(title: "Delete Account") {
-            print("Delete")
-        }
-
-        SettingsButton.destructive(title: "Remove", icon: "trash") {
-            print("Remove")
-        }
+        SettingsButton.destructive(title: "Delete Account") {}
+        SettingsButton.destructive(title: "Remove", icon: "trash") {}
     }
     .padding()
 }
 
 #Preview("Subtle Button") {
     VStack(spacing: Spacing.md) {
-        SettingsButton.subtle(title: "Learn More") {
-            print("Learn more")
-        }
-
-        SettingsButton.subtle(title: "Documentation", icon: "book") {
-            print("Docs")
-        }
+        SettingsButton.subtle(title: "Learn More") {}
+        SettingsButton.subtle(title: "Documentation", icon: "book") {}
     }
     .padding()
 }
 
 #Preview("Button Row") {
     HStack(spacing: Spacing.buttonRowSpacing) {
-        SettingsButton(title: "Cancel") {
-            print("Cancel")
-        }
-
-        SettingsButton.primary(title: "Save", icon: "checkmark") {
-            print("Save")
-        }
+        SettingsButton(title: "Cancel") {}
+        SettingsButton.primary(title: "Save", icon: "checkmark") {}
     }
     .padding()
 }
@@ -221,21 +196,10 @@ extension SettingsButton {
     VStack(spacing: Spacing.cardSpacing) {
         SettingsCard(title: "Button Styles") {
             VStack(spacing: Spacing.md) {
-                SettingsButton.primary(title: "Primary Button", icon: "star.fill") {
-                    print("Primary")
-                }
-
-                SettingsButton(title: "Secondary Button", icon: "circle") {
-                    print("Secondary")
-                }
-
-                SettingsButton.destructive(title: "Destructive Button", icon: "trash") {
-                    print("Destructive")
-                }
-
-                SettingsButton.subtle(title: "Subtle Button", icon: "info.circle") {
-                    print("Subtle")
-                }
+                SettingsButton.primary(title: "Primary Button", icon: "star.fill") {}
+                SettingsButton(title: "Secondary Button", icon: "circle") {}
+                SettingsButton.destructive(title: "Destructive Button", icon: "trash") {}
+                SettingsButton.subtle(title: "Subtle Button", icon: "info.circle") {}
             }
         }
     }

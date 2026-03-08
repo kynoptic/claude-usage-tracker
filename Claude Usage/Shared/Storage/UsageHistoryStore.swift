@@ -19,7 +19,13 @@ final class UsageHistoryStore {
     // MARK: - Initialization
 
     init() {
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            LoggingService.shared.logError("UsageHistoryStore: applicationSupportDirectory unavailable; falling back to temporary directory")
+            self.storageDirectory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("Claude Usage")
+                .appendingPathComponent("History")
+            return
+        }
         self.storageDirectory = appSupport.appendingPathComponent("Claude Usage").appendingPathComponent("History")
     }
 
@@ -141,7 +147,8 @@ final class UsageHistoryStore {
     func deduplicateConsecutive(_ snapshots: [UsageSnapshot]) -> [UsageSnapshot] {
         guard !snapshots.isEmpty else { return [] }
         var result = [snapshots[0]]
-        for snapshot in snapshots.dropFirst() where snapshot.percentage != result.last!.percentage {
+        // result.last is always non-nil here — result was seeded with snapshots[0] above
+        for snapshot in snapshots.dropFirst() where snapshot.percentage != result.last?.percentage {
             result.append(snapshot)
         }
         return result
