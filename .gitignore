@@ -119,7 +119,7 @@ Temporary Items
 # Session Keys (sensitive)
 .claude-session-key
 
-.claude
+# .claude/ is intentionally tracked (project instructions, skills, rules)
 
 # Backup files
 *.backup.*
