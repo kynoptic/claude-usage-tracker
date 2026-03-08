@@ -94,7 +94,7 @@ class ErrorPresenter {
         // This is a simplified version
         DispatchQueue.main.async {
             // Could implement custom toast window here
-            print("📱 Toast: \(message)")
+            LoggingService.shared.logDebug("📱 Toast: \(message)")
         }
     }
 

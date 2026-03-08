@@ -155,11 +155,11 @@ extension SettingsButton {
 #Preview("Primary Button") {
     VStack(spacing: Spacing.md) {
         SettingsButton.primary(title: "Save Changes") {
-            print("Save")
+            LoggingService.shared.logDebug("Save")
         }
 
         SettingsButton.primary(title: "Connect", icon: "link") {
-            print("Connect")
+            LoggingService.shared.logDebug("Connect")
         }
     }
     .padding()
@@ -168,11 +168,11 @@ extension SettingsButton {
 #Preview("Secondary Button") {
     VStack(spacing: Spacing.md) {
         SettingsButton(title: "Cancel") {
-            print("Cancel")
+            LoggingService.shared.logDebug("Cancel")
         }
 
         SettingsButton(title: "Refresh", icon: "arrow.clockwise") {
-            print("Refresh")
+            LoggingService.shared.logDebug("Refresh")
         }
     }
     .padding()
@@ -181,11 +181,11 @@ extension SettingsButton {
 #Preview("Destructive Button") {
     VStack(spacing: Spacing.md) {
         SettingsButton.destructive(title: "Delete Account") {
-            print("Delete")
+            LoggingService.shared.logDebug("Delete")
         }
 
         SettingsButton.destructive(title: "Remove", icon: "trash") {
-            print("Remove")
+            LoggingService.shared.logDebug("Remove")
         }
     }
     .padding()
@@ -194,11 +194,11 @@ extension SettingsButton {
 #Preview("Subtle Button") {
     VStack(spacing: Spacing.md) {
         SettingsButton.subtle(title: "Learn More") {
-            print("Learn more")
+            LoggingService.shared.logDebug("Learn more")
         }
 
         SettingsButton.subtle(title: "Documentation", icon: "book") {
-            print("Docs")
+            LoggingService.shared.logDebug("Docs")
         }
     }
     .padding()
@@ -207,11 +207,11 @@ extension SettingsButton {
 #Preview("Button Row") {
     HStack(spacing: Spacing.buttonRowSpacing) {
         SettingsButton(title: "Cancel") {
-            print("Cancel")
+            LoggingService.shared.logDebug("Cancel")
         }
 
         SettingsButton.primary(title: "Save", icon: "checkmark") {
-            print("Save")
+            LoggingService.shared.logDebug("Save")
         }
     }
     .padding()
@@ -222,19 +222,19 @@ extension SettingsButton {
         SettingsCard(title: "Button Styles") {
             VStack(spacing: Spacing.md) {
                 SettingsButton.primary(title: "Primary Button", icon: "star.fill") {
-                    print("Primary")
+                    LoggingService.shared.logDebug("Primary")
                 }
 
                 SettingsButton(title: "Secondary Button", icon: "circle") {
-                    print("Secondary")
+                    LoggingService.shared.logDebug("Secondary")
                 }
 
                 SettingsButton.destructive(title: "Destructive Button", icon: "trash") {
-                    print("Destructive")
+                    LoggingService.shared.logDebug("Destructive")
                 }
 
                 SettingsButton.subtle(title: "Subtle Button", icon: "info.circle") {
-                    print("Subtle")
+                    LoggingService.shared.logDebug("Subtle")
                 }
             }
         }
