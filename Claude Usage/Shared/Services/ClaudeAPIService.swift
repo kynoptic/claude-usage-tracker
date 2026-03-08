@@ -364,7 +364,15 @@ class ClaudeAPIService: APIServiceProtocol {
         let organizations = try await fetchAllOrganizations(sessionKey: sessionKey)
 
         // Auto-select organization (prefer first one for now - user can change later)
-        let selectedOrg = organizations.first!
+        guard let selectedOrg = organizations.first else {
+            throw AppError(
+                code: .apiParsingFailed,
+                message: "No organizations found",
+                technicalDetails: "Organizations array is empty after fetch",
+                isRecoverable: false,
+                recoverySuggestion: "Please ensure your Claude account has access to organizations"
+            )
+        }
         LoggingService.shared.logInfo("Auto-selected organization: \(selectedOrg.name) (ID: \(selectedOrg.uuid))")
 
         // Store the selected org ID in active profile
