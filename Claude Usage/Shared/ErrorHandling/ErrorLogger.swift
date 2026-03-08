@@ -138,20 +138,20 @@ class ErrorLogger {
         let icon = logged.severity.icon
         let timestamp = logged.timestamp.formatted(date: .omitted, time: .standard)
 
-        LoggingService.shared.logDebug("\(icon) [\(timestamp)] [\(logged.severity.rawValue.uppercased())] \(logged.error.description)")
+        LoggingService.shared.logError("\(icon) [\(timestamp)] [\(logged.severity.rawValue.uppercased())] \(logged.error.description)")
 
         if let context = logged.error.context {
-            LoggingService.shared.logDebug("   📍 \(context.fileName):\(context.line) in \(context.function)")
+            LoggingService.shared.logError("   📍 \(context.fileName):\(context.line) in \(context.function)")
         }
 
         if logged.error.isRecoverable {
-            LoggingService.shared.logDebug("Recoverable")
+            LoggingService.shared.logError("Recoverable")
         } else {
-            LoggingService.shared.logDebug("Not Recoverable")
+            LoggingService.shared.logError("Not Recoverable")
         }
 
         if let suggestion = logged.error.recoverySuggestion {
-            LoggingService.shared.logDebug("   💡 \(suggestion)")
+            LoggingService.shared.logError("   💡 \(suggestion)")
         }
     }
 }

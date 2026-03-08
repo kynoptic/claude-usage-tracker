@@ -166,13 +166,15 @@ final class ClaudeCodeSyncServiceTests: XCTestCase {
     }
 
     func testClaudeCodeError_KeychainReadFailed_IncludesStatus() {
-        let error = ClaudeCodeError.keychainReadFailed(status: -25300)
-        XCTAssertTrue(error.errorDescription?.contains("-25300") ?? false)
+        let status = errSecItemNotFound // -25300
+        let error = ClaudeCodeError.keychainReadFailed(status: status)
+        XCTAssertTrue(error.errorDescription?.contains("\(status)") ?? false)
     }
 
     func testClaudeCodeError_KeychainWriteFailed_IncludesStatus() {
-        let error = ClaudeCodeError.keychainWriteFailed(status: -25299)
-        XCTAssertTrue(error.errorDescription?.contains("-25299") ?? false)
+        let status = errSecDuplicateItem // -25299
+        let error = ClaudeCodeError.keychainWriteFailed(status: status)
+        XCTAssertTrue(error.errorDescription?.contains("\(status)") ?? false)
     }
 
     func testClaudeCodeError_NoProfileCredentials_HasDescription() {

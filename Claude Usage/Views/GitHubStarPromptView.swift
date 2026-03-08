@@ -103,10 +103,6 @@ struct GitHubStarPromptView: View {
 // MARK: - Preview
 
 #Preview {
-    GitHubStarPromptView(
-        onStar: { LoggingService.shared.logDebug("Star clicked") },
-        onMaybeLater: { LoggingService.shared.logDebug("Maybe Later clicked") },
-        onDontAskAgain: { LoggingService.shared.logDebug("Don't Ask Again clicked") }
-    )
-    .padding(40)
+    GitHubStarPromptView(onStar: {}, onMaybeLater: {}, onDontAskAgain: {})
+        .padding(40)
 }

@@ -147,6 +147,7 @@ final class UsageHistoryStore {
     func deduplicateConsecutive(_ snapshots: [UsageSnapshot]) -> [UsageSnapshot] {
         guard !snapshots.isEmpty else { return [] }
         var result = [snapshots[0]]
+        // result.last is always non-nil here — result was seeded with snapshots[0] above
         for snapshot in snapshots.dropFirst() where snapshot.percentage != result.last?.percentage {
             result.append(snapshot)
         }

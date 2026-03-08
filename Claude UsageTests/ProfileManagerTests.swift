@@ -240,15 +240,14 @@ final class ProfileManagerTests: XCTestCase {
 
     // MARK: - saveClaudeUsage / loadClaudeUsage
 
-    func testSaveAndLoadClaudeUsage_RoundTrip() {
+    func testSaveAndLoadClaudeUsage_RoundTrip() throws {
         let profile = manager.profiles[0]
         let usage = makeClaudeUsage(sessionPercentage: 55.0)
 
         manager.saveClaudeUsage(usage, for: profile.id)
-        let loaded = manager.loadClaudeUsage(for: profile.id)
+        let loaded = try XCTUnwrap(manager.loadClaudeUsage(for: profile.id))
 
-        XCTAssertNotNil(loaded)
-        XCTAssertEqual(loaded?.sessionPercentage, 55.0)
+        XCTAssertEqual(loaded.sessionPercentage, 55.0)
     }
 
     func testSaveClaudeUsage_UpdatesActiveProfileReference() {
@@ -289,14 +288,12 @@ final class ProfileManagerTests: XCTestCase {
 
     // MARK: - saveAPIUsage / loadAPIUsage
 
-    func testSaveAndLoadAPIUsage_RoundTrip() {
+    func testSaveAndLoadAPIUsage_RoundTrip() throws {
         let profile = manager.profiles[0]
         let usage = makeAPIUsage()
 
         manager.saveAPIUsage(usage, for: profile.id)
-        let loaded = manager.loadAPIUsage(for: profile.id)
-
-        XCTAssertNotNil(loaded)
+        _ = try XCTUnwrap(manager.loadAPIUsage(for: profile.id))
     }
 
     func testSaveAPIUsage_UpdatesActiveProfileReference() {

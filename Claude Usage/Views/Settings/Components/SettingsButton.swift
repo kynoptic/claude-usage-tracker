@@ -154,65 +154,40 @@ extension SettingsButton {
 
 #Preview("Primary Button") {
     VStack(spacing: Spacing.md) {
-        SettingsButton.primary(title: "Save Changes") {
-            LoggingService.shared.logDebug("Save")
-        }
-
-        SettingsButton.primary(title: "Connect", icon: "link") {
-            LoggingService.shared.logDebug("Connect")
-        }
+        SettingsButton.primary(title: "Save Changes") {}
+        SettingsButton.primary(title: "Connect", icon: "link") {}
     }
     .padding()
 }
 
 #Preview("Secondary Button") {
     VStack(spacing: Spacing.md) {
-        SettingsButton(title: "Cancel") {
-            LoggingService.shared.logDebug("Cancel")
-        }
-
-        SettingsButton(title: "Refresh", icon: "arrow.clockwise") {
-            LoggingService.shared.logDebug("Refresh")
-        }
+        SettingsButton(title: "Cancel") {}
+        SettingsButton(title: "Refresh", icon: "arrow.clockwise") {}
     }
     .padding()
 }
 
 #Preview("Destructive Button") {
     VStack(spacing: Spacing.md) {
-        SettingsButton.destructive(title: "Delete Account") {
-            LoggingService.shared.logDebug("Delete")
-        }
-
-        SettingsButton.destructive(title: "Remove", icon: "trash") {
-            LoggingService.shared.logDebug("Remove")
-        }
+        SettingsButton.destructive(title: "Delete Account") {}
+        SettingsButton.destructive(title: "Remove", icon: "trash") {}
     }
     .padding()
 }
 
 #Preview("Subtle Button") {
     VStack(spacing: Spacing.md) {
-        SettingsButton.subtle(title: "Learn More") {
-            LoggingService.shared.logDebug("Learn more")
-        }
-
-        SettingsButton.subtle(title: "Documentation", icon: "book") {
-            LoggingService.shared.logDebug("Docs")
-        }
+        SettingsButton.subtle(title: "Learn More") {}
+        SettingsButton.subtle(title: "Documentation", icon: "book") {}
     }
     .padding()
 }
 
 #Preview("Button Row") {
     HStack(spacing: Spacing.buttonRowSpacing) {
-        SettingsButton(title: "Cancel") {
-            LoggingService.shared.logDebug("Cancel")
-        }
-
-        SettingsButton.primary(title: "Save", icon: "checkmark") {
-            LoggingService.shared.logDebug("Save")
-        }
+        SettingsButton(title: "Cancel") {}
+        SettingsButton.primary(title: "Save", icon: "checkmark") {}
     }
     .padding()
 }
@@ -221,21 +196,10 @@ extension SettingsButton {
     VStack(spacing: Spacing.cardSpacing) {
         SettingsCard(title: "Button Styles") {
             VStack(spacing: Spacing.md) {
-                SettingsButton.primary(title: "Primary Button", icon: "star.fill") {
-                    LoggingService.shared.logDebug("Primary")
-                }
-
-                SettingsButton(title: "Secondary Button", icon: "circle") {
-                    LoggingService.shared.logDebug("Secondary")
-                }
-
-                SettingsButton.destructive(title: "Destructive Button", icon: "trash") {
-                    LoggingService.shared.logDebug("Destructive")
-                }
-
-                SettingsButton.subtle(title: "Subtle Button", icon: "info.circle") {
-                    LoggingService.shared.logDebug("Subtle")
-                }
+                SettingsButton.primary(title: "Primary Button", icon: "star.fill") {}
+                SettingsButton(title: "Secondary Button", icon: "circle") {}
+                SettingsButton.destructive(title: "Destructive Button", icon: "trash") {}
+                SettingsButton.subtle(title: "Subtle Button", icon: "info.circle") {}
             }
         }
     }
