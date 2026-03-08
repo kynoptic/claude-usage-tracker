@@ -16,6 +16,8 @@ struct BurnUpChartView: View {
 
     /// Chart data with a synthetic origin at windowStart so even a single
     /// real data point produces a visible area fill.
+    /// Appends a synthetic "now" point so the line extends to the current time
+    /// even when the percentage hasn't changed between polls.
     private var displaySnapshots: [UsageSnapshot] {
         let origin = UsageSnapshot(date: windowStart, percentage: 0.0)
         let windowSnapshots = snapshots.filter { $0.date >= windowStart }
@@ -26,6 +28,14 @@ struct BurnUpChartView: View {
             let stride = max(points.count / Self.maxPoints, 1)
             points = Swift.stride(from: 0, to: points.count, by: stride).map { points[$0] }
         }
+
+        // Extend the line to "now" — appended after downsampling so it's never dropped.
+        // Captures `now` once so both comparisons use the same timestamp.
+        let currentTime = now
+        if let last = windowSnapshots.last, currentTime < windowEnd {
+            points.append(UsageSnapshot(date: currentTime, percentage: last.percentage))
+        }
+
         return points
     }
 
