@@ -52,7 +52,11 @@ struct BurnUpChartView: View {
         if snapshots.isEmpty {
             emptyState
         } else {
-            chart
+            // TimelineView forces a re-render every 60 s so `now` stays current
+            // even when usage data hasn't changed (common for the weekly chart).
+            TimelineView(.periodic(from: .now, by: 60)) { _ in
+                chart
+            }
         }
     }
 
