@@ -543,14 +543,17 @@ struct SmartUsageDashboard: View {
         }
 
         // Retry countdown
-        if let interval = nextRetryInterval, interval > 0 {
-            let retryPart: String
-            if interval < 60 {
-                retryPart = "retrying in \(Int(interval))s"
-            } else {
-                retryPart = "retrying in \(Int(interval / 60))m"
+        if let retryDate = nextRetryDate {
+            let remaining = retryDate.timeIntervalSince(now)
+            if remaining > 0 {
+                let retryPart: String
+                if remaining < 60 {
+                    retryPart = "retrying in \(Int(remaining))s"
+                } else {
+                    retryPart = "retrying in \(Int(remaining / 60))m"
+                }
+                return "\(errorPart) – \(retryPart)"
             }
-            return "\(errorPart) – \(retryPart)"
         }
 
         return errorPart
