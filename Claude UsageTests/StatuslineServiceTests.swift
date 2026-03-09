@@ -70,6 +70,11 @@ final class StatuslineServiceTests: XCTestCase {
         XCTAssertFalse(service.isCredentialSafe("sk-ant-sid01-abc$(injection)"))
     }
 
+    func testSwiftInterpolationMarkerIsRejected() {
+        // `\(` would be interpreted as Swift string interpolation in the generated script
+        XCTAssertFalse(service.isCredentialSafe("sk-ant-sid01-abc\\(injection)"))
+    }
+
     func testNullByteIsRejected() {
         XCTAssertFalse(service.isCredentialSafe("sk-ant-sid01-abc\0def"))
     }

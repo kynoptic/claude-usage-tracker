@@ -20,6 +20,10 @@ class StatuslineService {
     /// - Session keys (`sk-ant-sid01-…`): alphanumeric + `-` + `_`
     /// - Organization IDs (UUID format): hex digits + `-`
     ///
+    /// `.` and `:` are included as forward-compatibility for versioned key
+    /// formats (e.g. `sk-ant-sid01-v2.0:token…`) that have appeared in
+    /// Anthropic's tooling. Both are inert inside a Swift string literal.
+    ///
     /// `+` and `=` are intentionally excluded. Anthropic uses URL-safe Base64
     /// (`-` / `_`) for session keys, never standard Base64 (`+` / `=`), so
     /// including them would widen the allow-list without any real-world benefit
@@ -390,12 +394,12 @@ printf "%s\\n" "$output"
                 swiftScriptContent = try generateSwiftScript(sessionKey: sessionKey, organizationId: organizationId)
                 LoggingService.shared.log("Injected session key and org ID from profile '\(activeProfile.name)' into statusline")
             } catch {
-                // Credential safety check failed — install placeholder to replace any stale
-                // credential script already on disk, then re-throw so the caller can surface
-                // the error to the user.
+                // Credential safety check failed — best-effort: install placeholder to
+                // replace any stale credential script already on disk. Use try? so that a
+                // secondary filesystem failure doesn't shadow the original safety error.
                 LoggingService.shared.logWarning("Credential safety check failed; installing placeholder script: \(error.localizedDescription)")
-                try placeholderSwiftScript.write(to: swiftDestination, atomically: true, encoding: .utf8)
-                try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: swiftDestination.path)
+                try? placeholderSwiftScript.write(to: swiftDestination, atomically: true, encoding: .utf8)
+                try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: swiftDestination.path)
                 throw error
             }
         } else {
