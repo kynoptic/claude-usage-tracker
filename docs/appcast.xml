@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Claude Usage</title>
+        <item>
+            <title>2.4.2</title>
+            <pubDate>Mon, 09 Mar 2026 06:39:28 +0000</pubDate>
+            <sparkle:version>11</sparkle:version>
+            <sparkle:shortVersionString>2.4.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://kynoptic.github.io/Claude-Usage-Tracker/releases/Claude-Usage.zip" length="4864362" type="application/octet-stream" sparkle:edSignature="7qGLXUMVBekSija/XQwsGteXlz3+QTPxr0HB9ZPltgIxWzJ4E9pSwZP/bNRATHjQEzEtlS2wevKhXxgyFgyHCw=="/>
+        </item>
+    </channel>
+</rss>
