@@ -841,17 +841,25 @@ class ClaudeAPIService: APIServiceProtocol {
         let (conversationData, conversationResponse) = try await URLSession.shared.data(for: conversationRequest)
 
         guard let httpResponse = conversationResponse as? HTTPURLResponse else {
-            throw APIError.invalidResponse
+            throw AppError(
+                code: .apiInvalidResponse,
+                message: "Invalid response when creating conversation",
+                isRecoverable: true
+            )
         }
 
         guard httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
-            throw APIError.serverError(statusCode: httpResponse.statusCode)
+            throw AppError.apiServerError(statusCode: httpResponse.statusCode)
         }
 
         // Parse conversation UUID
         guard let json = try? JSONSerialization.jsonObject(with: conversationData) as? [String: Any],
               let conversationUUID = json["uuid"] as? String else {
-            throw APIError.invalidResponse
+            throw AppError(
+                code: .apiInvalidResponse,
+                message: "Failed to parse conversation UUID from response",
+                isRecoverable: false
+            )
         }
 
         // Send a minimal "Hi" message to initialize the session
@@ -874,11 +882,15 @@ class ClaudeAPIService: APIServiceProtocol {
         let (_, messageResponse) = try await URLSession.shared.data(for: messageRequest)
 
         guard let messageHTTPResponse = messageResponse as? HTTPURLResponse else {
-            throw APIError.invalidResponse
+            throw AppError(
+                code: .apiInvalidResponse,
+                message: "Invalid response when sending initialization message",
+                isRecoverable: true
+            )
         }
 
         guard messageHTTPResponse.statusCode == 200 else {
-            throw APIError.serverError(statusCode: messageHTTPResponse.statusCode)
+            throw AppError.apiServerError(statusCode: messageHTTPResponse.statusCode)
         }
 
         // Delete the conversation to keep it out of chat history (incognito mode)
