@@ -36,7 +36,6 @@ Invoke this skill when the user says things like "prepare a release", "cut a rel
    ```bash
    git push origin main --tags
    ```
-   Always push to `origin` (the fork at `kynoptic/claude-usage-tracker`). Never push to upstream (`hamed-elfayome/Claude-Usage-Tracker`).
 
 7. **Tell the user**
    CI will create a draft release in approximately 3–5 minutes. The user must review and publish it manually at:
