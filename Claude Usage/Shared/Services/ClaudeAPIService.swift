@@ -13,6 +13,12 @@ class ClaudeAPIService: APIServiceProtocol {
 
     // MARK: - Properties
 
+    private static let iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
     private let sessionKeyPath: URL
     private let sessionKeyValidator: SessionKeyValidator
     let baseURL = Constants.APIEndpoints.claudeBase
@@ -689,9 +695,7 @@ class ClaudeAPIService: APIServiceProtocol {
                     sessionPercentage = parseUtilization(utilization)
                 }
                 if let resetsAt = fiveHour["resets_at"] as? String {
-                    let formatter = ISO8601DateFormatter()
-                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                    sessionResetTime = formatter.date(from: resetsAt) ?? sessionResetTime
+                    sessionResetTime = ClaudeAPIService.iso8601Formatter.date(from: resetsAt) ?? sessionResetTime
                 }
             }
 
@@ -703,9 +707,7 @@ class ClaudeAPIService: APIServiceProtocol {
                     weeklyPercentage = parseUtilization(utilization)
                 }
                 if let resetsAt = sevenDay["resets_at"] as? String {
-                    let formatter = ISO8601DateFormatter()
-                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                    weeklyResetTime = formatter.date(from: resetsAt) ?? weeklyResetTime
+                    weeklyResetTime = ClaudeAPIService.iso8601Formatter.date(from: resetsAt) ?? weeklyResetTime
                 }
             }
 
@@ -725,9 +727,7 @@ class ClaudeAPIService: APIServiceProtocol {
                     sonnetPercentage = parseUtilization(utilization)
                 }
                 if let resetsAt = sevenDaySonnet["resets_at"] as? String {
-                    let formatter = ISO8601DateFormatter()
-                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                    sonnetResetTime = formatter.date(from: resetsAt)
+                    sonnetResetTime = ClaudeAPIService.iso8601Formatter.date(from: resetsAt)
                 }
             }
 

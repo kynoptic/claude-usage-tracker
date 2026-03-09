@@ -27,6 +27,13 @@ final class AutoStartSessionService {
     private let profileManager: ProfileManager
     private let notificationManager: NotificationManager
 
+    // Shared ISO8601 formatter — allocated once to avoid per-call allocation
+    private static let iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
     // Track last captured reset time per profile to prevent duplicate auto-starts
     private var lastCapturedResetTime: [UUID: Date] = [:]
 
@@ -239,9 +246,7 @@ final class AutoStartSessionService {
                 sessionPercentage = parseUtilization(utilization)
             }
             if let resetsAt = fiveHour["resets_at"] as? String {
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                sessionResetTime = formatter.date(from: resetsAt) ?? sessionResetTime
+                sessionResetTime = AutoStartSessionService.iso8601Formatter.date(from: resetsAt) ?? sessionResetTime
             }
         }
 
@@ -254,9 +259,7 @@ final class AutoStartSessionService {
                 weeklyPercentage = parseUtilization(utilization)
             }
             if let resetsAt = sevenDay["resets_at"] as? String {
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                weeklyResetTime = formatter.date(from: resetsAt) ?? weeklyResetTime
+                weeklyResetTime = AutoStartSessionService.iso8601Formatter.date(from: resetsAt) ?? weeklyResetTime
             }
         }
 
@@ -276,9 +279,7 @@ final class AutoStartSessionService {
                 sonnetPercentage = parseUtilization(utilization)
             }
             if let resetsAt = sevenDaySonnet["resets_at"] as? String {
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                sonnetResetTime = formatter.date(from: resetsAt)
+                sonnetResetTime = AutoStartSessionService.iso8601Formatter.date(from: resetsAt)
             }
         }
 
