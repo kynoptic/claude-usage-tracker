@@ -88,8 +88,8 @@ Use `clean build` (not just `build`) when verifying a fix — incremental Releas
 
 ## Release
 
-1. Bump `MARKETING_VERSION` in `project.pbxproj`
+1. Bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.pbxproj`
 2. Update `CHANGELOG.md`
 3. Commit: `chore(release): bump version to X.Y.Z`
-4. Tag: `git tag vX.Y.Z && git push origin main --tags`
-5. CI creates a draft release — review and publish manually
+4. Tag: `git tag -a vX.Y.Z -m "<summary>" && git push origin main && git push origin vX.Y.Z`
+5. Create release: `gh release create vX.Y.Z --title "vX.Y.Z" --notes "<changelog body>"`
