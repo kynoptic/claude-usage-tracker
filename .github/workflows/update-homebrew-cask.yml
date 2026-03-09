@@ -1,8 +1,9 @@
 name: Update Homebrew Cask
 
 on:
-  release:
-    types: [published]
+  # Disabled: no Homebrew tap configured for this fork.
+  # Re-enable and update repository below when a tap is set up.
+  workflow_dispatch:
 
 jobs:
   update-cask:
@@ -51,7 +52,7 @@ jobs:
       - name: Checkout homebrew-claude-usage tap
         uses: actions/checkout@v4
         with:
-          repository: hamed-elfayome/homebrew-claude-usage
+          repository: kynoptic/homebrew-claude-usage
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           path: homebrew-tap
 

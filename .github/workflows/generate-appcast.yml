@@ -142,7 +142,7 @@ jobs:
           # Use gh-pages URL for downloads (more reliable than GitHub releases)
           echo "$SPARKLE_PRIVATE_KEY" | ./bin/generate_appcast \
             --ed-key-file - \
-            --download-url-prefix "https://hamed-elfayome.github.io/Claude-Usage-Tracker/releases/" \
+            --download-url-prefix "https://kynoptic.github.io/Claude-Usage-Tracker/releases/" \
             --maximum-deltas 5 \
             --maximum-versions 10 \
             releases/
@@ -193,7 +193,7 @@ jobs:
           sleep 30
 
           echo "Verifying appcast URL is accessible..."
-          APPCAST_URL="https://hamed-elfayome.github.io/Claude-Usage-Tracker/appcast.xml"
+          APPCAST_URL="https://kynoptic.github.io/Claude-Usage-Tracker/appcast.xml"
 
           if curl -f -s "$APPCAST_URL" > /dev/null; then
             echo "✅ Appcast is live at: $APPCAST_URL"
@@ -208,6 +208,6 @@ jobs:
           echo ""
           echo "📦 Release: ${{ steps.release_tag.outputs.tag }}"
           echo "📱 Version: ${{ env.APP_VERSION }}"
-          echo "🔗 Appcast URL: https://hamed-elfayome.github.io/Claude-Usage-Tracker/appcast.xml"
+          echo "🔗 Appcast URL: https://kynoptic.github.io/Claude-Usage-Tracker/appcast.xml"
           echo ""
           echo "ℹ️  Users with automatic updates enabled will be notified within 24 hours"
