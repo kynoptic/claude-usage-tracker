@@ -145,7 +145,7 @@ class ClaudeAPIService: APIServiceProtocol {
             // CLI OAuth authentication (requires specific headers)
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.setValue("claude-code/2.1.5", forHTTPHeaderField: "User-Agent")
+            request.setValue(Constants.claudeCodeUserAgent, forHTTPHeaderField: "User-Agent")
             request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
 
         case .consoleAPISession(let apiKey):

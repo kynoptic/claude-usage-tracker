@@ -149,6 +149,10 @@ enum Constants {
         static let oauthUsage = "https://api.anthropic.com/api/oauth/usage"
     }
 
+    // HTTP headers
+    /// User-Agent string sent with CLI OAuth requests
+    static let claudeCodeUserAgent = "claude-code/2.1.5"
+
     // UI Timing
     enum UITiming {
         static let popoverCloseDelay: TimeInterval = 0.15
