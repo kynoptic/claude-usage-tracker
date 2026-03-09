@@ -59,8 +59,8 @@ Common scopes: `api`, `menubar`, `statusline`, `settings`, `services`, `models`,
 **Remote:** `origin` → `https://github.com/kynoptic/Claude-Usage-Tracker.git` (your fork)
 
 > [!CAUTION]
-> **This is a hard fork.** All work — commits, issues, PRs, releases — happens exclusively on this fork (`kynoptic/Claude-Usage-Tracker`).
-> **NEVER push, open PRs, file issues, or interact with upstream or any other fork in any way.**
+> **This is a fork.** All work — commits, issues, PRs, releases — happens exclusively on this fork (`kynoptic/claude-usage-tracker`).
+> **NEVER push, open PRs, file issues, or interact with upstream or any other fork in any way.** Upstream and other forks are read-only references for ideas and cherry-picks only.
 
 **`gh` CLI guard:** `gh repo set-default kynoptic/claude-usage-tracker` is configured so `gh pr create`, `gh issue create`, etc. target the fork — not the upstream. If `gh` ever prompts to choose a repo, always pick the fork. When using `gh` commands that accept `--repo`, pass `--repo kynoptic/claude-usage-tracker` explicitly as a safety net.
 
