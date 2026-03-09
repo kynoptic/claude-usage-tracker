@@ -35,8 +35,6 @@ class SharedDataStore {
         static let hasStarredGitHub = "hasStarredGitHub"
         static let neverShowGitHubPrompt = "neverShowGitHubPrompt"
 
-        // Debug Settings
-        static let debugAPILoggingEnabled = "debugAPILoggingEnabled"
     }
 
     init() {
@@ -230,11 +228,11 @@ class SharedDataStore {
     // MARK: - Debug Settings
 
     func saveDebugAPILoggingEnabled(_ enabled: Bool) {
-        defaults.set(enabled, forKey: Keys.debugAPILoggingEnabled)
+        defaults.set(enabled, forKey: Constants.UserDefaultsKeys.debugAPILoggingEnabled)
     }
 
     func loadDebugAPILoggingEnabled() -> Bool {
-        return defaults.bool(forKey: Keys.debugAPILoggingEnabled)
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.debugAPILoggingEnabled)
     }
 
     // MARK: - Testing Helpers

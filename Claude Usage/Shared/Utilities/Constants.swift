@@ -60,6 +60,13 @@ enum Constants {
 
         // Localization
         static let appLanguage = "appLanguage"
+
+        // Overage & organization
+        static let checkOverageLimitEnabled = "checkOverageLimitEnabled"
+        static let selectedOrganizationId = "selectedOrganizationId"
+
+        // Debug
+        static let debugAPILoggingEnabled = "debugAPILoggingEnabled"
     }
 
     // Claude Code paths
@@ -141,6 +148,10 @@ enum Constants {
         static let consoleBase = "https://console.anthropic.com/api"
         static let oauthUsage = "https://api.anthropic.com/api/oauth/usage"
     }
+
+    // HTTP headers
+    /// User-Agent string sent with CLI OAuth requests
+    static let claudeCodeUserAgent = "claude-code/2.1.5"
 
     // UI Timing
     enum UITiming {

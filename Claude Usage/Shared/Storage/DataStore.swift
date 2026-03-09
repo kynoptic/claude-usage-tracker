@@ -124,36 +124,36 @@ class DataStore: StorageProvider {
 
     /// Saves check overage limit preference
     func saveCheckOverageLimitEnabled(_ enabled: Bool) {
-        defaults.set(enabled, forKey: "checkOverageLimitEnabled")
+        defaults.set(enabled, forKey: Constants.UserDefaultsKeys.checkOverageLimitEnabled)
     }
 
     /// Loads check overage limit preference (defaults to true)
     func loadCheckOverageLimitEnabled() -> Bool {
         // If key doesn't exist, register default as true
-        if defaults.object(forKey: "checkOverageLimitEnabled") == nil {
+        if defaults.object(forKey: Constants.UserDefaultsKeys.checkOverageLimitEnabled) == nil {
             return true
         }
-        return defaults.bool(forKey: "checkOverageLimitEnabled")
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.checkOverageLimitEnabled)
     }
 
     // MARK: - Organization Settings
 
     /// Saves selected organization ID for personal usage tracking
     func saveOrganizationId(_ organizationId: String) {
-        defaults.set(organizationId, forKey: "selectedOrganizationId")
+        defaults.set(organizationId, forKey: Constants.UserDefaultsKeys.selectedOrganizationId)
         LoggingService.shared.logStorageSave("selectedOrganizationId")
     }
 
     /// Loads selected organization ID (returns nil if not set)
     func loadOrganizationId() -> String? {
-        let orgId = defaults.string(forKey: "selectedOrganizationId")
+        let orgId = defaults.string(forKey: Constants.UserDefaultsKeys.selectedOrganizationId)
         LoggingService.shared.logStorageLoad("selectedOrganizationId", success: orgId != nil)
         return orgId
     }
 
     /// Clears stored organization ID (call when session key changes)
     func clearOrganizationId() {
-        defaults.removeObject(forKey: "selectedOrganizationId")
+        defaults.removeObject(forKey: Constants.UserDefaultsKeys.selectedOrganizationId)
         LoggingService.shared.logInfo("Cleared stored organization ID")
     }
 
@@ -161,12 +161,12 @@ class DataStore: StorageProvider {
 
     /// Saves debug API logging preference
     func saveDebugAPILoggingEnabled(_ enabled: Bool) {
-        defaults.set(enabled, forKey: "debugAPILoggingEnabled")
+        defaults.set(enabled, forKey: Constants.UserDefaultsKeys.debugAPILoggingEnabled)
     }
 
     /// Loads debug API logging preference (defaults to false)
     func loadDebugAPILoggingEnabled() -> Bool {
-        return defaults.bool(forKey: "debugAPILoggingEnabled")
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.debugAPILoggingEnabled)
     }
 
     // MARK: - Statusline Configuration

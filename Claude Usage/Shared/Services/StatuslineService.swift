@@ -13,7 +13,49 @@ class StatuslineService {
     /// Swift script that fetches Claude usage data from the API.
     /// Installed to ~/.claude/fetch-claude-usage.swift and executed by the bash statusline script.
     /// The session key and organization ID are injected into this script when statusline is enabled.
-    private func generateSwiftScript(sessionKey: String, organizationId: String) -> String {
+
+    /// Characters safe to embed verbatim in a Swift string literal.
+    ///
+    /// Covers the full alphabet of current Anthropic credential formats:
+    /// - Session keys (`sk-ant-sid01-…`): alphanumeric + `-` + `_`
+    /// - Organization IDs (UUID format): hex digits + `-`
+    ///
+    /// `.` and `:` are included as forward-compatibility for versioned key
+    /// formats (e.g. `sk-ant-sid01-v2.0:token…`) that have appeared in
+    /// Anthropic's tooling. Both are inert inside a Swift string literal.
+    ///
+    /// `+` and `=` are intentionally excluded. Anthropic uses URL-safe Base64
+    /// (`-` / `_`) for session keys, never standard Base64 (`+` / `=`), so
+    /// including them would widen the allow-list without any real-world benefit
+    /// while creating risk if a key with those characters is somehow injected.
+    /// Backslash, double-quote, `$`, `\n`, etc. would corrupt the generated
+    /// Swift literal and are blocked here.
+    private static let safeCredentialCharacters: CharacterSet = {
+        // ASCII alphanumerics only — CharacterSet.alphanumerics includes Unicode
+        // letters (e.g. é), which must not appear in embedded script literals.
+        var cs = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+        cs.insert(charactersIn: "-_.:") // hyphens, underscores, dots, colons
+        return cs
+    }()
+
+    /// Returns true when every character in `value` is safe to embed as a
+    /// Swift string literal without escaping or transformation.
+    /// `internal` for testability.
+    func isCredentialSafe(_ value: String) -> Bool {
+        guard !value.isEmpty else { return false }
+        return value.unicodeScalars.allSatisfy {
+            StatuslineService.safeCredentialCharacters.contains($0)
+        }
+    }
+
+    private func generateSwiftScript(sessionKey: String, organizationId: String) throws -> String {
+        guard isCredentialSafe(sessionKey) else {
+            throw StatuslineError.unsafeCredential("Session key contains characters that are not safe to embed in a script. Aborting write.")
+        }
+        guard isCredentialSafe(organizationId) else {
+            throw StatuslineError.unsafeCredential("Organization ID contains characters that are not safe to embed in a script. Aborting write.")
+        }
+
         return """
 #!/usr/bin/env swift
 
@@ -348,8 +390,18 @@ printf "%s\\n" "$output"
                 throw StatuslineError.organizationNotConfigured
             }
 
-            swiftScriptContent = generateSwiftScript(sessionKey: sessionKey, organizationId: organizationId)
-            LoggingService.shared.log("Injected session key and org ID from profile '\(activeProfile.name)' into statusline")
+            do {
+                swiftScriptContent = try generateSwiftScript(sessionKey: sessionKey, organizationId: organizationId)
+                LoggingService.shared.log("Injected session key and org ID from profile '\(activeProfile.name)' into statusline")
+            } catch {
+                // Credential safety check failed — best-effort: install placeholder to
+                // replace any stale credential script already on disk. Use try? so that a
+                // secondary filesystem failure doesn't shadow the original safety error.
+                LoggingService.shared.logWarning("Credential safety check failed; installing placeholder script: \(error.localizedDescription)")
+                try? placeholderSwiftScript.write(to: swiftDestination, atomically: true, encoding: .utf8)
+                try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: swiftDestination.path)
+                throw error
+            }
         } else {
             // Install placeholder script
             swiftScriptContent = placeholderSwiftScript
@@ -530,6 +582,7 @@ enum StatuslineError: Error, LocalizedError {
     case noActiveProfile
     case sessionKeyNotFound
     case organizationNotConfigured
+    case unsafeCredential(String)
 
     var errorDescription: String? {
         switch self {
@@ -539,6 +592,8 @@ enum StatuslineError: Error, LocalizedError {
             return "Session key not found in active profile. Please configure your session key first."
         case .organizationNotConfigured:
             return "Organization not configured in active profile. Please select an organization in the app settings."
+        case .unsafeCredential(let message):
+            return message
         }
     }
 }

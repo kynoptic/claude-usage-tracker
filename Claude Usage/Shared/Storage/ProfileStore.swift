@@ -32,16 +32,9 @@ class ProfileStore {
     func saveProfiles(_ profiles: [Profile]) {
         do {
             let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted // For debugging
             let data = try encoder.encode(profiles)
             defaults.set(data, forKey: Keys.profiles)
-
-            // Verify save
-            if let savedData = defaults.data(forKey: Keys.profiles) {
-                LoggingService.shared.log("ProfileStore: Saved \(profiles.count) profiles (\(savedData.count) bytes)")
-            } else {
-                LoggingService.shared.logError("ProfileStore: Failed to verify save!")
-            }
+            LoggingService.shared.log("ProfileStore: Saved \(profiles.count) profiles (\(data.count) bytes)")
         } catch {
             LoggingService.shared.logStorageError("saveProfiles", error: error)
         }

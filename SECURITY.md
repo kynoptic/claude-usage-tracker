@@ -91,9 +91,9 @@ We'll keep you informed throughout the process and credit you in the security ad
 
 ### Verify Downloads
 
-- Download only from official sources:
-  - [GitHub Releases](https://github.com/kynoptic/Claude-Usage-Tracker/releases)
-  - [Homebrew Tap](https://github.com/ggfevans/homebrew-claude-usage-tracker)
+- Download only from the official source:
+  - [GitHub Releases](https://github.com/kynoptic/Claude-Usage-Tracker/releases) — the sole distribution channel for this fork
+  - Note: the Homebrew cask workflow is disabled in this fork; no tap is configured or maintained
 - Build from source if you prefer: `git clone` + Xcode build
 
 ### Keep Updated
