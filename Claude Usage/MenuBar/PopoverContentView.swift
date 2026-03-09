@@ -514,49 +514,18 @@ struct SmartUsageDashboard: View {
         DataStore.shared.loadAPITrackingEnabled()
     }
 
-    /// Formatted staleness label: explains why data is outdated and when it will retry.
+    /// Formatted staleness label: explains why data is outdated (no error active).
+    /// Only called from the `isStale && lastRefreshError == nil` branch — nextRetryDate is always nil here.
     private func stalenessLabel(at now: Date) -> String {
-        // Error description
-        let errorPart: String
-        if let error = lastRefreshError {
-            switch error.code {
-            case .apiRateLimited:
-                errorPart = "Rate limited"
-            case .apiUnauthorized:
-                errorPart = "Auth failed (\(error.code.rawValue))"
-            case .networkUnavailable, .networkTimeout, .networkConnectionLost, .networkDNSFailed:
-                errorPart = "Network error (\(error.code.rawValue))"
-            default:
-                errorPart = "Fetch failed (\(error.code.rawValue))"
-            }
-        } else if let lastFetch = lastSuccessfulFetch {
-            let elapsed = now.timeIntervalSince(lastFetch)
-            if elapsed < 60 {
-                errorPart = "Updated just now"
-            } else if elapsed < 3600 {
-                errorPart = "Updated \(Int(elapsed / 60))m ago"
-            } else {
-                errorPart = "Updated \(Int(elapsed / 3600))h ago"
-            }
+        guard let lastFetch = lastSuccessfulFetch else { return "No data yet" }
+        let elapsed = now.timeIntervalSince(lastFetch)
+        if elapsed < 60 {
+            return "Updated just now"
+        } else if elapsed < 3600 {
+            return "Updated \(Int(elapsed / 60))m ago"
         } else {
-            errorPart = "No data yet"
+            return "Updated \(Int(elapsed / 3600))h ago"
         }
-
-        // Retry countdown
-        if let retryDate = nextRetryDate {
-            let remaining = retryDate.timeIntervalSince(now)
-            if remaining > 0 {
-                let retryPart: String
-                if remaining < 60 {
-                    retryPart = "retrying in \(Int(remaining))s"
-                } else {
-                    retryPart = "retrying in \(Int(remaining / 60))m"
-                }
-                return "\(errorPart) – \(retryPart)"
-            }
-        }
-
-        return errorPart
     }
 
     /// Actionable error message for non-rate-limit errors
@@ -570,8 +539,7 @@ struct SmartUsageDashboard: View {
         case .sessionKeyNotFound:
             return "No credentials — configure in Settings"
         default:
-            let message = error.message
-            return message.count > 50 ? String(message.prefix(50)) + "…" : message
+            return error.message
         }
     }
 
@@ -614,6 +582,8 @@ struct SmartUsageDashboard: View {
                         Text(errorBannerText ?? "Refresh failed")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(.orange)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
 
                         Spacer()
                     }

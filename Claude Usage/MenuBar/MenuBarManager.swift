@@ -791,7 +791,9 @@ class MenuBarManager: NSObject, ObservableObject {
                         isRecoverable: true,
                         retryAfter: rateLimitRetryAfter
                     )
-                    self.nextRetryDate = Date().addingTimeInterval(self.pollingScheduler.currentInterval)
+                    // Use the server-provided retryAfter directly so the countdown matches reality.
+                    let retryInterval = rateLimitRetryAfter ?? self.pollingScheduler.currentInterval
+                    self.nextRetryDate = Date().addingTimeInterval(retryInterval)
                 }
                 self.updateStaleness()
                 self.startAutoRefresh()
@@ -961,11 +963,17 @@ class MenuBarManager: NSObject, ObservableObject {
                 await MainActor.run {
                     if appError.code == .apiRateLimited {
                         self.pollingScheduler.recordRateLimitError(retryAfter: appError.retryAfter)
+                        // Use the server-provided retryAfter directly so the countdown matches reality.
+                        // pollingScheduler.currentInterval clamps to [baseInterval, maxBackoff], which may differ.
+                        let retryInterval = appError.retryAfter ?? self.pollingScheduler.currentInterval
+                        self.nextRetryDate = Date().addingTimeInterval(retryInterval)
                     } else {
                         self.pollingScheduler.recordOtherError()
+                        // Auth and credential errors require user action — no countdown shown.
+                        let requiresUserAction = appError.code == .apiUnauthorized || appError.code == .sessionKeyNotFound
+                        self.nextRetryDate = requiresUserAction ? nil : Date().addingTimeInterval(self.pollingScheduler.currentInterval)
                     }
                     self.lastRefreshError = appError
-                    self.nextRetryDate = Date().addingTimeInterval(self.pollingScheduler.currentInterval)
                     self.updateStaleness()
                     LoggingService.shared.logError("MenuBarManager: Failed to fetch usage - [\(appError.code.rawValue)] \(appError.message)")
                 }

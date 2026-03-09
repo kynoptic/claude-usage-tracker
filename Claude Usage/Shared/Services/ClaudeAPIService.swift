@@ -615,6 +615,7 @@ class ClaudeAPIService: APIServiceProtocol {
     /// Maps an HTTP status code from an OAuth endpoint to the appropriate AppError.
     /// Internal (not private) to allow unit testing via `@testable import`.
     func oauthError(statusCode: Int, data: Data, context: String, httpResponse: HTTPURLResponse? = nil) -> AppError {
+        // Truncated to 200 chars as a privacy guard — OAuth responses may contain auth tokens.
         let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? "Unable to read response"
 
         // Log response body at error level so it persists in Release builds
