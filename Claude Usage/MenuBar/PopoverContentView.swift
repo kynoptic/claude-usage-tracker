@@ -543,9 +543,13 @@ struct SmartUsageDashboard: View {
         }
     }
 
-    /// Formats remaining seconds as a compact countdown string
-    private static func countdownText(until date: Date, now: Date) -> String {
+    /// Formats remaining seconds as a compact countdown string.
+    /// Internal (not private) to allow unit testing via @testable import.
+    nonisolated static func countdownText(until date: Date, now: Date) -> String {
         let remaining = max(0, Int(date.timeIntervalSince(now)))
+        if remaining == 0 {
+            return "Rate limited — retrying now…"
+        }
         if remaining >= 60 {
             return "Rate limited — retrying in \(remaining / 60)m \(remaining % 60)s"
         }
