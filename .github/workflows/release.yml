@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v2.4.1)'
+        required: true
 
 jobs:
   release:
@@ -14,8 +19,19 @@ jobs:
       contents: write
 
     steps:
+      - name: Resolve Tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.value }}
 
       - name: Select Xcode 26.0.1
         run: sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer
@@ -25,7 +41,7 @@ jobs:
           xcodebuild -version
           swift --version
           echo "macOS: $(sw_vers -productVersion)"
-          echo "Tag: ${{ github.ref_name }}"
+          echo "Tag: ${{ steps.tag.outputs.value }}"
 
       - name: Build Release
         run: |
@@ -57,7 +73,7 @@ jobs:
         id: changelog_notes
         continue-on-error: true
         run: |
-          VERSION="${{ github.ref_name }}"
+          VERSION="${{ steps.tag.outputs.value }}"
           VERSION="${VERSION#v}"
 
           awk "/## \[$VERSION\]/{flag=1; next} /^---$|^## \[/{flag=0} flag" CHANGELOG.md > release-notes.md
@@ -73,7 +89,8 @@ jobs:
       - name: Upload Release Artifacts
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
+          name: ${{ steps.tag.outputs.value }}
+          tag_name: ${{ steps.tag.outputs.value }}
           draft: false
           body_path: ${{ steps.changelog_notes.outputs.changelog_extracted == 'true' && 'release-notes.md' || '' }}
           generate_release_notes: ${{ steps.changelog_notes.outputs.changelog_extracted != 'true' }}
