@@ -78,12 +78,12 @@ The tag push triggers three automated workflows:
 3. **Update Homebrew Cask workflow** (triggers after release)
    - Automatically updates Homebrew formula
 
-Monitor at: `https://github.com/hamed-elfayome/Claude-Usage-Tracker/actions`
+Monitor at: `https://github.com/kynoptic/Claude-Usage-Tracker/actions`
 
 ### 6. Verify Release
 
 1. Check GitHub releases page for the new release
-2. Verify appcast: `https://hamed-elfayome.github.io/Claude-Usage-Tracker/appcast.xml`
+2. Verify appcast: `https://kynoptic.github.io/Claude-Usage-Tracker/appcast.xml`
 3. Test in-app update:
    - Run an older version of the app
    - Check for updates
@@ -95,7 +95,7 @@ Monitor at: `https://github.com/hamed-elfayome/Claude-Usage-Tracker/actions`
 
 - Check `CURRENT_PROJECT_VERSION` was incremented (not just `MARKETING_VERSION`)
 - Verify appcast.xml has higher `<sparkle:version>` number
-- Clear app caches: `~/Library/Caches/HamedElfayome.Claude-Usage/`
+- Clear app caches: `~/Library/Caches/io.kynoptic.claude-usage-tracker/`
 
 ### Signature validation error
 

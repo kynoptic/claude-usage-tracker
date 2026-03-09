@@ -58,22 +58,17 @@ Before you begin, ensure you have the following installed:
    cd Claude-Usage-Tracker
    ```
 
-3. **Add upstream remote**
-   ```bash
-   git remote add upstream https://github.com/hamed-elfayome/Claude-Usage-Tracker.git
-   ```
-
-4. **Open in Xcode**
+3. **Open in Xcode**
    ```bash
    open "Claude Usage.xcodeproj"
    ```
 
-5. **Build and run**
+4. **Build and run**
    - Select the "Claude Usage" scheme
    - Press `⌘R` to build and run
    - The app will appear in your menu bar
 
-6. **Configure for testing**
+5. **Configure for testing**
    - Extract your session key from claude.ai (see README for instructions)
    - The app will guide you through setup on first launch
 
@@ -119,7 +114,7 @@ Claude Usage/
 ### Reporting Bugs
 
 Before submitting a bug report:
-1. Check existing [issues](https://github.com/hamed-elfayome/Claude-Usage-Tracker/issues) to avoid duplicates
+1. Check existing [issues](https://github.com/kynoptic/Claude-Usage-Tracker/issues) to avoid duplicates
 2. Ensure you're running the latest version
 
 **When reporting a bug, include:**
@@ -270,10 +265,10 @@ Use descriptive branch names with prefixes:
 
 ## Pull Request Process
 
-1. **Update your fork**
+1. **Ensure your branch is up to date**
    ```bash
-   git fetch upstream
-   git rebase upstream/main
+   git fetch origin
+   git rebase origin/main
    ```
 
 2. **Create your branch**
@@ -338,8 +333,8 @@ git push origin main --tags
 
 ## Getting Help
 
-- **Questions?** Open a [Discussion](https://github.com/hamed-elfayome/Claude-Usage-Tracker/discussions)
-- **Found a bug?** Open an [Issue](https://github.com/hamed-elfayome/Claude-Usage-Tracker/issues)
+- **Questions?** Open a [Discussion](https://github.com/kynoptic/Claude-Usage-Tracker/discussions)
+- **Found a bug?** Open an [Issue](https://github.com/kynoptic/Claude-Usage-Tracker/issues)
 - **Want to chat?** Reach out to maintainers
 
 ---

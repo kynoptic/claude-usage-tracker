@@ -59,14 +59,12 @@ Common scopes: `api`, `menubar`, `statusline`, `settings`, `services`, `models`,
 **Remote:** `origin` → `https://github.com/kynoptic/Claude-Usage-Tracker.git` (your fork)
 
 > [!CAUTION]
-> **This is a fork. The upstream (`hamed-elfayome/Claude-Usage-Tracker`) is idle.**
-> **NEVER push, open PRs, file issues, or interact with upstream in any way.**
-> All work — commits, issues, PRs, releases — happens exclusively on this fork (`kynoptic/Claude-Usage-Tracker`).
-> There are no exceptions.
+> **This is a hard fork.** All work — commits, issues, PRs, releases — happens exclusively on this fork (`kynoptic/Claude-Usage-Tracker`).
+> **NEVER push, open PRs, file issues, or interact with upstream or any other fork in any way.**
 
 **`gh` CLI guard:** `gh repo set-default kynoptic/claude-usage-tracker` is configured so `gh pr create`, `gh issue create`, etc. target the fork — not the upstream. If `gh` ever prompts to choose a repo, always pick the fork. When using `gh` commands that accept `--repo`, pass `--repo kynoptic/claude-usage-tracker` explicitly as a safety net.
 
-Avoid large refactors for now. If upstream becomes active again, we want to be able to contribute back cleanly without a tangled diff.
+**Upstream and other forks** (`hamed-elfayome/Claude-Usage-Tracker`, `tsvikas`, others) are read-only references for ideas and inspiration. Cherry-picks and patches are possible but require manual porting — the architectures have diverged too far for clean applies. Always evaluate against our codebase before attempting.
 
 ## Deploy to /Applications
 

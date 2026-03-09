@@ -35,11 +35,9 @@ For contribution guidelines, build commands, and commit conventions see [`CONTRI
 
 ## Attribution
 
-This is a fork of [hamed-elfayome/Claude-Usage-Tracker](https://github.com/hamed-elfayome/Claude-Usage-Tracker), created and maintained by [Hamed Elfayome](https://github.com/hamed-elfayome). The original project established the core architecture, API integration, multi-profile system, and most of the features described here. All credit for that foundation belongs to the upstream author and [contributors](https://github.com/hamed-elfayome/Claude-Usage-Tracker/graphs/contributors).
+This project is a hard fork of [hamed-elfayome/Claude-Usage-Tracker](https://github.com/hamed-elfayome/Claude-Usage-Tracker). The original project established the core architecture, API integration, and foundation. All credit for that foundation belongs to [Hamed Elfayome](https://github.com/hamed-elfayome) and the [upstream contributors](https://github.com/hamed-elfayome/Claude-Usage-Tracker/graphs/contributors).
 
-This fork continues active development while upstream is quiet. Issues, PRs, and releases are tracked here on the fork.
-
-<img src="https://contrib.rocks/image?repo=hamed-elfayome/Claude-Usage-Tracker" alt="Contributors" height="32px" />
+This fork has diverged significantly and is developed independently. Issues, PRs, and releases are tracked here.
 
 ## License
 
