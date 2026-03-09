@@ -42,7 +42,7 @@ This project adheres to a code of conduct that all contributors are expected to 
 Before you begin, ensure you have the following installed:
 
 - **macOS 14.0+** (Sonoma or later)
-- **Xcode 15.0+** (latest stable recommended)
+- **Xcode 26.0.1+** (required; CI uses Xcode 26.0.1 on macOS 15)
 - **Git** for version control
 - **A Claude AI account** for testing (to obtain a session key)
 

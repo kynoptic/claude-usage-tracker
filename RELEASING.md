@@ -2,6 +2,9 @@
 
 This document describes how to create a new release of Claude Usage Tracker.
 
+> [!IMPORTANT]
+> **Code signing and notarization are disabled in this open-source fork.** The automated signing, notarization, and Homebrew cask steps described below do not apply. See `CLAUDE.md` for the current release workflow used in this fork.
+
 ## Prerequisites
 
 - Xcode with command line tools
