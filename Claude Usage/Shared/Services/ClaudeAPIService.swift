@@ -13,11 +13,9 @@ class ClaudeAPIService: APIServiceProtocol {
 
     // MARK: - Properties
 
-    private static let iso8601Formatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
+    // Date.ISO8601FormatStyle is a value type (struct) — safe for concurrent access
+    // from overlapping async tasks. ISO8601DateFormatter (a Formatter subclass) is not.
+    private static let iso8601ParseStrategy = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
     private let sessionKeyPath: URL
     private let sessionKeyValidator: SessionKeyValidator
@@ -695,7 +693,7 @@ class ClaudeAPIService: APIServiceProtocol {
                     sessionPercentage = parseUtilization(utilization)
                 }
                 if let resetsAt = fiveHour["resets_at"] as? String {
-                    sessionResetTime = ClaudeAPIService.iso8601Formatter.date(from: resetsAt) ?? sessionResetTime
+                    sessionResetTime = (try? ClaudeAPIService.iso8601ParseStrategy.parse(resetsAt)) ?? sessionResetTime
                 }
             }
 
@@ -707,7 +705,7 @@ class ClaudeAPIService: APIServiceProtocol {
                     weeklyPercentage = parseUtilization(utilization)
                 }
                 if let resetsAt = sevenDay["resets_at"] as? String {
-                    weeklyResetTime = ClaudeAPIService.iso8601Formatter.date(from: resetsAt) ?? weeklyResetTime
+                    weeklyResetTime = (try? ClaudeAPIService.iso8601ParseStrategy.parse(resetsAt)) ?? weeklyResetTime
                 }
             }
 
@@ -727,7 +725,7 @@ class ClaudeAPIService: APIServiceProtocol {
                     sonnetPercentage = parseUtilization(utilization)
                 }
                 if let resetsAt = sevenDaySonnet["resets_at"] as? String {
-                    sonnetResetTime = ClaudeAPIService.iso8601Formatter.date(from: resetsAt)
+                    sonnetResetTime = try? ClaudeAPIService.iso8601ParseStrategy.parse(resetsAt)
                 }
             }
 

@@ -27,12 +27,8 @@ final class AutoStartSessionService {
     private let profileManager: ProfileManager
     private let notificationManager: NotificationManager
 
-    // Shared ISO8601 formatter — allocated once to avoid per-call allocation
-    private static let iso8601Formatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
+    // Date.ISO8601FormatStyle is a value type (struct) — safe for concurrent access.
+    private static let iso8601ParseStrategy = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
     // Track last captured reset time per profile to prevent duplicate auto-starts
     private var lastCapturedResetTime: [UUID: Date] = [:]
@@ -246,7 +242,7 @@ final class AutoStartSessionService {
                 sessionPercentage = parseUtilization(utilization)
             }
             if let resetsAt = fiveHour["resets_at"] as? String {
-                sessionResetTime = AutoStartSessionService.iso8601Formatter.date(from: resetsAt) ?? sessionResetTime
+                sessionResetTime = (try? AutoStartSessionService.iso8601ParseStrategy.parse(resetsAt)) ?? sessionResetTime
             }
         }
 
@@ -259,7 +255,7 @@ final class AutoStartSessionService {
                 weeklyPercentage = parseUtilization(utilization)
             }
             if let resetsAt = sevenDay["resets_at"] as? String {
-                weeklyResetTime = AutoStartSessionService.iso8601Formatter.date(from: resetsAt) ?? weeklyResetTime
+                weeklyResetTime = (try? AutoStartSessionService.iso8601ParseStrategy.parse(resetsAt)) ?? weeklyResetTime
             }
         }
 
@@ -279,7 +275,7 @@ final class AutoStartSessionService {
                 sonnetPercentage = parseUtilization(utilization)
             }
             if let resetsAt = sevenDaySonnet["resets_at"] as? String {
-                sonnetResetTime = AutoStartSessionService.iso8601Formatter.date(from: resetsAt)
+                sonnetResetTime = try? AutoStartSessionService.iso8601ParseStrategy.parse(resetsAt)
             }
         }
 
