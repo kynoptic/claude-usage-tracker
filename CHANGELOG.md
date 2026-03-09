@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.2] - 2026-03-09
+
+Credential safety hardening for statusline script generation.
+
+### Security
+
+- Statusline setup now validates session keys and organization IDs against an allowlist before writing the generated Swift script, preventing crafted credentials from injecting code
+
 ## [2.4.1] - 2026-03-09
 
 Burn-up chart accuracy, stability hardening, and auto-updates for the fork.
