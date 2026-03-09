@@ -60,6 +60,13 @@ enum Constants {
 
         // Localization
         static let appLanguage = "appLanguage"
+
+        // Overage & organization
+        static let checkOverageLimitEnabled = "checkOverageLimitEnabled"
+        static let selectedOrganizationId = "selectedOrganizationId"
+
+        // Debug
+        static let debugAPILoggingEnabled = "debugAPILoggingEnabled"
     }
 
     // Claude Code paths

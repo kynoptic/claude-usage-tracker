@@ -13,7 +13,33 @@ class StatuslineService {
     /// Swift script that fetches Claude usage data from the API.
     /// Installed to ~/.claude/fetch-claude-usage.swift and executed by the bash statusline script.
     /// The session key and organization ID are injected into this script when statusline is enabled.
-    private func generateSwiftScript(sessionKey: String, organizationId: String) -> String {
+    /// Character set considered safe for embedding in a Swift string literal.
+    /// Alphanumeric, hyphens, underscores, dots, and colons cover all known
+    /// session-key and org-ID formats. Any other character (backslash, quote,
+    /// interpolation marker, newline, …) would corrupt the generated script.
+    private static let safeCredentialCharacters: CharacterSet = {
+        var cs = CharacterSet.alphanumerics
+        cs.insert(charactersIn: "-_.:") // hyphens, underscores, dots, colons
+        return cs
+    }()
+
+    /// Returns true when every character in `value` is safe to embed as a
+    /// Swift string literal without escaping or transformation.
+    private func isCredentialSafe(_ value: String) -> Bool {
+        guard !value.isEmpty else { return false }
+        return value.unicodeScalars.allSatisfy {
+            StatuslineService.safeCredentialCharacters.contains($0)
+        }
+    }
+
+    private func generateSwiftScript(sessionKey: String, organizationId: String) throws -> String {
+        guard isCredentialSafe(sessionKey) else {
+            throw StatuslineError.unsafeCredential("Session key contains characters that are not safe to embed in a script. Aborting write.")
+        }
+        guard isCredentialSafe(organizationId) else {
+            throw StatuslineError.unsafeCredential("Organization ID contains characters that are not safe to embed in a script. Aborting write.")
+        }
+
         return """
 #!/usr/bin/env swift
 
@@ -348,7 +374,7 @@ printf "%s\\n" "$output"
                 throw StatuslineError.organizationNotConfigured
             }
 
-            swiftScriptContent = generateSwiftScript(sessionKey: sessionKey, organizationId: organizationId)
+            swiftScriptContent = try generateSwiftScript(sessionKey: sessionKey, organizationId: organizationId)
             LoggingService.shared.log("Injected session key and org ID from profile '\(activeProfile.name)' into statusline")
         } else {
             // Install placeholder script
@@ -530,6 +556,7 @@ enum StatuslineError: Error, LocalizedError {
     case noActiveProfile
     case sessionKeyNotFound
     case organizationNotConfigured
+    case unsafeCredential(String)
 
     var errorDescription: String? {
         switch self {
@@ -539,6 +566,8 @@ enum StatuslineError: Error, LocalizedError {
             return "Session key not found in active profile. Please configure your session key first."
         case .organizationNotConfigured:
             return "Organization not configured in active profile. Please select an organization in the app settings."
+        case .unsafeCredential(let message):
+            return message
         }
     }
 }
