@@ -21,7 +21,7 @@ CI runs on `macos-15` (Xcode 16 required for `PBXFileSystemSynchronizedRootGroup
 
 MVVM pattern. Keep views "dumb" — display only, no business logic.
 
-```
+```text
 Claude Usage/
 ├── App/              # Entry point, lifecycle
 ├── MenuBar/          # Status item, popover UI, MenuBarManager (ViewModel)
@@ -96,10 +96,29 @@ open "/Applications/Claude Usage.app"
 ```
 
 **Why each step:**
+
 - **Kill first**: macOS can keep the old process in memory even after replacing the bundle.
 - **Nuke DerivedData**: `clean build` alone can reuse stale object files from incremental caches.
 - **`rm -rf` before `cp -R`**: `cp -R` silently skips overwriting an existing `.app` directory, leaving the stale binary in place.
 - **`grep` not `awk`**: The `awk` pattern for `BUILT_PRODUCTS_DIR` can match the wrong line (e.g. `CODE_SIGNING_ALLOWED = YES`).
+
+## Viewing UI without a display
+
+The environment lacks display access (`screencapture` fails headlessly). Use `ScreenshotTests` to render SwiftUI views to PNG via `ImageRenderer`:
+
+```bash
+xcodebuild test -project "Claude Usage.xcodeproj" -scheme "Claude Usage" \
+  -only-testing:"Claude UsageTests/ScreenshotTests" \
+  -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+```
+
+PNGs are written to `.screenshots/` at the project root. Open them with:
+
+```bash
+open .screenshots/<name>.png
+```
+
+Add a temporary test to `ScreenshotTests.swift` for the view you want to inspect — remove it after verification. `ImageRenderer` returns `nil` in fully headless CI (no GPU), but works in local terminal sessions.
 
 ## Release
 
