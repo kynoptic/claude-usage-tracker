@@ -6,7 +6,7 @@ Native macOS menu bar app that monitors your Claude AI usage limits in real time
 - **Burn-up charts** – flip any usage card in the popover to see a live burn-up chart with a pace line and current-time marker
 - **Time-elapsed marker** – shows current position within the session window on progress bars and the menu bar icon
 - **Adaptive polling** – exponential backoff on rate limits, honouring server `Retry-After` headers
-- **Terminal statusline** – live usage in your Claude Code prompt
+- **Terminal statusline** – live usage in your Claude Code prompt via a generated shell script, with pacing-aware colour levels
 - **Privacy-first** – local storage, no telemetry, no cloud sync
 
 ## Getting started
@@ -50,8 +50,6 @@ For contribution guidelines, build commands, and commit conventions see [`CONTRI
 ## Attribution
 
 This project is a fork of [hamed-elfayome/Claude-Usage-Tracker](https://github.com/hamed-elfayome/Claude-Usage-Tracker). The original established the core architecture and API integration — full credit to [Hamed Elfayome](https://github.com/hamed-elfayome) and the [upstream contributors](https://github.com/hamed-elfayome/Claude-Usage-Tracker/graphs/contributors).
-
-This fork has diverged from the upstream. Additions here include five-zone projection-based pacing (vs. three zones upstream), per-card burn-up charts in the popover, time-elapsed markers, adaptive polling with exponential backoff, week usage displayed as a token count, and credential-safe statusline script generation. Development is independent; issues, PRs, and releases are tracked here only.
 
 ## License
 
