@@ -29,7 +29,7 @@ final class PollingSchedulerTests: XCTestCase {
     // MARK: - Initial State
 
     func testInitialIntervalEqualsBaseRate() {
-        var scheduler = PollingScheduler(baseInterval: 30)
+        let scheduler = PollingScheduler(baseInterval: 30)
         XCTAssertEqual(scheduler.currentInterval, 30)
     }
 

@@ -5,7 +5,7 @@ import Foundation
 /// testable via `init(storageDirectory:)`.
 final class SessionHistoryStore {
 
-    nonisolated(unsafe) static let shared = SessionHistoryStore()
+    static let shared = SessionHistoryStore()
 
     // MARK: - Properties
 

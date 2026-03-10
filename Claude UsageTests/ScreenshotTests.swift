@@ -175,8 +175,8 @@ final class ScreenshotTests: XCTestCase {
     // MARK: - Composite Dashboard Approximation
 
     func testCompositeDashboard() throws {
-        let sessionSnapshots = makeSnapshots(count: 15, maxPct: 50)
-        let weeklySnapshots = makeSnapshots(count: 30, maxPct: 35)
+        _ = makeSnapshots(count: 15, maxPct: 50)
+        _ = makeSnapshots(count: 30, maxPct: 35)
 
         let view = VStack(spacing: 16) {
             // Primary session card
@@ -266,7 +266,7 @@ final class ScreenshotTests: XCTestCase {
     private func makeSnapshots(
         count: Int,
         maxPct: Double,
-        window: TimeInterval = Constants.sessionWindow
+        window: TimeInterval = 5 * 60 * 60
     ) -> [UsageSnapshot] {
         precondition(count >= 2, "makeSnapshots requires count >= 2")
         return (0..<count).map { i in
