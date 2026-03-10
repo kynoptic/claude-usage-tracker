@@ -4,8 +4,8 @@ The icon and progress bars change colour based on **whether your current pace wi
 
 ## What the colours mean
 
-| Colour | Range | Status | Meaning |
-| ------ | ----- | ------ | ------- |
+| Colour | Projected range | Status | Meaning |
+| ------ | --------------- | ------ | ------- |
 | ⚫ Grey | < 50% | Underutilized 💤 | Well under the limit. (Opt-in — see below.) |
 | 🟢 Green | 50–90% | On track ✅ | Comfortable headroom. |
 | 🟡 Yellow | 90–110% | Maximizing 🔥 | Close to the limit; consider slowing down. |

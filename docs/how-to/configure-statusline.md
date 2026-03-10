@@ -51,7 +51,11 @@ Applying writes four files to `~/.claude/`:
 | `statusline-config.txt` | Toggle flags for each component |
 | `settings.json` | Updated with `"statusLine": {"type": "command", ...}` |
 
-When you switch profiles, the Swift script is rewritten with the new profile's credentials.
+### How the files work together
+
+Claude Code reads `settings.json` to find the statusline command and runs `statusline-command.sh` on each prompt render. The bash script reads `statusline-config.txt` to know which components are enabled, then calls `swift ~/.claude/fetch-claude-usage.swift` to get the live usage values. The Swift script has your session credentials baked in at install time, so it can contact the API directly without any app involvement.
+
+When you switch profiles, the app rewrites `fetch-claude-usage.swift` with the new profile's credentials — `statusline-command.sh` and `statusline-config.txt` are left unchanged.
 
 ## Disable
 
