@@ -13,6 +13,10 @@ Credentials are stored as fields on `Profile` and persisted with the rest of the
 
 `ProfileCredentials` is a lightweight transfer struct used when reading or writing credentials through `ProfileManager.loadCredentials` / `saveCredentials`. Changes write back into the `Profile` struct immediately after saving.
 
+## Scope
+
+This decision covers **session keys** (`claudeSessionKey`) and OAuth tokens (`cliCredentialsJSON`) stored on the `Profile` struct. It does not govern the System Keychain — that entry belongs to the Claude Code CLI, not this app. The authentication chain (`auth-chain.md`) can read from the System Keychain as a fallback, but this app never writes to it.
+
 ## Consequences
 
 **Positive:**

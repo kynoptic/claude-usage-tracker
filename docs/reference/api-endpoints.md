@@ -71,3 +71,16 @@ Returns an array of `{ uuid, name }` objects. The app selects the first organisa
 ## Rate limiting
 
 The API returns HTTP `429` with a `Retry-After` header (integer seconds) when rate-limited. The app honours this value directly rather than using fixed backoff. See [adaptive polling](../explanations/polling-and-rate-limits.md) for details.
+
+## Error handling
+
+| HTTP status | Meaning | App behaviour |
+|-------------|---------|---------------|
+| `200` | Success | Parse response; update UI |
+| `401` | Invalid or expired credential | Surface error to UI; skip retry until next poll cycle |
+| `403` | Credential valid but unauthorised | Surface error to UI; skip retry |
+| `429` | Rate limited | Read `Retry-After` header; back off for that duration |
+| `5xx` | Server error | Treat as transient; retry on next scheduled poll |
+| Network error | No connectivity or DNS failure | Treat as transient; retry on next scheduled poll |
+
+The `utilization` field can be `null` in the API response when no usage data is available for the window (e.g. the weekly window has no recorded activity). The app maps `null` to `0` when computing display values.

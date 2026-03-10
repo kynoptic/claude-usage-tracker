@@ -36,6 +36,8 @@ CLI OAuth tokens auto-refresh when the user runs Claude Code, making them more r
 
 `ClaudeCodeSyncService.isTokenExpired()` reads the `expiresAt` field from the stored JSON. The field is normalized from milliseconds to seconds during parsing to guard against a known edge case where the Anthropic CLI stores expiry in milliseconds, which would make a valid token appear expired if interpreted as Unix seconds.
 
+Expiry is checked at the start of each fetch, before any network call. If the stored CLI OAuth token (step 1 in the chain) is expired, the chain immediately falls through to step 2 (System Keychain). If the Keychain token is also expired or absent, the chain falls through to the session key (step 3). There is no mid-fetch token refresh — if a token expires while a request is in-flight, the request fails and the next polling cycle re-evaluates the chain from the top, picking up a refreshed token if Claude Code has renewed it in the meantime.
+
 ## Multi-profile fetch
 
 When fetching all profiles in multi-display mode, `MenuBarManager` calls a separate helper (`fetchUsageForProfile()`) for each profile. That helper runs the same OAuth-first → cookie fallback logic against each profile's stored credentials independently, so profiles can authenticate through different methods at the same time.
