@@ -220,7 +220,7 @@ This project follows the **MVVM (Model-View-ViewModel)** pattern:
 
 ### Commit Messages
 
-We follow [Conventional Commits](https://www.conventionalcommits.org/):
+We follow [Conventional Commits](https://www.conventionalcommits.org/). Scopes are **required** here — the codebase is split across distinct layers (`api`, `menubar`, `statusline`, etc.) and scopes make it easy to scan history for changes in a specific area without reading every commit body.
 
 ```
 <type>(<scope>): <description>

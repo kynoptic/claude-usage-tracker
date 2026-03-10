@@ -102,6 +102,12 @@ open "/Applications/Claude Usage.app"
 - **`rm -rf` before `cp -R`**: `cp -R` silently skips overwriting an existing `.app` directory, leaving the stale binary in place.
 - **`grep` not `awk`**: The `awk` pattern for `BUILT_PRODUCTS_DIR` can match the wrong line (e.g. `CODE_SIGNING_ALLOWED = YES`).
 
+**Verification after deploy:**
+
+- App appears in menu bar within a few seconds of launch
+- Click the icon — popover opens and usage data loads (not stuck on `~`)
+- Settings → Claude Code shows existing statusline config, if previously configured
+
 ## Viewing UI without a display
 
 The environment lacks display access (`screencapture` fails headlessly). Use `ScreenshotTests` to render SwiftUI views to PNG via `ImageRenderer`:
