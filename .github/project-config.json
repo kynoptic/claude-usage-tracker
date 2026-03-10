@@ -1,0 +1,34 @@
+{
+  "project": {
+    "number": 13,
+    "id": "PVT_kwHOAvtmyM4BRWl8",
+    "title": "Claude Usage Tracker",
+    "owner": "kynoptic"
+  },
+  "fields": {
+    "status": {
+      "id": "PVTSSF_lAHOAvtmyM4BRWl8zg_NLKw",
+      "options": {
+        "todo": "f75ad846",
+        "in_progress": "47fc9ee4",
+        "done": "98236657"
+      }
+    },
+    "value": {
+      "id": "PVTSSF_lAHOAvtmyM4BRWl8zg_NLUQ",
+      "options": {
+        "essential": "607065ed",
+        "useful": "09a9a9e6",
+        "nice_to_have": "406791b1"
+      }
+    },
+    "effort": {
+      "id": "PVTSSF_lAHOAvtmyM4BRWl8zg_NLVk",
+      "options": {
+        "heavy": "f248c579",
+        "moderate": "680fdc3f",
+        "light": "51ddda40"
+      }
+    }
+  }
+}
