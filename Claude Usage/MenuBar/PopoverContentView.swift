@@ -774,6 +774,7 @@ struct SmartUsageCard: View {
                     .transition(.opacity)
             }
         }
+        .frame(maxHeight: .infinity)
         .padding(isPrimary ? 16 : 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
