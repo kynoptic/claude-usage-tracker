@@ -671,6 +671,7 @@ struct SmartUsageDashboard: View {
                     )
                 }
             }
+            .fixedSize(horizontal: false, vertical: true)
 
             if let used = usage.costUsed, let limit = usage.costLimit, let currency = usage.costCurrency, limit > 0 {
                 let usedPercentage = (used / limit) * 100.0
@@ -774,7 +775,7 @@ struct SmartUsageCard: View {
                     .transition(.opacity)
             }
         }
-        .frame(maxHeight: .infinity)
+        .frame(maxHeight: isPrimary ? nil : .infinity)
         .padding(isPrimary ? 16 : 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
