@@ -1,66 +1,78 @@
 # Pacing-aware colour logic
 
-The app colours usage indicators using five discrete zones. The colour reflects not just how much you've used, but whether your current pace will exhaust the session before it resets.
+The icon and progress bars change colour based on **whether your current pace will exhaust your session before it resets** — not just how much you've used so far.
 
-## Projected utilisation
+## What the colours mean
 
-The icon colour is driven by **projected end-of-session utilisation**:
+| Colour | Range | Status | Meaning |
+| ------ | ----- | ------ | ------- |
+| ⚫ Grey | < 50% | Underutilized 💤 | Well under the limit. (Opt-in — see below.) |
+| 🟢 Green | 50–90% | On track ✅ | Comfortable headroom. |
+| 🟡 Yellow | 90–110% | Maximizing 🔥 | Close to the limit; consider slowing down. |
+| 🟠 Orange | 110–150% | Overshooting ⚠️ | Will exceed your limit before the session resets. |
+| 🔴 Red | > 150% | Way over 🛑 | Burning through the session very fast. |
+
+## Why "projected" instead of raw usage
+
+Raw usage can be misleading. If you've used 80% of your limit but you're 95% through the session window, you're fine — you'll reset before running out. If you've only used 40% but you're just 20% into the session, you're on pace to use 200%.
+
+The app calculates:
 
 ```
 projected = usedPercentage / elapsedFraction
 ```
 
-`usedPercentage` is current usage (0–100). `elapsedFraction` is how far through the session window you are (0–1). `projected` is the percentage you'll have consumed by the end of the session if you continue at this rate.
+**Example:** 30% used, 40% into the session → projected = 30 ÷ 0.40 = **75%** (green, on track).
 
-Example: 30% used, 40% through the session → projected = 30 / 0.40 = **75%** (on track to use exactly 75%).
+When timing information is unavailable (session expired or no reset time), the app falls back to raw `usedPercentage`.
 
-When `elapsedFraction` is nil, zero, or ≥ 1 (session expired or timing unavailable), the app falls back to the raw `usedPercentage`.
+## The grey zone (opt-in)
 
-## Five colour zones
+Grey is disabled by default — low-usage sessions show green. To enable it:
 
-| Projected utilisation | Zone | Colour | Apple colour constant |
-|----------------------|------|--------|-----------------------|
-| < 50% | Underutilized | Grey | `NSColor.systemGray` |
-| 50–90% | On track | Green | `NSColor.systemGreen` |
-| 90–110% | Maximizing | Yellow | `NSColor.systemYellow` |
-| 110–150% | Overshooting | Orange | `NSColor.systemOrange` |
-| > 150% | Way over | Red | `NSColor.systemRed` |
+Go to Settings → Appearance → "Show grey for underutilized sessions".
 
-The grey zone is **opt-in** — it is off by default. Enable it with the **"Show grey for underutilized sessions"** toggle in **Appearance** settings. When disabled, sessions below 50% projected use show green instead.
+When enabled, projected usage below 50% shows grey instead of green. The 50% threshold is the default; you can adjust it in Appearance settings (range: 10–80%).
 
-## Where this logic runs
+## Where colours appear
 
-The same zone boundaries apply in three places:
+The same zone logic applies in three places:
 
-| Location | Implementation |
-|----------|---------------|
-| Menu bar icon colour | `UsageStatusCalculator.calculateStatus()` in Swift |
-| Popover progress bars | `UsageStatusCalculator.calculateStatus()` in Swift |
-| Terminal statusline | `UsageStatusCalculator.colorLevel()` in Swift, replicated in bash in `statusline-command.sh` |
+- **Menu bar icon** — tinted dot or percentage label
+- **Popover progress bars** — each profile's usage bar
+- **Terminal statusline** — colour level 3 (green/grey), 5 (yellow), 7 (orange), or 10 (red)
 
-## Statusline colour levels
+---
 
-The statusline uses a 1–10 ANSI colour level. The five zones map to specific levels:
+## Technical details
+
+### Projection formula
+
+`UsageStatusCalculator.calculateStatus()` in `Claude Usage/Shared/Utilities/UsageStatusCalculator.swift`:
+
+```swift
+projected = usedPercentage / 100.0 / elapsedFraction   // when elapsedFraction ∈ (0, 1)
+// fallback to usedPercentage / 100.0 otherwise
+```
+
+### Statusline colour levels
+
+The terminal statusline maps zones to ANSI colour levels (1–10):
 
 | Zone | Colour level |
-|------|-------------|
-| Grey | 3 |
-| Green | 3 |
+| ---- | ------------ |
+| Grey or Green | 3 |
 | Yellow | 5 |
 | Orange | 7 |
 | Red | 10 |
 
-## Bash/Swift sync contract
+### Bash/Swift sync contract
 
-The bash script in `statusline-command.sh` replicates the zone logic in shell arithmetic. The comment in that file reads:
+`statusline-command.sh` replicates the zone logic in shell arithmetic. The comment in that file reads:
 
 > "Logic mirrors UsageStatusCalculator.colorLevel (Swift) — keep in sync."
 
-If you change any threshold in `UsageStatusCalculator.swift`, the corresponding branch in the bash script must be updated to match. The two implementations are not linked at runtime — they can silently diverge.
-
-## Dormant components
-
-`SessionHistoryStore` and `BoundaryDetector` exist in the codebase but are not wired to the UI. They are kept for possible future session-history display.
+If you change any threshold in `UsageStatusCalculator.swift`, update the corresponding branch in the bash script. The two implementations are not linked at runtime and can silently diverge.
 
 ## Related docs
 
