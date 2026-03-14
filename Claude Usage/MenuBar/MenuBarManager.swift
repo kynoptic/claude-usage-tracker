@@ -225,7 +225,7 @@ class MenuBarManager: NSObject, ObservableObject {
 
         Task {
             await MainActor.run { self.isRefreshing = true }
-            let result = await refreshOrchestrator.refreshSingleProfile(apiSessionKey: profile.apiSessionKey, apiOrganizationId: profile.apiOrganizationId)
+            let result = await refreshOrchestrator.refreshSingleProfile(profile: profile, apiSessionKey: profile.apiSessionKey, apiOrganizationId: profile.apiOrganizationId)
             await applySingleProfileResult(result)
         }
     }
@@ -234,7 +234,12 @@ class MenuBarManager: NSObject, ObservableObject {
         if let s = result.status { status = s }
         if let u = result.usage {
             usage = u
-            if let pid = profileManager.activeProfile?.id { profileManager.saveClaudeUsage(u, for: pid) }
+            if let pid = profileManager.activeProfile?.id {
+                profileManager.saveClaudeUsage(u, for: pid)
+                if let orgId = result.newlyFetchedOrgId {
+                    profileManager.updateOrganizationId(orgId, for: pid)
+                }
+            }
             UsageHistoryStore.shared.recordAll(from: u)
             pacingContext = Self.buildPacingContext(for: u)
             updateAllStatusBarIcons()

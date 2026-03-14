@@ -13,6 +13,8 @@ struct SingleProfileRefreshResult {
     var usageError: AppError?
     var status: ClaudeStatus?
     var apiUsage: APIUsage?
+    /// Non-nil when the orchestrator auto-discovered an org ID that the caller should persist.
+    var newlyFetchedOrgId: String?
     var usageSuccess: Bool { usage != nil }
 }
 
@@ -35,19 +37,43 @@ final class RefreshOrchestrator {
 
     // MARK: - Single Profile
 
-    /// Fetches usage, status, and (optionally) API usage for the active profile.
+    /// Fetches usage, status, and (optionally) API usage for the given profile.
+    /// - Parameters:
+    ///   - profile: The active profile to fetch usage for (provides credentials)
+    ///   - apiSessionKey: Optional Console API session key
+    ///   - apiOrganizationId: Optional Console API organization ID
     func refreshSingleProfile(
+        profile: Profile,
         apiSessionKey: String? = nil,
         apiOrganizationId: String? = nil
     ) async -> SingleProfileRefreshResult {
         var result = SingleProfileRefreshResult()
 
+        // Resolve authentication from the profile
+        let auth: ClaudeAPIService.AuthenticationType
+        do {
+            auth = try await resolveAuthentication(for: profile)
+        } catch {
+            let appError = AppError.wrap(error)
+            ErrorLogger.shared.log(appError, severity: .error)
+            ErrorRecovery.shared.recordFailure(for: .api)
+            result.usageError = appError
+            return result
+        }
+
         // Fetch usage and status in parallel
-        async let usageResult = apiService.fetchUsageData()
+        async let usageResult = apiService.fetchUsageData(
+            auth: auth,
+            storedOrgId: profile.organizationId,
+            checkOverageLimitEnabled: profile.checkOverageLimitEnabled,
+            sessionKeyFallback: profile.claudeSessionKey
+        )
         async let statusResult = statusService.fetchStatus()
 
         do {
-            result.usage = try await usageResult
+            let (usage, newOrgId) = try await usageResult
+            result.usage = usage
+            result.newlyFetchedOrgId = newOrgId
             ErrorRecovery.shared.recordSuccess(for: .api)
         } catch {
             let appError = AppError.wrap(error)
@@ -143,5 +169,56 @@ final class RefreshOrchestrator {
             message: "Missing credentials for profile '\(profile.name)'",
             isRecoverable: false
         )
+    }
+
+    // MARK: - Authentication Resolution
+
+    /// Resolves the best available authentication method for a profile.
+    /// Priority: 1) CLI OAuth (auto-refreshing) -> 2) system Keychain CLI OAuth -> 3) claude.ai session
+    private func resolveAuthentication(for profile: Profile) async throws -> ClaudeAPIService.AuthenticationType {
+        // Try saved CLI OAuth token first (auto-refreshing, most reliable)
+        if let cliJSON = profile.cliCredentialsJSON {
+            if !ClaudeCodeSyncService.shared.isTokenExpired(cliJSON),
+               let accessToken = ClaudeCodeSyncService.shared.extractAccessToken(from: cliJSON) {
+                LoggingService.shared.log("RefreshOrchestrator: Using saved CLI OAuth token")
+                return .cliOAuth(accessToken)
+            } else {
+                LoggingService.shared.log("RefreshOrchestrator: Saved CLI OAuth token is expired or invalid")
+            }
+        }
+
+        // Fall back to reading CLI credentials directly from system Keychain
+        do {
+            if let systemCredentials = try await ClaudeCodeSyncService.shared.readSystemCredentials() {
+                LoggingService.shared.log("RefreshOrchestrator: Found CLI credentials in system Keychain")
+
+                if ClaudeCodeSyncService.shared.isTokenExpired(systemCredentials) {
+                    LoggingService.shared.log("RefreshOrchestrator: System Keychain CLI token is expired")
+                } else if let accessToken = ClaudeCodeSyncService.shared.extractAccessToken(from: systemCredentials) {
+                    LoggingService.shared.log("RefreshOrchestrator: Using CLI credentials from system Keychain")
+                    return .cliOAuth(accessToken)
+                } else {
+                    LoggingService.shared.log("RefreshOrchestrator: Could not extract access token from system Keychain credentials")
+                }
+            } else {
+                LoggingService.shared.log("RefreshOrchestrator: No CLI credentials found in system Keychain")
+            }
+        } catch {
+            LoggingService.shared.log("RefreshOrchestrator: Could not read system CLI credentials: \(error.localizedDescription)")
+        }
+
+        // Fall back to claude.ai session key
+        if let sessionKey = profile.claudeSessionKey {
+            do {
+                let validatedKey = try apiService.sessionKeyValidator.validate(sessionKey)
+                LoggingService.shared.log("RefreshOrchestrator: Falling back to claude.ai session key")
+                return .claudeAISession(validatedKey)
+            } catch {
+                LoggingService.shared.logError("RefreshOrchestrator: claude.ai session key validation failed: \(error.localizedDescription)")
+            }
+        }
+
+        LoggingService.shared.logError("RefreshOrchestrator: No valid credentials for usage data")
+        throw AppError.sessionKeyNotFound()
     }
 }
