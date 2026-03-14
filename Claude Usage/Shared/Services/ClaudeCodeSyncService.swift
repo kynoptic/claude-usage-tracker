@@ -129,6 +129,7 @@ class ClaudeCodeSyncService {
         }
 
         profiles[index].cliCredentialsJSON = jsonData
+        profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(jsonData)
         ProfileStore.shared.saveProfiles(profiles)
 
         LoggingService.shared.log("Synced CLI credentials to profile: \(profileId)")
@@ -159,6 +160,7 @@ class ClaudeCodeSyncService {
         }
 
         profiles[index].cliCredentialsJSON = nil
+        profiles[index].hasValidOAuthCredentials = false
         ProfileStore.shared.saveProfiles(profiles)
 
         LoggingService.shared.log("Removed CLI credentials from profile: \(profileId)")
@@ -233,6 +235,7 @@ class ClaudeCodeSyncService {
         }
 
         profiles[index].cliCredentialsJSON = freshJSON
+        profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(freshJSON)
         profiles[index].cliAccountSyncedAt = Date()  // Update sync timestamp
         ProfileStore.shared.saveProfiles(profiles)
 
