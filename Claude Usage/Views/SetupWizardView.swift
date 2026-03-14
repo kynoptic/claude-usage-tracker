@@ -182,7 +182,7 @@ struct SetupWizardView: View {
             // Check if Claude Code credentials exist
             Task {
                 do {
-                    let credentials = try ClaudeCodeSyncService.shared.readSystemCredentials()
+                    let credentials = try await ClaudeCodeSyncService.shared.readSystemCredentials()
                     await MainActor.run {
                         hasClaudeCodeCredentials = (credentials != nil)
                     }

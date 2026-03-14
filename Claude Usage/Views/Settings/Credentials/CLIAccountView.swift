@@ -243,29 +243,31 @@ struct CLIAccountView: View {
         isSyncing = true
         syncError = nil
 
-        do {
-            try ClaudeCodeSyncService.shared.syncToProfile(profileId)
+        Task {
+            do {
+                try await ClaudeCodeSyncService.shared.syncToProfile(profileId)
 
-            // Reload profiles to get the updated cliCredentialsJSON
-            profileManager.loadProfiles()
+                // Reload profiles to get the updated cliCredentialsJSON
+                profileManager.loadProfiles()
 
-            // Update profile metadata
-            if var updated = profileManager.activeProfile {
-                updated.hasCliAccount = true
-                updated.cliAccountSyncedAt = Date()
-                profileManager.updateProfile(updated)
+                // Update profile metadata
+                if var updated = profileManager.activeProfile {
+                    updated.hasCliAccount = true
+                    updated.cliAccountSyncedAt = Date()
+                    profileManager.updateProfile(updated)
+                }
+
+                // Load account info
+                loadCLIAccountInfo()
+
+                LoggingService.shared.log("CLIAccountView: CLI sync complete, credentials saved to profile")
+            } catch {
+                syncError = error.localizedDescription
+                LoggingService.shared.logError("CLIAccountView: CLI sync failed - \(error.localizedDescription)")
             }
 
-            // Load account info
-            loadCLIAccountInfo()
-
-            LoggingService.shared.log("CLIAccountView: CLI sync complete, credentials saved to profile")
-        } catch {
-            syncError = error.localizedDescription
-            LoggingService.shared.logError("CLIAccountView: CLI sync failed - \(error.localizedDescription)")
+            isSyncing = false
         }
-
-        isSyncing = false
     }
 
     private func removeSync() {
