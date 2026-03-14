@@ -117,6 +117,11 @@ class ProfileStore {
         profiles[index].apiSessionKey = credentials.apiSessionKey
         profiles[index].apiOrganizationId = credentials.apiOrganizationId
         profiles[index].cliCredentialsJSON = credentials.cliCredentialsJSON
+        if let json = credentials.cliCredentialsJSON {
+            profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(json)
+        } else {
+            profiles[index].hasValidOAuthCredentials = false
+        }
 
         saveProfiles(profiles)
     }

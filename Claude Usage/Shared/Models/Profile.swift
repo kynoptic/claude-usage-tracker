@@ -24,6 +24,10 @@ struct Profile: Codable, Identifiable, Equatable {
     var hasCliAccount: Bool
     var cliAccountSyncedAt: Date?
 
+    /// Cached result of CLI OAuth credential validation.
+    /// Updated when credentials are synced, loaded, or removed — never during SwiftUI body evaluation.
+    var hasValidOAuthCredentials: Bool
+
     // MARK: - Usage Data (Per-Profile)
     var claudeUsage: ClaudeUsage?
     var apiUsage: APIUsage?
@@ -56,6 +60,7 @@ struct Profile: Codable, Identifiable, Equatable {
         cliCredentialsJSON: String? = nil,
         hasCliAccount: Bool = false,
         cliAccountSyncedAt: Date? = nil,
+        hasValidOAuthCredentials: Bool = false,
         claudeUsage: ClaudeUsage? = nil,
         apiUsage: APIUsage? = nil,
         iconConfig: MenuBarIconConfiguration = .default,
@@ -76,6 +81,7 @@ struct Profile: Codable, Identifiable, Equatable {
         self.cliCredentialsJSON = cliCredentialsJSON
         self.hasCliAccount = hasCliAccount
         self.cliAccountSyncedAt = cliAccountSyncedAt
+        self.hasValidOAuthCredentials = hasValidOAuthCredentials
         self.claudeUsage = claudeUsage
         self.apiUsage = apiUsage
         self.iconConfig = iconConfig
@@ -99,24 +105,28 @@ struct Profile: Codable, Identifiable, Equatable {
 
     /// True if profile has credentials that can fetch usage data (Claude.ai, CLI OAuth, or API Console)
     var hasUsageCredentials: Bool {
-        hasClaudeAI || hasAPIConsole || hasValidCLIOAuth || hasValidSystemCLIOAuth
+        hasClaudeAI || hasAPIConsole || hasValidOAuthCredentials
     }
 
-    /// True if profile has CLI OAuth credentials that are not expired
-    var hasValidCLIOAuth: Bool {
-        guard let cliJSON = cliCredentialsJSON else { return false }
-        // Check if not expired
-        return !ClaudeCodeSyncService.shared.isTokenExpired(cliJSON)
-    }
+    // MARK: - OAuth Validation Helpers
 
-    /// True if system Keychain has valid CLI OAuth credentials (fallback)
-    var hasValidSystemCLIOAuth: Bool {
-        guard let systemCredentials = try? ClaudeCodeSyncService.shared.readSystemCredentials() else {
+    /// Pure validation: checks whether a CLI credentials JSON string contains a valid, non-expired OAuth token.
+    /// Safe to call from any context — no subprocess, no I/O.
+    static func isValidOAuthJSON(_ jsonData: String) -> Bool {
+        guard let data = jsonData.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let oauth = json["claudeAiOauth"] as? [String: Any],
+              let _ = oauth["accessToken"] as? String else {
             return false
         }
-        // Check if not expired and has valid access token
-        return !ClaudeCodeSyncService.shared.isTokenExpired(systemCredentials) &&
-               ClaudeCodeSyncService.shared.extractAccessToken(from: systemCredentials) != nil
+        // Check expiry if present
+        if let expiresAt = oauth["expiresAt"] as? TimeInterval {
+            let epoch = expiresAt > 1e12 ? expiresAt / 1000.0 : expiresAt
+            let expiryDate = Date(timeIntervalSince1970: epoch)
+            return Date() < expiryDate
+        }
+        // No expiry info = assume valid
+        return true
     }
 
     var hasAnyCredentials: Bool {
