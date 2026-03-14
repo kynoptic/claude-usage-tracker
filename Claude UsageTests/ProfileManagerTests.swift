@@ -462,6 +462,54 @@ final class ProfileManagerTests: XCTestCase {
         XCTAssertEqual(manager.activeProfile?.id, profile.id)
     }
 
+    func testActivateProfile_NonExistentId_DoesNotDeadlock() async {
+        let profileA = makeProfile(name: "A")
+        let profileB = makeProfile(name: "B")
+        manager.profiles = [profileA, profileB]
+        manager.activeProfile = profileA
+        ProfileStore.shared.saveProfiles([profileA, profileB])
+        ProfileStore.shared.saveActiveProfileId(profileA.id)
+
+        // Activate a profile ID that does not exist — should not lock the switcher
+        await manager.activateProfile(UUID())
+
+        XCTAssertFalse(manager.isSwitchingProfile,
+                       "isSwitchingProfile must be false after a failed lookup")
+
+        // A subsequent valid switch must succeed (not be blocked by stale flag)
+        await manager.activateProfile(profileB.id)
+
+        XCTAssertEqual(manager.activeProfile?.id, profileB.id,
+                       "Valid switch must succeed after a prior failed lookup")
+    }
+
+    func testActivateProfile_ProfileDeletedBeforeReload_DoesNotDeadlock() async {
+        let profileA = makeProfile(name: "A")
+        let profileB = makeProfile(name: "B")
+        manager.profiles = [profileA, profileB]
+        manager.activeProfile = profileA
+        // Save only profileA to disk — profileB will be missing on reload
+        ProfileStore.shared.saveProfiles([profileA])
+        ProfileStore.shared.saveActiveProfileId(profileA.id)
+
+        // profileB exists in memory but not on disk; activateProfile reloads
+        // from disk mid-flight and should handle the missing profile gracefully
+        await manager.activateProfile(profileB.id)
+
+        XCTAssertFalse(manager.isSwitchingProfile,
+                       "isSwitchingProfile must reset when profile vanishes on disk reload")
+
+        // Subsequent valid switch must still work
+        let profileC = makeProfile(name: "C")
+        manager.profiles.append(profileC)
+        ProfileStore.shared.saveProfiles(manager.profiles)
+
+        await manager.activateProfile(profileC.id)
+
+        XCTAssertEqual(manager.activeProfile?.id, profileC.id,
+                       "Valid switch must succeed after a prior mid-reload failure")
+    }
+
     func testActivateProfile_ClearsSwitchingFlag_WhenDone() async {
         let profileA = makeProfile(name: "A")
         let profileB = makeProfile(name: "B")
