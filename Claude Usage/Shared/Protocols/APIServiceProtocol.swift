@@ -10,13 +10,17 @@ import Foundation
 /// Protocol defining API operations for Claude services
 /// Enables dependency injection and testing with mock API services
 protocol APIServiceProtocol {
-    // MARK: - Session Key Management
-    func saveSessionKey(_ key: String, preserveOrgIfUnchanged: Bool) throws
-
     // MARK: - Claude.ai API
-    func fetchOrganizationId(sessionKey: String?) async throws -> String
-    func fetchUsageData() async throws -> ClaudeUsage
-    func sendInitializationMessage() async throws
+    func fetchOrganizationId(sessionKey: String, storedOrgId: String?) async throws -> (orgId: String, isNewlyFetched: Bool)
+    func fetchUsageData(sessionKey: String, organizationId: String) async throws -> ClaudeUsage
+    func fetchUsageData(oauthAccessToken: String) async throws -> ClaudeUsage
+    func fetchUsageData(
+        auth: ClaudeAPIService.AuthenticationType,
+        storedOrgId: String?,
+        checkOverageLimitEnabled: Bool,
+        sessionKeyFallback: String?
+    ) async throws -> (usage: ClaudeUsage, newlyFetchedOrgId: String?)
+    func sendInitializationMessage(sessionKey: String, organizationId: String) async throws
 
     // MARK: - Console API
     func fetchConsoleOrganizations(apiSessionKey: String) async throws -> [APIOrganization]

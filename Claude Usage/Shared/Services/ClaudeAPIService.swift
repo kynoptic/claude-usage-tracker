@@ -5,7 +5,7 @@ class ClaudeAPIService: APIServiceProtocol {
     // MARK: - Types
 
     /// Authentication method for API requests
-    private enum AuthenticationType {
+    enum AuthenticationType {
         case claudeAISession(String)      // Cookie: sessionKey=...
         case cliOAuth(String)              // Authorization: Bearer ... (with anthropic-beta header)
         case consoleAPISession(String)     // Cookie: sessionKey=... (different endpoint)
@@ -18,7 +18,7 @@ class ClaudeAPIService: APIServiceProtocol {
     private static let iso8601ParseStrategy = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
 
     private let sessionKeyPath: URL
-    private let sessionKeyValidator: SessionKeyValidator
+    let sessionKeyValidator: SessionKeyValidator
     let baseURL = Constants.APIEndpoints.claudeBase
     let consoleBaseURL = Constants.APIEndpoints.consoleBase
 
@@ -31,103 +31,19 @@ class ClaudeAPIService: APIServiceProtocol {
         self.sessionKeyValidator = sessionKeyValidator
     }
 
-    // MARK: - Session Key Management
+    // MARK: - Organization ID Caching
 
-    /// Reads and validates the session key from active profile
-    private func readSessionKey() throws -> String {
-        do {
-            // Load from active profile only
-            guard let activeProfile = ProfileManager.shared.activeProfile else {
-                LoggingService.shared.logError("ClaudeAPIService.readSessionKey: No active profile")
-                throw AppError.sessionKeyNotFound()
-            }
+    /// Cache organization ID to reduce API calls
+    private var cachedOrgId: String?
+    private var cachedOrgIdSessionKey: String?
 
-            LoggingService.shared.log("ClaudeAPIService.readSessionKey: Profile '\(activeProfile.name)'")
-            LoggingService.shared.log("  - claudeSessionKey: \(activeProfile.claudeSessionKey == nil ? "NIL" : "EXISTS (len: \(activeProfile.claudeSessionKey!.count))")")
-
-            guard let key = activeProfile.claudeSessionKey else {
-                LoggingService.shared.logError("ClaudeAPIService.readSessionKey: Profile has NIL claudeSessionKey - throwing sessionKeyNotFound")
-                throw AppError.sessionKeyNotFound()
-            }
-
-            let validatedKey = try sessionKeyValidator.validate(key)
-            LoggingService.shared.log("ClaudeAPIService.readSessionKey: Key validated successfully")
-            return validatedKey
-
-        } catch let error as SessionKeyValidationError {
-            // Convert validation errors to AppError
-            throw AppError.wrap(error)
-        } catch let error as AppError {
-            // Re-throw AppError as-is
-            throw error
-        } catch {
-            let appError = AppError(
-                code: .storageReadFailed,
-                message: "Failed to read session key from profile",
-                technicalDetails: error.localizedDescription,
-                underlyingError: error,
-                isRecoverable: true,
-                recoverySuggestion: "Please check your session key configuration in the active profile"
-            )
-            ErrorLogger.shared.log(appError)
-            throw appError
-        }
+    /// Clears the cached organization ID (call when session key changes)
+    func clearOrganizationIdCache() {
+        cachedOrgId = nil
+        cachedOrgIdSessionKey = nil
     }
 
-    /// Gets the best available authentication method with fallback support
-    /// Priority: 1) CLI OAuth (auto-refreshing) → 2) system Keychain CLI OAuth → 3) claude.ai session
-    /// Note: Console API session is NOT used as fallback (it only provides billing data, not usage)
-    private func getAuthentication() async throws -> AuthenticationType {
-        guard let activeProfile = ProfileManager.shared.activeProfile else {
-            LoggingService.shared.logError("ClaudeAPIService.getAuthentication: No active profile")
-            throw AppError.sessionKeyNotFound()
-        }
-
-        // Try saved CLI OAuth token first (auto-refreshing, most reliable)
-        if let cliJSON = activeProfile.cliCredentialsJSON {
-            if !ClaudeCodeSyncService.shared.isTokenExpired(cliJSON),
-               let accessToken = ClaudeCodeSyncService.shared.extractAccessToken(from: cliJSON) {
-                LoggingService.shared.log("ClaudeAPIService: Using saved CLI OAuth token")
-                return .cliOAuth(accessToken)
-            } else {
-                LoggingService.shared.log("ClaudeAPIService: Saved CLI OAuth token is expired or invalid")
-            }
-        }
-
-        // Fall back to reading CLI credentials directly from system Keychain
-        do {
-            if let systemCredentials = try await ClaudeCodeSyncService.shared.readSystemCredentials() {
-                LoggingService.shared.log("ClaudeAPIService: Found CLI credentials in system Keychain")
-
-                if ClaudeCodeSyncService.shared.isTokenExpired(systemCredentials) {
-                    LoggingService.shared.log("ClaudeAPIService: System Keychain CLI token is expired")
-                } else if let accessToken = ClaudeCodeSyncService.shared.extractAccessToken(from: systemCredentials) {
-                    LoggingService.shared.log("ClaudeAPIService: Using CLI credentials from system Keychain")
-                    return .cliOAuth(accessToken)
-                } else {
-                    LoggingService.shared.log("ClaudeAPIService: Could not extract access token from system Keychain credentials")
-                }
-            } else {
-                LoggingService.shared.log("ClaudeAPIService: No CLI credentials found in system Keychain")
-            }
-        } catch {
-            LoggingService.shared.log("ClaudeAPIService: Could not read system CLI credentials: \(error.localizedDescription)")
-        }
-
-        // Fall back to claude.ai session key
-        if let sessionKey = activeProfile.claudeSessionKey {
-            do {
-                let validatedKey = try sessionKeyValidator.validate(sessionKey)
-                LoggingService.shared.log("ClaudeAPIService: Falling back to claude.ai session key")
-                return .claudeAISession(validatedKey)
-            } catch {
-                LoggingService.shared.logError("ClaudeAPIService: claude.ai session key validation failed: \(error.localizedDescription)")
-            }
-        }
-
-        LoggingService.shared.logError("ClaudeAPIService.getAuthentication: No valid credentials for usage data")
-        throw AppError.sessionKeyNotFound()
-    }
+    // MARK: - Authenticated Request Building
 
     /// Builds an authenticated request with the appropriate headers for the auth type
     private func buildAuthenticatedRequest(url: URL, auth: AuthenticationType) -> URLRequest {
@@ -155,83 +71,12 @@ class ClaudeAPIService: APIServiceProtocol {
         return request
     }
 
-    /// Saves a session key with smart org ID preservation
-    /// Only clears org ID if the key actually changed
-    func saveSessionKey(_ key: String, preserveOrgIfUnchanged: Bool = true) throws {
-        do {
-            // Validate the key before saving
-            let validatedKey = try sessionKeyValidator.validate(key)
-
-            guard let profileId = ProfileManager.shared.activeProfile?.id else {
-                throw AppError(
-                    code: .storageWriteFailed,
-                    message: "No active profile found",
-                    technicalDetails: "Cannot save session key without an active profile",
-                    isRecoverable: true,
-                    recoverySuggestion: "Please ensure a profile is active"
-                )
-            }
-
-            // Check if key actually changed (for smart org clearing)
-            var shouldClearOrg = true
-            if preserveOrgIfUnchanged {
-                let existingKey = ProfileManager.shared.activeProfile?.claudeSessionKey
-                shouldClearOrg = (existingKey != validatedKey)
-            }
-
-            // Save to active profile
-            var credentials = (try? ProfileManager.shared.loadCredentials(for: profileId)) ?? ProfileCredentials()
-            credentials.claudeSessionKey = validatedKey
-            try ProfileManager.shared.saveCredentials(for: profileId, credentials: credentials)
-
-            LoggingService.shared.log("Session key saved to active profile")
-
-            // Only clear org ID if key actually changed
-            if shouldClearOrg {
-                clearOrganizationIdCache()
-                ProfileManager.shared.updateOrganizationId(nil, for: profileId)
-                LoggingService.shared.log("Session key changed - cleared organization ID")
-            } else {
-                LoggingService.shared.log("Session key unchanged - preserving organization ID")
-            }
-
-        } catch let error as SessionKeyValidationError {
-            // Convert validation errors to AppError
-            throw AppError.wrap(error)
-        } catch {
-            // Keychain errors
-            let appError = AppError(
-                code: .sessionKeyStorageFailed,
-                message: "Failed to save session key",
-                technicalDetails: error.localizedDescription,
-                underlyingError: error,
-                isRecoverable: true,
-                recoverySuggestion: "Please check Keychain access and try again"
-            )
-            ErrorLogger.shared.log(appError)
-            throw appError
-        }
-    }
-
-    // MARK: - Organization ID Caching
-
-    /// Cache organization ID to reduce API calls
-    private var cachedOrgId: String?
-    private var cachedOrgIdSessionKey: String?
-
-    /// Clears the cached organization ID (call when session key changes)
-    func clearOrganizationIdCache() {
-        cachedOrgId = nil
-        cachedOrgIdSessionKey = nil
-    }
-
     // MARK: - API Requests
 
     /// Fetches all organizations for the authenticated user
-    func fetchAllOrganizations(sessionKey: String? = nil) async throws -> [AccountInfo] {
+    /// - Parameter sessionKey: The claude.ai session key to authenticate with
+    func fetchAllOrganizations(sessionKey: String) async throws -> [AccountInfo] {
         return try await ErrorRecovery.shared.executeWithRetry(maxAttempts: 3) {
-            let sessionKey = try sessionKey ?? self.readSessionKey()
-
             // Build URL safely
             let url: URL
             do {
@@ -353,14 +198,17 @@ class ClaudeAPIService: APIServiceProtocol {
     }
 
     /// Fetches the organization ID for the authenticated user
-    /// Uses stored org ID if available, otherwise fetches all orgs and auto-selects
-    func fetchOrganizationId(sessionKey: String? = nil) async throws -> String {
-        let sessionKey = try sessionKey ?? self.readSessionKey()
-
-        // Check for stored organization ID in active profile first
-        if let storedOrgId = ProfileManager.shared.activeProfile?.organizationId {
+    /// Uses the provided stored org ID if available, otherwise fetches all orgs and auto-selects.
+    /// Returns a tuple: the resolved org ID and whether it was newly fetched (so the caller can persist it).
+    /// - Parameters:
+    ///   - sessionKey: The session key for authentication
+    ///   - storedOrgId: The previously stored organization ID, if any
+    /// - Returns: A tuple of (orgId, isNewlyFetched) where isNewlyFetched indicates the caller should persist the org ID
+    func fetchOrganizationId(sessionKey: String, storedOrgId: String? = nil) async throws -> (orgId: String, isNewlyFetched: Bool) {
+        // Use stored org ID if available
+        if let storedOrgId = storedOrgId {
             LoggingService.shared.logInfo("Using stored organization ID from profile: \(storedOrgId)")
-            return storedOrgId
+            return (storedOrgId, false)
         }
 
         // No stored org ID - fetch all organizations
@@ -379,12 +227,7 @@ class ClaudeAPIService: APIServiceProtocol {
         }
         LoggingService.shared.logInfo("Auto-selected organization: \(selectedOrg.name) (ID: \(selectedOrg.uuid))")
 
-        // Store the selected org ID in active profile
-        if let profileId = ProfileManager.shared.activeProfile?.id {
-            ProfileManager.shared.updateOrganizationId(selectedOrg.uuid, for: profileId)
-        }
-
-        return selectedOrg.uuid
+        return (selectedOrg.uuid, true)
     }
 
     /// Fetches usage data for a specific profile using provided credentials
@@ -430,25 +273,32 @@ class ClaudeAPIService: APIServiceProtocol {
         return try parseUsageResponse(data)
     }
 
-    /// Fetches real usage data from Claude's API
-    func fetchUsageData() async throws -> ClaudeUsage {
-        let auth = try await getAuthentication()
-
+    /// Fetches usage data using a resolved authentication type
+    /// - Parameters:
+    ///   - auth: The authentication method (resolved by the caller)
+    ///   - storedOrgId: The stored organization ID for session-based auth (optional)
+    ///   - checkOverageLimitEnabled: Whether to fetch overage limit data for session-based auth
+    ///   - sessionKeyFallback: Optional session key for falling back on OAuth 429 errors
+    /// - Returns: A tuple of (usage, newlyFetchedOrgId) where newlyFetchedOrgId is non-nil if the caller should persist it
+    func fetchUsageData(
+        auth: AuthenticationType,
+        storedOrgId: String? = nil,
+        checkOverageLimitEnabled: Bool = true,
+        sessionKeyFallback: String? = nil
+    ) async throws -> (usage: ClaudeUsage, newlyFetchedOrgId: String?) {
         switch auth {
         case .claudeAISession(let sessionKey):
             // Use existing claude.ai flow
-            let orgId = try await fetchOrganizationId(sessionKey: sessionKey)
+            let (orgId, isNewlyFetched) = try await fetchOrganizationId(sessionKey: sessionKey, storedOrgId: storedOrgId)
 
             async let usageDataTask = performRequest(endpoint: "/organizations/\(orgId)/usage", sessionKey: sessionKey)
 
-            // Use active profile's checkOverageLimitEnabled setting
-            let checkOverage = ProfileManager.shared.activeProfile?.checkOverageLimitEnabled ?? true
-            async let overageDataTask: Data? = checkOverage ? performRequest(endpoint: "/organizations/\(orgId)/overage_spend_limit", sessionKey: sessionKey) : nil
+            async let overageDataTask: Data? = checkOverageLimitEnabled ? performRequest(endpoint: "/organizations/\(orgId)/overage_spend_limit", sessionKey: sessionKey) : nil
 
             let usageData = try await usageDataTask
             var claudeUsage = try parseUsageResponse(usageData)
 
-            if checkOverage,
+            if checkOverageLimitEnabled,
                let data = try? await overageDataTask,
                let overage = try? JSONDecoder().decode(OverageSpendLimitResponse.self, from: data),
                overage.isEnabled == true {
@@ -457,7 +307,7 @@ class ClaudeAPIService: APIServiceProtocol {
                 claudeUsage.costCurrency = overage.currency
             }
 
-            return claudeUsage
+            return (claudeUsage, isNewlyFetched ? orgId : nil)
 
         case .cliOAuth:
             // Use OAuth endpoint (no organization ID needed)
@@ -489,17 +339,18 @@ class ClaudeAPIService: APIServiceProtocol {
                 // On 429, fall back to the claude.ai session key endpoint if one is available.
                 // That endpoint has more lenient rate limits and is what the statusline uses.
                 if httpResponse.statusCode == 429,
-                   let sessionKey = ProfileManager.shared.activeProfile?.claudeSessionKey,
+                   let sessionKey = sessionKeyFallback,
                    (try? sessionKeyValidator.validate(sessionKey)) != nil {
                     LoggingService.shared.log("ClaudeAPIService: OAuth rate limited — falling back to claude.ai session endpoint")
-                    let orgId = try await fetchOrganizationId(sessionKey: sessionKey)
+                    let (orgId, isNewlyFetched) = try await fetchOrganizationId(sessionKey: sessionKey, storedOrgId: storedOrgId)
                     let usageData = try await performRequest(endpoint: "/organizations/\(orgId)/usage", sessionKey: sessionKey)
-                    return try parseUsageResponse(usageData)
+                    let usage = try parseUsageResponse(usageData)
+                    return (usage, isNewlyFetched ? orgId : nil)
                 }
                 throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth authentication failed", httpResponse: httpResponse)
             }
 
-            return try parseUsageResponse(data)
+            return (try parseUsageResponse(data), nil)
 
         case .consoleAPISession:
             // Console API is for billing/credits only, not usage data
@@ -821,13 +672,13 @@ class ClaudeAPIService: APIServiceProtocol {
     /// Sends a minimal message to Claude to initialize a new session
     /// Uses Claude 3.5 Haiku (cheapest model)
     /// Creates a temporary conversation that is deleted after initialization to avoid cluttering chat history
-    func sendInitializationMessage() async throws {
-        let sessionKey = try readSessionKey()
-        let orgId = try await fetchOrganizationId(sessionKey: sessionKey)
-
+    /// - Parameters:
+    ///   - sessionKey: The Claude.ai session key for authentication
+    ///   - organizationId: The organization ID to create the conversation under
+    func sendInitializationMessage(sessionKey: String, organizationId: String) async throws {
         // Create a new conversation
         let conversationURL = try URLBuilder(baseURL: baseURL)
-            .appendingPathComponents(["/organizations", orgId, "/chat_conversations"])
+            .appendingPathComponents(["/organizations", organizationId, "/chat_conversations"])
             .build()
 
         var conversationRequest = URLRequest(url: conversationURL)
@@ -867,7 +718,7 @@ class ClaudeAPIService: APIServiceProtocol {
 
         // Send a minimal "Hi" message to initialize the session
         let messageURL = try URLBuilder(baseURL: baseURL)
-            .appendingPathComponents(["/organizations", orgId, "/chat_conversations", conversationUUID, "/completion"])
+            .appendingPathComponents(["/organizations", organizationId, "/chat_conversations", conversationUUID, "/completion"])
             .build()
 
         var messageRequest = URLRequest(url: messageURL)
@@ -898,7 +749,7 @@ class ClaudeAPIService: APIServiceProtocol {
 
         // Delete the conversation to keep it out of chat history (incognito mode)
         let deleteURL = try URLBuilder(baseURL: baseURL)
-            .appendingPathComponents(["/organizations", orgId, "/chat_conversations", conversationUUID])
+            .appendingPathComponents(["/organizations", organizationId, "/chat_conversations", conversationUUID])
             .build()
 
         var deleteRequest = URLRequest(url: deleteURL)
