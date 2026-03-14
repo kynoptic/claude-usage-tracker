@@ -48,8 +48,8 @@ We'll keep you informed throughout the process and credit you in the security ad
 
 ### Session Key Storage
 
-- Session keys are stored locally in `~/.claude-session-key`
-- File permissions are automatically set to `0600` (owner read/write only)
+- Session keys are stored in `UserDefaults` as part of the serialized `Profile` struct (see [ADR-003](docs/decisions/ADR-003-credentials-embedded-in-profile.md))
+- `UserDefaults` is less secure than the macOS Keychain — credentials are readable by any process running as the same user
 - Keys are never transmitted except to `claude.ai` via HTTPS
 - No cloud sync or external storage
 
@@ -71,13 +71,13 @@ We'll keep you informed throughout the process and credit you in the security ad
 
 - Claude Code integration scripts are installed to `~/.claude/`
 - Script permissions are set to `755` (read/execute for all, write for owner)
-- Scripts only read the existing session key file
+- The statusline script (`~/.claude/fetch-claude-usage.swift`) contains the session key in plaintext, injected at install time (see [ADR-004](docs/decisions/ADR-004-statusline-session-key-injection.md))
 - No arbitrary code execution from external sources
 
 ### Sandboxing
 
 - App Sandbox is **disabled** to allow file system access
-- Required for reading `~/.claude-session-key` and writing `~/.claude/` scripts
+- Required for writing `~/.claude/` scripts and reading CLI OAuth credentials from the System Keychain
 - Necessary trade-off for the app's core functionality
 
 ## Best Practices for Users
@@ -87,7 +87,7 @@ We'll keep you informed throughout the process and credit you in the security ad
 - Never share your session key publicly
 - Treat it like a password
 - Rotate it if you suspect compromise (extract a fresh key from claude.ai)
-- Check file permissions: `ls -la ~/.claude-session-key` should show `-rw-------`
+- If the statusline is enabled, the session key is also stored in plaintext in `~/.claude/fetch-claude-usage.swift` — restrict read access to this file if you share your machine
 
 ### Verify Downloads
 
