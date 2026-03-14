@@ -1,7 +1,7 @@
 import Foundation
 
 /// Timing context for pacing status calculations.
-struct PacingContext: Equatable {
+nonisolated struct PacingContext: Equatable, Sendable {
     /// Fraction (0…1) of the current session that has elapsed.
     let elapsedFraction: Double?
 
@@ -12,14 +12,14 @@ struct PacingContext: Equatable {
 // MARK: - Boundary Records (dormant — reserved for future history display)
 
 /// A completed session boundary snapshot.
-struct SessionRecord: Codable {
+nonisolated struct SessionRecord: Codable, Sendable {
     let endedAt: Date
     let finalPercentage: Double
     let sessionLimit: Int
 }
 
 /// A completed weekly period boundary snapshot.
-struct WeeklyRecord: Codable {
+nonisolated struct WeeklyRecord: Codable, Sendable {
     let endedAt: Date
     let finalPercentage: Double
     let weeklyLimit: Int

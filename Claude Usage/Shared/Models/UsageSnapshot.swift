@@ -1,7 +1,7 @@
 import Foundation
 
 /// A single point-in-time usage measurement for burn-up chart rendering
-struct UsageSnapshot: Identifiable {
+nonisolated struct UsageSnapshot: Identifiable, Sendable {
     let date: Date
     let percentage: Double
 
@@ -18,7 +18,7 @@ struct UsageSnapshot: Identifiable {
 
 // MARK: - Equatable
 
-extension UsageSnapshot: Equatable {
+nonisolated extension UsageSnapshot: Equatable {
     /// Value equality ignores `id` — two snapshots with the same date and
     /// percentage are equal regardless of their UUID.
     static func == (lhs: UsageSnapshot, rhs: UsageSnapshot) -> Bool {
@@ -28,7 +28,7 @@ extension UsageSnapshot: Equatable {
 
 // MARK: - Codable
 
-extension UsageSnapshot: Codable {
+nonisolated extension UsageSnapshot: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.date = try container.decode(Date.self, forKey: .date)
@@ -43,7 +43,7 @@ extension UsageSnapshot: Codable {
 }
 
 /// Identifies which usage metric a snapshot belongs to
-enum UsageMetric: String, Codable, CaseIterable {
+nonisolated enum UsageMetric: String, Codable, CaseIterable, Sendable {
     case session
     case weekly
     case opus

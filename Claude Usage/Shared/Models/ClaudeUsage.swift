@@ -1,7 +1,7 @@
 import Foundation
 
 /// Main data model representing Claude Code usage statistics
-struct ClaudeUsage: Codable, Equatable {
+nonisolated struct ClaudeUsage: Codable, Equatable, Sendable {
     // Session data (5-hour rolling window)
     var sessionTokensUsed: Int
     var sessionLimit: Int
@@ -66,7 +66,7 @@ struct ClaudeUsage: Codable, Equatable {
 // MARK: - Pacing Types
 
 /// Five-zone status indicator driven by projected end-of-session utilisation.
-enum UsageZone: Equatable {
+nonisolated enum UsageZone: Equatable, Sendable {
     case grey    // Underutilized — projected < 50% (opt-in via Settings)
     case green   // On track — projected 50–90%
     case yellow  // Maximizing — projected 90–110%
@@ -75,7 +75,7 @@ enum UsageZone: Equatable {
 }
 
 /// Status produced by UsageStatusCalculator.
-struct UsageStatus: Equatable {
+nonisolated struct UsageStatus: Equatable, Sendable {
     let zone: UsageZone
     let actionText: String
 }
