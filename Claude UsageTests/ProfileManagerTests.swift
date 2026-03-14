@@ -660,6 +660,115 @@ final class ProfileManagerTests: XCTestCase {
         XCTAssertEqual(manager.loadClaudeUsage(for: profile.id)?.sessionPercentage, 80.0)
     }
 
+    // MARK: - CLI Sync Operations
+
+    func testRemoveCLICredentials_ClearsCredentialsInMemory() throws {
+        var profile = manager.profiles[0]
+        profile.cliCredentialsJSON = """
+        {"claudeAiOauth":{"accessToken":"test-token"}}
+        """
+        profile.hasValidOAuthCredentials = true
+        manager.profiles = [profile]
+        manager.activeProfile = profile
+        ProfileStore.shared.saveProfiles([profile])
+
+        try manager.removeCLICredentials(fromProfile: profile.id)
+
+        XCTAssertNil(manager.profiles[0].cliCredentialsJSON,
+                     "cliCredentialsJSON must be nil after removal")
+        XCTAssertFalse(manager.profiles[0].hasValidOAuthCredentials,
+                       "hasValidOAuthCredentials must be false after removal")
+    }
+
+    func testRemoveCLICredentials_UpdatesActiveProfileReference() throws {
+        var profile = manager.profiles[0]
+        profile.cliCredentialsJSON = """
+        {"claudeAiOauth":{"accessToken":"test-token"}}
+        """
+        profile.hasValidOAuthCredentials = true
+        manager.profiles = [profile]
+        manager.activeProfile = profile
+        ProfileStore.shared.saveProfiles([profile])
+
+        try manager.removeCLICredentials(fromProfile: profile.id)
+
+        XCTAssertNil(manager.activeProfile?.cliCredentialsJSON,
+                     "activeProfile.cliCredentialsJSON must be nil after removal")
+        XCTAssertFalse(manager.activeProfile?.hasValidOAuthCredentials ?? true,
+                       "activeProfile.hasValidOAuthCredentials must be false after removal")
+    }
+
+    func testRemoveCLICredentials_PersistsToDisk() throws {
+        var profile = manager.profiles[0]
+        profile.cliCredentialsJSON = """
+        {"claudeAiOauth":{"accessToken":"test-token"}}
+        """
+        profile.hasValidOAuthCredentials = true
+        manager.profiles = [profile]
+        ProfileStore.shared.saveProfiles([profile])
+
+        try manager.removeCLICredentials(fromProfile: profile.id)
+
+        // Reload from disk and verify persistence
+        let diskProfiles = ProfileStore.shared.loadProfiles()
+        let diskProfile = diskProfiles.first(where: { $0.id == profile.id })
+        XCTAssertNil(diskProfile?.cliCredentialsJSON,
+                     "Disk profile must have nil cliCredentialsJSON after removal")
+    }
+
+    func testRemoveCLICredentials_UnknownId_Throws() {
+        XCTAssertThrowsError(try manager.removeCLICredentials(fromProfile: UUID())) { error in
+            XCTAssertTrue(error is ClaudeCodeError)
+        }
+    }
+
+    func testApplyCLICredentials_NoCreds_Throws() async {
+        let profile = manager.profiles[0]
+        // Profile has no cliCredentialsJSON
+
+        do {
+            try await manager.applyCLICredentials(forProfile: profile.id)
+            XCTFail("Expected ClaudeCodeError.noProfileCredentials")
+        } catch {
+            XCTAssertTrue(error is ClaudeCodeError)
+        }
+    }
+
+    func testApplyCLICredentials_UnknownId_Throws() async {
+        do {
+            try await manager.applyCLICredentials(forProfile: UUID())
+            XCTFail("Expected ClaudeCodeError.noProfileCredentials")
+        } catch {
+            XCTAssertTrue(error is ClaudeCodeError)
+        }
+    }
+
+    func testRemoveCLICredentials_DoesNotAffectOtherProfiles() throws {
+        var profileA = manager.profiles[0]
+        profileA.cliCredentialsJSON = """
+        {"claudeAiOauth":{"accessToken":"token-a"}}
+        """
+        profileA.hasValidOAuthCredentials = true
+
+        var profileB = makeProfile(name: "Profile B")
+        profileB.cliCredentialsJSON = """
+        {"claudeAiOauth":{"accessToken":"token-b"}}
+        """
+        profileB.hasValidOAuthCredentials = true
+
+        manager.profiles = [profileA, profileB]
+        manager.activeProfile = profileA
+        ProfileStore.shared.saveProfiles([profileA, profileB])
+
+        try manager.removeCLICredentials(fromProfile: profileA.id)
+
+        // Profile B should be unaffected
+        XCTAssertNotNil(manager.profiles[1].cliCredentialsJSON,
+                        "Other profile's cliCredentialsJSON must not be affected")
+        XCTAssertTrue(manager.profiles[1].hasValidOAuthCredentials,
+                      "Other profile's hasValidOAuthCredentials must not be affected")
+    }
+
     // MARK: - Private Helpers
 
     private func makeClaudeUsage(sessionPercentage: Double) -> ClaudeUsage {

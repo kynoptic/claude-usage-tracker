@@ -194,21 +194,16 @@ class ProfileManager: ObservableObject {
         // Re-sync current profile before leaving (if CLI credentials exist)
         if let currentProfile = activeProfile, currentProfile.cliCredentialsJSON != nil {
             do {
-                try await cliSyncService.resyncBeforeSwitching(for: currentProfile.id)
-                // Reload profiles to get the updated data in memory
-                profiles = profileStore.loadProfiles()
+                try await resyncCLICredentials(forProfile: currentProfile.id)
                 LoggingService.shared.log("✓ Re-synced current profile before switching")
             } catch {
                 LoggingService.shared.logError("Failed to re-sync current profile (non-fatal)", error: error)
             }
         }
 
-        // Reload profiles from disk to get latest data (including any resyncs from other profiles)
-        profiles = profileStore.loadProfiles()
-
-        // Get the updated target profile from the reloaded data
+        // Get the target profile from in-memory state
         guard let updatedProfile = profiles.first(where: { $0.id == id }) else {
-            LoggingService.shared.log("Profile not found after reload: \(id)")
+            LoggingService.shared.log("Profile not found: \(id)")
             return
         }
 
@@ -217,7 +212,7 @@ class ProfileManager: ObservableObject {
 
         if updatedProfile.cliCredentialsJSON != nil {
             do {
-                try await cliSyncService.applyProfileCredentials(updatedProfile.id)
+                try await applyCLICredentials(forProfile: updatedProfile.id)
                 LoggingService.shared.log("✓ Applied CLI credentials for: \(updatedProfile.name)")
             } catch {
                 LoggingService.shared.logError("Failed to apply CLI credentials (non-fatal)", error: error)
@@ -249,6 +244,89 @@ class ProfileManager: ObservableObject {
         }
 
         LoggingService.shared.log("Successfully activated profile: \(updatedProfile.name)")
+    }
+
+    // MARK: - CLI Sync Operations
+
+    /// Syncs CLI credentials from system Keychain to a profile (one-time copy).
+    /// Updates both persistent storage and in-memory state.
+    func syncCLICredentials(toProfile profileId: UUID) async throws {
+        let jsonData = try await cliSyncService.readAndValidateSystemCredentials()
+
+        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
+            throw ClaudeCodeError.noProfileCredentials
+        }
+
+        profiles[index].cliCredentialsJSON = jsonData
+        profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(jsonData)
+
+        if activeProfile?.id == profileId {
+            activeProfile = profiles[index]
+        }
+
+        profileStore.saveProfiles(profiles)
+        LoggingService.shared.log("Synced CLI credentials to profile: \(profileId)")
+    }
+
+    /// Applies a profile's CLI credentials to the system Keychain.
+    /// Reads from in-memory state rather than loading from disk.
+    func applyCLICredentials(forProfile profileId: UUID) async throws {
+        LoggingService.shared.log("Applying CLI credentials for profile: \(profileId)")
+
+        guard let profile = profiles.first(where: { $0.id == profileId }),
+              let jsonData = profile.cliCredentialsJSON else {
+            LoggingService.shared.log("No CLI credentials found for profile: \(profileId)")
+            throw ClaudeCodeError.noProfileCredentials
+        }
+
+        LoggingService.shared.log("Found CLI credentials, writing to keychain...")
+        try await cliSyncService.writeSystemCredentials(jsonData)
+
+        LoggingService.shared.log("Applied profile CLI credentials to system: \(profileId)")
+    }
+
+    /// Removes CLI credentials from a profile (doesn't affect system Keychain).
+    /// Updates both persistent storage and in-memory state.
+    func removeCLICredentials(fromProfile profileId: UUID) throws {
+        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
+            throw ClaudeCodeError.noProfileCredentials
+        }
+
+        profiles[index].cliCredentialsJSON = nil
+        profiles[index].hasValidOAuthCredentials = false
+
+        if activeProfile?.id == profileId {
+            activeProfile = profiles[index]
+        }
+
+        profileStore.saveProfiles(profiles)
+        LoggingService.shared.log("Removed CLI credentials from profile: \(profileId)")
+    }
+
+    /// Re-syncs fresh credentials from system Keychain into a profile before switching.
+    /// Updates both persistent storage and in-memory state.
+    func resyncCLICredentials(forProfile profileId: UUID) async throws {
+        LoggingService.shared.log("Re-syncing CLI credentials before profile switch: \(profileId)")
+
+        guard let freshJSON = try await cliSyncService.readFreshSystemCredentials() else {
+            LoggingService.shared.log("No system credentials found - skipping re-sync")
+            return
+        }
+
+        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
+            return
+        }
+
+        profiles[index].cliCredentialsJSON = freshJSON
+        profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(freshJSON)
+        profiles[index].cliAccountSyncedAt = Date()
+
+        if activeProfile?.id == profileId {
+            activeProfile = profiles[index]
+        }
+
+        profileStore.saveProfiles(profiles)
+        LoggingService.shared.log("Re-synced CLI credentials from system and updated timestamp")
     }
 
     // MARK: - Credentials
@@ -500,10 +578,7 @@ class ProfileManager: ObservableObject {
             }
 
             // Sync to the newly created default profile
-            try await cliSyncService.syncToProfile(profileId)
-
-            // Reload the profile to get updated credentials
-            profiles = profileStore.loadProfiles()
+            try await syncCLICredentials(toProfile: profileId)
 
             LoggingService.shared.log("ProfileManager: Successfully synced CLI credentials to default profile on first launch")
 
