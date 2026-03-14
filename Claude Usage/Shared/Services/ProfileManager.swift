@@ -182,6 +182,10 @@ class ProfileManager: ObservableObject {
 
         switchingSemaphore = true
         isSwitchingProfile = true
+        defer {
+            switchingSemaphore = false
+            isSwitchingProfile = false
+        }
 
         LoggingService.shared.log("Switching to profile: \(profile.name)")
 
@@ -203,8 +207,6 @@ class ProfileManager: ObservableObject {
         // Get the updated target profile from the reloaded data
         guard let updatedProfile = profiles.first(where: { $0.id == id }) else {
             LoggingService.shared.log("Profile not found after reload: \(id)")
-            switchingSemaphore = false
-            isSwitchingProfile = false
             return
         }
 
@@ -243,9 +245,6 @@ class ProfileManager: ObservableObject {
                 LoggingService.shared.logError("Failed to update statusline (non-fatal)", error: error)
             }
         }
-
-        switchingSemaphore = false
-        isSwitchingProfile = false
 
         LoggingService.shared.log("Successfully activated profile: \(updatedProfile.name)")
     }
