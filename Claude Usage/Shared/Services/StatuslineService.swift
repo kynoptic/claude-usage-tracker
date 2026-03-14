@@ -153,7 +153,8 @@ exit(1)
     /// Bash script that builds the statusline display.
     /// Installed to ~/.claude/statusline-command.sh and configured in Claude Code settings.json.
     /// Reads user preferences from ~/.claude/statusline-config.txt and displays selected components.
-    private let bashScript = """
+    /// `internal` for threshold-parity testing via `@testable import`.
+    let bashScript = """
 #!/bin/bash
 config_file="$HOME/.claude/statusline-config.txt"
 if [ -f "$config_file" ]; then

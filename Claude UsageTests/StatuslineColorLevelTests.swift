@@ -124,6 +124,42 @@ final class StatuslineColorLevelTests: XCTestCase {
 
     // MARK: - Zone/level agreement with calculateStatus
 
+    // MARK: - Bash/Swift threshold parity
+
+    /// Verifies the bash statusline script uses the same zone thresholds as
+    /// `UsageStatusCalculator.calculateStatus`. A mismatch here means someone
+    /// changed the Swift thresholds without updating the bash template (or
+    /// vice versa).
+    ///
+    /// The Swift thresholds are 0.9, 1.1, 1.5 (fractions of full utilization),
+    /// which correspond to integer percentages 90, 110, 150 in the bash script.
+    func testBashScript_ContainsMatchingThresholds() {
+        let script = StatuslineService.shared.bashScript
+
+        // The bash script should contain these comparison patterns twice each
+        // (once for pacing mode, once for fallback mode):
+        //   -lt 90   → green upper bound   (Swift: ..<0.9)
+        //   -lt 110  → yellow upper bound   (Swift: ..<1.1)
+        //   -le 150  → orange upper bound   (Swift: ...1.5)
+
+        // Green → yellow boundary at 90
+        let lt90Count = script.components(separatedBy: "-lt 90").count - 1
+        XCTAssertEqual(lt90Count, 2,
+            "Expected '-lt 90' twice (pacing + fallback); found \(lt90Count)")
+
+        // Yellow → orange boundary at 110
+        let lt110Count = script.components(separatedBy: "-lt 110").count - 1
+        XCTAssertEqual(lt110Count, 2,
+            "Expected '-lt 110' twice (pacing + fallback); found \(lt110Count)")
+
+        // Orange → red boundary at 150
+        let le150Count = script.components(separatedBy: "-le 150").count - 1
+        XCTAssertEqual(le150Count, 2,
+            "Expected '-le 150' twice (pacing + fallback); found \(le150Count)")
+    }
+
+    // MARK: - Zone/level agreement with calculateStatus
+
     func testAgreement_Matrix() {
         let scenarios: [(utilization: Int, elapsed: Double?, zone: UsageZone, note: String)] = [
             (20,  0.5,  .green,  "20%@50% → projected 40% → green"),
