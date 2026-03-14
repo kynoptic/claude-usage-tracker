@@ -27,9 +27,6 @@ final class AutoStartSessionService {
     private let profileManager: ProfileManager
     private let notificationManager: NotificationManager
 
-    // Date.ISO8601FormatStyle is a value type (struct) — safe for concurrent access.
-    private static let iso8601ParseStrategy = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
-
     // Track last captured reset time per profile to prevent duplicate auto-starts
     private var lastCapturedResetTime: [UUID: Date] = [:]
 
@@ -177,18 +174,6 @@ final class AutoStartSessionService {
     }
 
     private func fetchUsageForProfile(_ profile: Profile) async throws -> ClaudeUsage {
-        // Fetch usage data using the profile's specific credentials
-        let usage = try await fetchUsageData(for: profile)
-
-        // Save usage to profile
-        await MainActor.run {
-            profileManager.saveClaudeUsage(usage, for: profile.id)
-        }
-
-        return usage
-    }
-
-    private func fetchUsageData(for profile: Profile) async throws -> ClaudeUsage {
         // Get credentials from the specific profile
         guard let sessionKey = profile.claudeSessionKey,
               let orgId = profile.organizationId else {
@@ -199,128 +184,15 @@ final class AutoStartSessionService {
             )
         }
 
-        // Build URL
-        let url = try URLBuilder(baseURL: Constants.APIEndpoints.claudeBase)
-            .appendingPath("/organizations/\(orgId)/usage")
-            .build()
+        // Delegate to ClaudeAPIService's parameter-based fetch
+        let usage = try await apiService.fetchUsageData(sessionKey: sessionKey, organizationId: orgId)
 
-        var request = URLRequest(url: url)
-        request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpMethod = "GET"
-        request.timeoutInterval = 30
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AppError(code: .apiInvalidResponse, message: "Invalid response", isRecoverable: true)
+        // Save usage to profile
+        await MainActor.run {
+            profileManager.saveClaudeUsage(usage, for: profile.id)
         }
 
-        guard httpResponse.statusCode == 200 else {
-            throw AppError(
-                code: .apiGenericError,
-                message: "API returned status \(httpResponse.statusCode)",
-                isRecoverable: true
-            )
-        }
-
-        // Parse usage response
-        return try parseUsageResponse(data)
-    }
-
-    private func parseUsageResponse(_ data: Data) throws -> ClaudeUsage {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw AppError(code: .apiParsingFailed, message: "Failed to parse usage data", isRecoverable: false)
-        }
-
-        // Extract session usage (five_hour)
-        var sessionPercentage = 0.0
-        var sessionResetTime = Date().addingTimeInterval(5 * 3600)
-
-        if let fiveHour = json["five_hour"] as? [String: Any] {
-            if let utilization = fiveHour["utilization"] {
-                sessionPercentage = parseUtilization(utilization)
-            }
-            if let resetsAt = fiveHour["resets_at"] as? String {
-                sessionResetTime = (try? AutoStartSessionService.iso8601ParseStrategy.parse(resetsAt)) ?? sessionResetTime
-            }
-        }
-
-        // Extract weekly usage (seven_day)
-        var weeklyPercentage = 0.0
-        var weeklyResetTime = Date().nextMonday1259pm()
-
-        if let sevenDay = json["seven_day"] as? [String: Any] {
-            if let utilization = sevenDay["utilization"] {
-                weeklyPercentage = parseUtilization(utilization)
-            }
-            if let resetsAt = sevenDay["resets_at"] as? String {
-                weeklyResetTime = (try? AutoStartSessionService.iso8601ParseStrategy.parse(resetsAt)) ?? weeklyResetTime
-            }
-        }
-
-        // Extract Opus weekly usage (seven_day_opus)
-        var opusPercentage = 0.0
-        if let sevenDayOpus = json["seven_day_opus"] as? [String: Any] {
-            if let utilization = sevenDayOpus["utilization"] {
-                opusPercentage = parseUtilization(utilization)
-            }
-        }
-
-        // Extract Sonnet weekly usage (seven_day_sonnet)
-        var sonnetPercentage = 0.0
-        var sonnetResetTime: Date? = nil
-        if let sevenDaySonnet = json["seven_day_sonnet"] as? [String: Any] {
-            if let utilization = sevenDaySonnet["utilization"] {
-                sonnetPercentage = parseUtilization(utilization)
-            }
-            if let resetsAt = sevenDaySonnet["resets_at"] as? String {
-                sonnetResetTime = try? AutoStartSessionService.iso8601ParseStrategy.parse(resetsAt)
-            }
-        }
-
-        let weeklyLimit = Constants.weeklyLimit
-        let weeklyTokens = Int(Double(weeklyLimit) * (weeklyPercentage / 100.0))
-        let opusTokens = Int(Double(weeklyLimit) * (opusPercentage / 100.0))
-        let sonnetTokens = Int(Double(weeklyLimit) * (sonnetPercentage / 100.0))
-
-        return ClaudeUsage(
-            sessionTokensUsed: 0,
-            sessionLimit: 0,
-            sessionPercentage: sessionPercentage,
-            sessionResetTime: sessionResetTime,
-            weeklyTokensUsed: weeklyTokens,
-            weeklyLimit: weeklyLimit,
-            weeklyPercentage: weeklyPercentage,
-            weeklyResetTime: weeklyResetTime,
-            opusWeeklyTokensUsed: opusTokens,
-            opusWeeklyPercentage: opusPercentage,
-            sonnetWeeklyTokensUsed: sonnetTokens,
-            sonnetWeeklyPercentage: sonnetPercentage,
-            sonnetWeeklyResetTime: sonnetResetTime,
-            costUsed: nil,
-            costLimit: nil,
-            costCurrency: nil,
-            lastUpdated: Date(),
-            userTimezone: .current
-        )
-    }
-
-    private func parseUtilization(_ value: Any) -> Double {
-        if let intValue = value as? Int {
-            return Double(intValue)
-        }
-        if let doubleValue = value as? Double {
-            return doubleValue
-        }
-        if let stringValue = value as? String {
-            let cleaned = stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                .replacingOccurrences(of: "%", with: "")
-            if let parsed = Double(cleaned) {
-                return parsed
-            }
-        }
-        return 0.0
+        return usage
     }
 
     /// Parse the completion response (SSE format) to extract session reset time from messageLimit.windows.5h
