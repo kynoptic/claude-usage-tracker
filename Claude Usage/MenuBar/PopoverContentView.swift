@@ -86,60 +86,14 @@ struct ProfileSwitcherCompact: View {
 
     var body: some View {
         Menu {
-            ForEach(profileManager.profiles) { profile in
-                Button(action: {
-                    Task {
-                        await profileManager.activateProfile(profile.id)
-                    }
-                }) {
-                    HStack(spacing: 8) {
-                        // Profile icon
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 12))
-
-                        // Profile name
-                        Text(profile.name)
-                            .font(.system(size: 12, weight: .medium))
-
-                        Spacer()
-
-                        // Badges
-                        HStack(spacing: 4) {
-                            // CLI Account badge
-                            if profile.hasCliAccount {
-                                Image(systemName: "terminal.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.green)
-                            }
-
-                            // Claude.ai badge
-                            if profile.claudeSessionKey != nil {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.blue)
-                            }
-
-                            // Active indicator
-                            if profile.id == profileManager.activeProfile?.id {
-                                Image(systemName: "circle.fill")
-                                    .font(.system(size: 6))
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                    }
-                }
-            }
-
-            Divider()
-
-            Button(action: onManageProfiles) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 12))
-                    Text("popover.manage_profiles".localized)
-                        .font(.system(size: 12, weight: .medium))
-                }
-            }
+            ProfileMenuContent(
+                profiles: profileManager.profiles,
+                activeProfileId: profileManager.activeProfile?.id,
+                onActivate: { id in
+                    Task { await profileManager.activateProfile(id) }
+                },
+                onManageProfiles: onManageProfiles
+            )
         } label: {
             HStack(spacing: 5) {
                 Text(profileManager.activeProfile?.name ?? "popover.no_profile".localized)
@@ -189,60 +143,14 @@ struct ProfileSwitcherBar: View {
 
     var body: some View {
         Menu {
-            ForEach(profileManager.profiles) { profile in
-                Button(action: {
-                    Task {
-                        await profileManager.activateProfile(profile.id)
-                    }
-                }) {
-                    HStack(spacing: 8) {
-                        // Profile icon
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 12))
-
-                        // Profile name
-                        Text(profile.name)
-                            .font(.system(size: 12, weight: .medium))
-
-                        Spacer()
-
-                        // Badges
-                        HStack(spacing: 4) {
-                            // CLI Account badge
-                            if profile.hasCliAccount {
-                                Image(systemName: "terminal.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.green)
-                            }
-
-                            // Claude.ai badge
-                            if profile.claudeSessionKey != nil {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.blue)
-                            }
-
-                            // Active indicator
-                            if profile.id == profileManager.activeProfile?.id {
-                                Image(systemName: "circle.fill")
-                                    .font(.system(size: 6))
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                    }
-                }
-            }
-
-            Divider()
-
-            Button(action: onManageProfiles) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 12))
-                    Text("popover.manage_profiles".localized)
-                        .font(.system(size: 12, weight: .medium))
-                }
-            }
+            ProfileMenuContent(
+                profiles: profileManager.profiles,
+                activeProfileId: profileManager.activeProfile?.id,
+                onActivate: { id in
+                    Task { await profileManager.activateProfile(id) }
+                },
+                onManageProfiles: onManageProfiles
+            )
         } label: {
             HStack(spacing: 10) {
                 // Profile avatar with gradient background

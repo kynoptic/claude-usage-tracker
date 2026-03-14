@@ -8,7 +8,10 @@
 import Cocoa
 import SwiftUI
 
-/// Coordinates window lifecycle (popover, settings, GitHub prompt, detached window)
+/// Coordinates window lifecycle (popover, settings, GitHub prompt, detached window).
+///
+/// `MenuBarManager` delegates all NSWindow/NSPopover creation and teardown to
+/// this coordinator, keeping the manager focused on data, timer, and icon state.
 final class WindowCoordinator: NSObject {
     private var popover: NSPopover?
     private var eventMonitor: Any?
@@ -16,50 +19,82 @@ final class WindowCoordinator: NSObject {
     private var settingsWindow: NSWindow?
     private var githubPromptWindow: NSWindow?
 
-    weak var manager: AnyObject?
+    /// The status bar button currently anchoring the popover (multi-profile aware).
+    private weak var currentPopoverButton: NSStatusBarButton?
+
+    private let dataStore = DataStore.shared
 
     // MARK: - Popover Management
 
+    /// Creates the initial popover with the given content view controller.
     func setupPopover(contentViewController: NSViewController) {
         let popover = NSPopover()
-        popover.contentSize = Constants.WindowSizes.popoverSize
+        popover.contentSize = NSSize(width: 320, height: 600)
         popover.behavior = .semitransient
         popover.animates = true
         popover.delegate = self
         popover.contentViewController = contentViewController
         self.popover = popover
-        LoggingService.shared.logWindowEvent("Popover created")
     }
 
-    func togglePopover(relativeTo button: NSStatusBarButton, contentProvider: () -> NSViewController) {
-        // If there's a detached window, close it
+    /// Replaces the current popover with a fresh one (e.g. after a profile switch).
+    func recreatePopover(contentViewController: NSViewController) {
+        if popover?.isShown == true {
+            closePopover()
+        }
+
+        let newPopover = NSPopover()
+        newPopover.contentSize = NSSize(width: 320, height: 600)
+        newPopover.behavior = .semitransient
+        newPopover.animates = true
+        newPopover.delegate = self
+        newPopover.contentViewController = contentViewController
+        self.popover = newPopover
+
+        LoggingService.shared.log("WindowCoordinator: Popover recreated for profile switch")
+    }
+
+    /// Toggles the popover at the given button, recreating content via `contentProvider`.
+    ///
+    /// In multi-profile mode the same popover may be re-anchored to a different
+    /// status-bar button — the coordinator handles closing the old anchor first.
+    func togglePopover(at button: NSStatusBarButton, contentProvider: () -> NSViewController) {
+        // If there's a detached window, close it instead
         if let window = detachedWindow {
             window.close()
             detachedWindow = nil
-            LoggingService.shared.logWindowEvent("Detached window closed")
+            currentPopoverButton = nil
             return
         }
 
-        // Otherwise toggle the popover
         guard let popover = popover else { return }
 
         if popover.isShown {
-            closePopover()
-        } else {
-            // Recreate content if it was moved to a detached window
-            if popover.contentViewController == nil {
+            if currentPopoverButton === button {
+                // Same button — close
+                closePopover()
+            } else {
+                // Different button — reanchor
+                popover.performClose(nil)
+                stopMonitoringForOutsideClicks()
                 popover.contentViewController = contentProvider()
+                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+                currentPopoverButton = button
+                startMonitoringForOutsideClicks()
             }
+        } else {
+            stopMonitoringForOutsideClicks()
+            popover.contentViewController = contentProvider()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            currentPopoverButton = button
             startMonitoringForOutsideClicks()
-            LoggingService.shared.logWindowEvent("Popover shown")
         }
     }
 
     func closePopover() {
         popover?.performClose(nil)
         stopMonitoringForOutsideClicks()
-        LoggingService.shared.logWindowEvent("Popover closed")
+        currentPopoverButton = nil
     }
 
     func closePopoverOrWindow() {
@@ -67,44 +102,13 @@ final class WindowCoordinator: NSObject {
             window.close()
             detachedWindow = nil
         } else {
-            closePopover()
+            popover?.performClose(nil)
         }
-    }
-
-    // MARK: - Detached Window
-
-    func detachPopover(contentProvider: () -> NSViewController) {
-        guard let popover = popover, popover.isShown else { return }
-
-        // Close the popover
-        closePopover()
-
-        // Get the content view controller
-        let contentViewController = contentProvider()
-
-        // Create a floating window
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: Constants.WindowSizes.popoverSize.width, height: Constants.WindowSizes.popoverSize.height),
-            styleMask: [.titled, .closable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "app.window.main".localized
-        window.contentViewController = contentViewController
-        window.level = .floating
-        window.center()
-        window.isRestorable = false
-        window.makeKeyAndOrderFront(nil)
-
-        // Clear popover's content so it can be recreated later
-        popover.contentViewController = nil
-
-        detachedWindow = window
-        LoggingService.shared.logWindowEvent("Popover detached to window")
     }
 
     // MARK: - Settings Window
 
+    /// Opens the settings window, closing the popover first.
     func showSettings() {
         closePopoverOrWindow()
 
@@ -112,40 +116,43 @@ final class WindowCoordinator: NSObject {
         if let existingWindow = settingsWindow, existingWindow.isVisible {
             existingWindow.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
-            LoggingService.shared.logWindowEvent("Settings window brought to front")
             return
         }
 
-        // Create settings window
-        DispatchQueue.main.asyncAfter(deadline: .now() + Constants.UITiming.popoverCloseDelay) {
+        // Small delay to ensure smooth transition
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self else { return }
+
             NSApp.setActivationPolicy(.regular)
-            NSApp.activate(ignoringOtherApps: true)
 
             let settingsView = SettingsView()
             let hostingController = NSHostingController(rootView: settingsView)
 
-            let window = NSWindow(
-                contentRect: NSRect(origin: .zero, size: Constants.WindowSizes.settingsWindow),
-                styleMask: [.titled, .closable, .resizable],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = "app.window.settings".localized
-            window.contentViewController = hostingController
+            let window = NSWindow(contentViewController: hostingController)
+            window.title = "Claude Usage - Settings"
+            window.styleMask = [.titled, .closable, .miniaturizable]
+            window.setContentSize(NSSize(width: 720, height: 600))
             window.center()
+            window.isReleasedWhenClosed = false
             window.isRestorable = false
-            window.makeKeyAndOrderFront(nil)
             window.delegate = self
 
             self.settingsWindow = window
-            LoggingService.shared.logWindowEvent("Settings window opened")
+
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 
     // MARK: - GitHub Star Prompt
 
-    func showGitHubPrompt(promptView: NSViewController) {
-        // If prompt window already exists, just bring it to front
+    /// Shows the GitHub star prompt window with the given action callbacks.
+    func showGitHubStarPrompt(
+        onStar: @escaping () -> Void,
+        onMaybeLater: @escaping () -> Void,
+        onDontAskAgain: @escaping () -> Void
+    ) {
+        // If window already exists, just bring it to front
         if let existingWindow = githubPromptWindow, existingWindow.isVisible {
             existingWindow.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -153,32 +160,60 @@ final class WindowCoordinator: NSObject {
         }
 
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
 
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 300),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
+        let promptView = GitHubStarPromptView(
+            onStar: { [weak self] in
+                onStar()
+                self?.closeGitHubPrompt()
+            },
+            onMaybeLater: { [weak self] in
+                onMaybeLater()
+                self?.closeGitHubPrompt()
+            },
+            onDontAskAgain: { [weak self] in
+                onDontAskAgain()
+                self?.closeGitHubPrompt()
+            }
         )
-        window.title = "app.window.github_prompt".localized
-        window.contentViewController = promptView
+
+        let hostingController = NSHostingController(rootView: promptView)
+
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = ""
+        window.styleMask = [.titled, .closable, .fullSizeContentView]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.setContentSize(NSSize(width: 300, height: 145))
         window.center()
+        window.isReleasedWhenClosed = false
         window.isRestorable = false
-        window.makeKeyAndOrderFront(nil)
+        window.level = .floating
         window.delegate = self
 
         githubPromptWindow = window
-        LoggingService.shared.logWindowEvent("GitHub prompt opened")
+
+        dataStore.saveLastGitHubStarPromptDate(Date())
+
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Closes the GitHub prompt window and hides the dock icon.
+    private func closeGitHubPrompt() {
+        githubPromptWindow?.close()
+        githubPromptWindow = nil
+        NSApp.setActivationPolicy(.accessory)
     }
 
     // MARK: - Event Monitoring
 
     private func startMonitoringForOutsideClicks() {
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            if let popover = self?.popover, popover.isShown {
-                self?.closePopover()
-            }
+            guard let self,
+                  let popover = self.popover,
+                  popover.isShown,
+                  self.detachedWindow == nil else { return }
+            self.closePopover()
         }
     }
 
@@ -200,13 +235,20 @@ final class WindowCoordinator: NSObject {
         githubPromptWindow?.close()
         githubPromptWindow = nil
         popover = nil
-        LoggingService.shared.logWindowEvent("Window coordinator cleaned up")
     }
 }
 
 // MARK: - NSPopoverDelegate
 
 extension WindowCoordinator: NSPopoverDelegate {
+    func popoverShouldDetach(_ popover: NSPopover) -> Bool {
+        // Detachment disabled: dragging while a card-flip animation is in-flight causes
+        // NSPopover._dragFromScreenLocation: to open an inner run loop that flushes a
+        // CA transaction, which hits a baseline-constraint exception on the
+        // rotation3DEffect view and crashes via NSApplication._crashOnException:.
+        return false
+    }
+
     func popoverDidClose(_ notification: Notification) {
         stopMonitoringForOutsideClicks()
     }
@@ -216,12 +258,16 @@ extension WindowCoordinator: NSPopoverDelegate {
 
 extension WindowCoordinator: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
-        if notification.object as? NSWindow === settingsWindow {
-            settingsWindow = nil
-            NSApp.setActivationPolicy(.accessory)
-        } else if notification.object as? NSWindow === githubPromptWindow {
-            githubPromptWindow = nil
-            NSApp.setActivationPolicy(.accessory)
+        if let window = notification.object as? NSWindow {
+            if window === settingsWindow {
+                NSApp.setActivationPolicy(.accessory)
+                settingsWindow = nil
+            } else if window === detachedWindow {
+                detachedWindow = nil
+            } else if window === githubPromptWindow {
+                NSApp.setActivationPolicy(.accessory)
+                githubPromptWindow = nil
+            }
         }
     }
 }
