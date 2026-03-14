@@ -12,7 +12,8 @@ class ErrorRecovery {
 
     static let shared = ErrorRecovery()
 
-    private init() {}
+    /// Internal access for `@testable import` — production code should use `ErrorRecovery.shared`.
+    init() {}
 
     // MARK: - Retry Decision
 
