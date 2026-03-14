@@ -37,8 +37,9 @@ class ClaudeCodeSyncService {
 
     // MARK: - Profile Sync Operations
 
-    /// Syncs credentials from system to profile (one-time copy)
-    func syncToProfile(_ profileId: UUID) async throws {
+    /// Reads and validates CLI credentials from system Keychain.
+    /// Returns the validated JSON string, or throws on missing/invalid credentials.
+    func readAndValidateSystemCredentials() async throws -> String {
         guard let jsonData = try await readSystemCredentials() else {
             throw ClaudeCodeError.noCredentialsFound
         }
@@ -49,48 +50,7 @@ class ClaudeCodeSyncService {
             throw ClaudeCodeError.invalidJSON
         }
 
-        // Save to profile directly
-        var profiles = ProfileStore.shared.loadProfiles()
-        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
-            throw ClaudeCodeError.noProfileCredentials
-        }
-
-        profiles[index].cliCredentialsJSON = jsonData
-        profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(jsonData)
-        ProfileStore.shared.saveProfiles(profiles)
-
-        LoggingService.shared.log("Synced CLI credentials to profile: \(profileId)")
-    }
-
-    /// Applies profile's CLI credentials to system (overwrites current login)
-    func applyProfileCredentials(_ profileId: UUID) async throws {
-        LoggingService.shared.log("Applying CLI credentials for profile: \(profileId)")
-
-        let profiles = ProfileStore.shared.loadProfiles()
-        guard let profile = profiles.first(where: { $0.id == profileId }),
-              let jsonData = profile.cliCredentialsJSON else {
-            LoggingService.shared.log("No CLI credentials found for profile: \(profileId)")
-            throw ClaudeCodeError.noProfileCredentials
-        }
-
-        LoggingService.shared.log("Found CLI credentials, writing to keychain...")
-        try await writeSystemCredentials(jsonData)
-
-        LoggingService.shared.log("Applied profile CLI credentials to system: \(profileId)")
-    }
-
-    /// Removes CLI credentials from profile (doesn't affect system)
-    func removeFromProfile(_ profileId: UUID) throws {
-        var profiles = ProfileStore.shared.loadProfiles()
-        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
-            throw ClaudeCodeError.noProfileCredentials
-        }
-
-        profiles[index].cliCredentialsJSON = nil
-        profiles[index].hasValidOAuthCredentials = false
-        ProfileStore.shared.saveProfiles(profiles)
-
-        LoggingService.shared.log("Removed CLI credentials from profile: \(profileId)")
+        return jsonData
     }
 
     // MARK: - Access Token Extraction
@@ -143,30 +103,10 @@ class ClaudeCodeSyncService {
 
     // MARK: - Auto Re-sync Before Switching
 
-    /// Re-syncs credentials from system Keychain before profile switching
-    /// This ensures we always have the latest CLI login when switching profiles
-    func resyncBeforeSwitching(for profileId: UUID) async throws {
-        LoggingService.shared.log("Re-syncing CLI credentials before profile switch: \(profileId)")
-
-        // Read fresh credentials from system (if user is logged in)
-        guard let freshJSON = try await readSystemCredentials() else {
-            // No credentials in system - user not logged into CLI anymore
-            LoggingService.shared.log("No system credentials found - skipping re-sync")
-            return
-        }
-
-        // Update profile's stored credentials with fresh ones
-        var profiles = ProfileStore.shared.loadProfiles()
-        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
-            return
-        }
-
-        profiles[index].cliCredentialsJSON = freshJSON
-        profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(freshJSON)
-        profiles[index].cliAccountSyncedAt = Date()  // Update sync timestamp
-        ProfileStore.shared.saveProfiles(profiles)
-
-        LoggingService.shared.log("Re-synced CLI credentials from system and updated timestamp")
+    /// Reads fresh CLI credentials from system Keychain for re-sync.
+    /// Returns the JSON string, or nil if no credentials are found in the system.
+    func readFreshSystemCredentials() async throws -> String? {
+        try await readSystemCredentials()
     }
 
     // MARK: - Private Methods

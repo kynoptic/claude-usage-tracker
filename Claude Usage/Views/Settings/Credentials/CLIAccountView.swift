@@ -245,10 +245,7 @@ struct CLIAccountView: View {
 
         Task {
             do {
-                try await ClaudeCodeSyncService.shared.syncToProfile(profileId)
-
-                // Reload profiles to get the updated cliCredentialsJSON
-                profileManager.loadProfiles()
+                try await profileManager.syncCLICredentials(toProfile: profileId)
 
                 // Update profile metadata
                 if var updated = profileManager.activeProfile {
@@ -274,10 +271,7 @@ struct CLIAccountView: View {
         guard let profileId = profileManager.activeProfile?.id else { return }
 
         do {
-            try ClaudeCodeSyncService.shared.removeFromProfile(profileId)
-
-            // Reload profiles to get the updated profile without cliCredentialsJSON
-            profileManager.loadProfiles()
+            try profileManager.removeCLICredentials(fromProfile: profileId)
 
             // Update profile metadata
             if var updated = profileManager.activeProfile {
