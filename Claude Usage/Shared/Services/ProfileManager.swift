@@ -37,7 +37,9 @@ class ProfileManager: ObservableObject {
             profileStore.saveProfiles(profiles)
 
             // On first launch, try to sync CLI credentials to the new default profile
-            syncCLICredentialsToDefaultProfile(defaultProfile.id)
+            Task {
+                await syncCLICredentialsToDefaultProfile(defaultProfile.id)
+            }
         }
 
         // Load active profile
@@ -192,7 +194,7 @@ class ProfileManager: ObservableObject {
         // Re-sync current profile before leaving (if CLI credentials exist)
         if let currentProfile = activeProfile, currentProfile.cliCredentialsJSON != nil {
             do {
-                try cliSyncService.resyncBeforeSwitching(for: currentProfile.id)
+                try await cliSyncService.resyncBeforeSwitching(for: currentProfile.id)
                 // Reload profiles to get the updated data in memory
                 profiles = profileStore.loadProfiles()
                 LoggingService.shared.log("✓ Re-synced current profile before switching")
@@ -215,7 +217,7 @@ class ProfileManager: ObservableObject {
 
         if updatedProfile.cliCredentialsJSON != nil {
             do {
-                try cliSyncService.applyProfileCredentials(updatedProfile.id)
+                try await cliSyncService.applyProfileCredentials(updatedProfile.id)
                 LoggingService.shared.log("✓ Applied CLI credentials for: \(updatedProfile.name)")
             } catch {
                 LoggingService.shared.logError("Failed to apply CLI credentials (non-fatal)", error: error)
@@ -477,10 +479,10 @@ class ProfileManager: ObservableObject {
     // MARK: - Private Helpers
 
     /// Syncs CLI credentials to default profile on first launch only
-    private func syncCLICredentialsToDefaultProfile(_ profileId: UUID) {
+    private func syncCLICredentialsToDefaultProfile(_ profileId: UUID) async {
         do {
             // Attempt to read credentials from system Keychain
-            guard let jsonData = try cliSyncService.readSystemCredentials() else {
+            guard let jsonData = try await cliSyncService.readSystemCredentials() else {
                 LoggingService.shared.log("ProfileManager: No CLI credentials found in system Keychain")
                 return
             }
@@ -498,12 +500,12 @@ class ProfileManager: ObservableObject {
             }
 
             // Sync to the newly created default profile
-            try cliSyncService.syncToProfile(profileId)
+            try await cliSyncService.syncToProfile(profileId)
 
             // Reload the profile to get updated credentials
             profiles = profileStore.loadProfiles()
 
-            LoggingService.shared.log("ProfileManager: ✅ Successfully synced CLI credentials to default profile on first launch")
+            LoggingService.shared.log("ProfileManager: Successfully synced CLI credentials to default profile on first launch")
 
         } catch {
             LoggingService.shared.logError("ProfileManager: Failed to sync CLI credentials on first launch (non-fatal)", error: error)

@@ -35,15 +35,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             object: nil
         )
 
-        // Check if setup has been completed
-        if !shouldShowSetupWizard() {
-            // Initialize menu bar with active profile
-            menuBarManager = MenuBarManager()
-            menuBarManager?.setup()
-        } else {
-            showSetupWizardManually()
-            // Mark that wizard has been shown once
-            SharedDataStore.shared.markWizardShown()
+        // Check if setup has been completed (async — credential check runs off main actor)
+        Task { @MainActor in
+            if await !shouldShowSetupWizard() {
+                // Initialize menu bar with active profile
+                menuBarManager = MenuBarManager()
+                menuBarManager?.setup()
+            } else {
+                showSetupWizardManually()
+                // Mark that wizard has been shown once
+                SharedDataStore.shared.markWizardShown()
+            }
         }
 
         // Track first launch date for GitHub star prompt
@@ -74,7 +76,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
 
-    private func shouldShowSetupWizard() -> Bool {
+    private func shouldShowSetupWizard() async -> Bool {
         // FORCE SHOW wizard on very first app launch (one-time)
         // This ensures users see the migration option if they have old data
         if !SharedDataStore.shared.hasShownWizardOnce() {
@@ -96,7 +98,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
 
         // Check if valid CLI credentials exist in system Keychain
-        if hasValidSystemCLICredentials() {
+        if await hasValidSystemCLICredentials() {
             LoggingService.shared.log("AppDelegate: Found valid CLI credentials, skipping wizard")
             return false
         }
@@ -106,10 +108,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     /// Checks if valid Claude Code CLI credentials exist in system Keychain
-    private func hasValidSystemCLICredentials() -> Bool {
+    private func hasValidSystemCLICredentials() async -> Bool {
         do {
-            // Attempt to read credentials from system Keychain
-            guard let jsonData = try ClaudeCodeSyncService.shared.readSystemCredentials() else {
+            // Attempt to read credentials from system Keychain (runs off main actor)
+            guard let jsonData = try await ClaudeCodeSyncService.shared.readSystemCredentials() else {
                 LoggingService.shared.log("AppDelegate: No CLI credentials found in system Keychain")
                 return false
             }

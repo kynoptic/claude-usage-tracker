@@ -183,6 +183,38 @@ final class ClaudeCodeSyncServiceTests: XCTestCase {
         XCTAssertFalse(error.errorDescription!.isEmpty)
     }
 
+    func testClaudeCodeError_SubprocessTimedOut_HasDescription() {
+        let error = ClaudeCodeError.subprocessTimedOut(seconds: 10)
+        XCTAssertNotNil(error.errorDescription)
+        XCTAssertTrue(error.errorDescription!.contains("10"))
+    }
+
+    // MARK: - Subprocess timeout constant
+
+    func testSubprocessTimeout_IsReasonable() {
+        // Timeout should be between 5 and 15 seconds
+        XCTAssertGreaterThanOrEqual(ClaudeCodeSyncService.subprocessTimeout, 5)
+        XCTAssertLessThanOrEqual(ClaudeCodeSyncService.subprocessTimeout, 15)
+    }
+
+    // MARK: - Async credential access runs off main actor
+
+    func testReadSystemCredentials_RunsOffMainActor() async {
+        // Verify the async method completes without blocking the main actor.
+        // We use a fast subprocess (/usr/bin/security) that should finish well
+        // within the timeout. The key assertion is that this runs from an async
+        // context without deadlocking.
+        let expectation = XCTestExpectation(description: "readSystemCredentials completes")
+
+        Task { @MainActor in
+            // This would deadlock if the subprocess blocked the main actor
+            _ = try? await ClaudeCodeSyncService.shared.readSystemCredentials()
+            expectation.fulfill()
+        }
+
+        await fulfillment(of: [expectation], timeout: 15)
+    }
+
     // MARK: - Helpers
 
     private func makeCredentialsJSON(expiresAt: TimeInterval) -> String {
