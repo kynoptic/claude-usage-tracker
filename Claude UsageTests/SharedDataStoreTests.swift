@@ -141,17 +141,18 @@ final class SharedDataStoreTests: XCTestCase {
         let threeDaysAgo = Date().addingTimeInterval(-3 * 24 * 60 * 60)
         dataStore.saveFirstLaunchDate(threeDaysAgo)
 
-        // Should show prompt (>2 days, not starred, not dismissed)
-        XCTAssertTrue(dataStore.shouldShowGitHubStarPrompt())
+        // GitHubStarPromptManager.shared uses DataStore.shared (same instance as dataStore)
+        // so state set above is visible to the manager
+        XCTAssertTrue(GitHubStarPromptManager.shared.shouldShowGitHubStarPrompt())
 
         // Mark as starred - should no longer show
         dataStore.saveHasStarredGitHub(true)
-        XCTAssertFalse(dataStore.shouldShowGitHubStarPrompt())
+        XCTAssertFalse(GitHubStarPromptManager.shared.shouldShowGitHubStarPrompt())
 
         // Reset starred, set never show - should not show
         dataStore.saveHasStarredGitHub(false)
         dataStore.saveNeverShowGitHubPrompt(true)
-        XCTAssertFalse(dataStore.shouldShowGitHubStarPrompt())
+        XCTAssertFalse(GitHubStarPromptManager.shared.shouldShowGitHubStarPrompt())
     }
 
     func testShouldNotShowGitHubPromptWhenTooEarly() {
@@ -163,8 +164,8 @@ final class SharedDataStoreTests: XCTestCase {
         let twelveHoursAgo = Date().addingTimeInterval(-12 * 60 * 60)
         dataStore.saveFirstLaunchDate(twelveHoursAgo)
 
-        // Should NOT show prompt (< 1 day threshold)
-        XCTAssertFalse(dataStore.shouldShowGitHubStarPrompt())
+        // GitHubStarPromptManager.shared uses DataStore.shared (same instance as dataStore)
+        XCTAssertFalse(GitHubStarPromptManager.shared.shouldShowGitHubStarPrompt())
     }
 
     func testResetGitHubStarPromptForTesting() {
