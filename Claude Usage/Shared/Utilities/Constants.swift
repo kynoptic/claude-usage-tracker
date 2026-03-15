@@ -142,9 +142,6 @@ enum Constants {
         static let critical: Double = 95.0
     }
 
-    // GitHub repository
-    static let githubRepoURL = "https://github.com/kynoptic/Claude-Usage-Tracker"
-
     // GitHub star prompt timing (in seconds)
     enum GitHubPromptTiming {
         static let initialDelay: TimeInterval = 24 * 60 * 60  // 1 day
@@ -161,6 +158,8 @@ enum Constants {
     // HTTP headers
     /// User-Agent string sent with CLI OAuth requests
     static let claudeCodeUserAgent = "claude-code/2.1.5"
+    /// Model used for auto-start initialization conversations in ClaudeAPIService
+    static let autoStartModel = "claude-haiku-4-5-20251001"
 
     // UI Timing
     enum UITiming {

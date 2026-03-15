@@ -22,7 +22,7 @@ final class ProfileStore {
         static let multiProfileConfig = "multiProfileDisplayConfig"
     }
 
-    init() {
+    private init() {
         // Use standard UserDefaults (app container)
         self.defaults = UserDefaults.standard
         LoggingService.shared.log("ProfileStore: Using standard app container storage")

@@ -32,11 +32,11 @@ init:
 	echo "✓ Xcode $$xcode_version"
 	@echo ""
 	@echo "Checking git remote configuration..."
-	@if ! git remote | grep -q github; then \
-		echo "❌ 'github' remote not found"; \
+	@if ! git remote | grep -q origin; then \
+		echo "❌ 'origin' remote not found"; \
 		exit 1; \
 	fi; \
-	echo "✓ 'github' remote configured"
+	echo "✓ 'origin' remote configured"
 	@echo ""
 	@echo "Resolving SPM dependencies..."
 	@xcodebuild -resolvePackageDependencies \

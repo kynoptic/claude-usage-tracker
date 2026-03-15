@@ -5,7 +5,7 @@ import Combine
 /// Primary ViewModel for the menu bar app. Owns the refresh timer, orchestrates all service
 /// calls, manages the popover lifecycle, and is the main dependency of every SwiftUI view.
 @MainActor
-class MenuBarManager: NSObject, ObservableObject {
+final class MenuBarManager: NSObject, ObservableObject {
     // MARK: - Properties
 
     /// The most recent Claude token-usage snapshot for the active profile.
@@ -375,7 +375,7 @@ class MenuBarManager: NSObject, ObservableObject {
     func showGitHubStarPrompt() {
         windowCoordinator.showGitHubStarPrompt(
             onStar: { [weak self] in
-                if let url = URL(string: Constants.githubRepoURL) { NSWorkspace.shared.open(url) }
+                if let url = URL(string: Constants.GitHub.repoURL) { NSWorkspace.shared.open(url) }
                 self?.dataStore.saveHasStarredGitHub(true)
             },
             onMaybeLater: {},

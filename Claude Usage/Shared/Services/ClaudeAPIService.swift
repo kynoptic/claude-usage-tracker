@@ -1,7 +1,7 @@
 import Foundation
 
 /// Service for fetching usage data directly from Claude's API
-class ClaudeAPIService: APIServiceProtocol {
+final class ClaudeAPIService: APIServiceProtocol {
     // MARK: - Types
 
     /// Backward-compatibility alias — callers may use either `AuthenticationType` or
@@ -594,7 +594,7 @@ class ClaudeAPIService: APIServiceProtocol {
 
         let messageBody: [String: Any] = [
             "prompt": "Hi",
-            "model": "claude-haiku-4-5-20251001",
+            "model": Constants.autoStartModel,
             "timezone": "UTC"
         ]
         messageRequest.httpBody = try JSONSerialization.data(withJSONObject: messageBody)
