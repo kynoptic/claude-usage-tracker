@@ -26,15 +26,15 @@ final class LoggingService {
     // MARK: - API Logging
 
     nonisolated func logAPIRequest(_ endpoint: String) {
-        os_log("📤 API Request: %{public}@", log: apiLogger, type: .info, endpoint)
+        os_log("📤 API Request: %{private}@", log: apiLogger, type: .info, endpoint)
     }
 
     nonisolated func logAPIResponse(_ endpoint: String, statusCode: Int) {
-        os_log("📥 API Response: %{public}@ [%d]", log: apiLogger, type: .info, endpoint, statusCode)
+        os_log("📥 API Response: %{private}@ [%d]", log: apiLogger, type: .info, endpoint, statusCode)
     }
 
     nonisolated func logAPIError(_ endpoint: String, error: Error) {
-        os_log("❌ API Error: %{public}@ - %{public}@", log: apiLogger, type: .error, endpoint, error.localizedDescription)
+        os_log("❌ API Error: %{private}@ - %{public}@", log: apiLogger, type: .error, endpoint, error.localizedDescription)
     }
 
     // MARK: - Storage Logging
