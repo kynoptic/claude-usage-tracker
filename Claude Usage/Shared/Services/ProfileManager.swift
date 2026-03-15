@@ -246,18 +246,15 @@ final class ProfileManager: ObservableObject {
     func syncCLICredentials(toProfile profileId: UUID) async throws {
         let jsonData = try await cliSyncService.readAndValidateSystemCredentials()
 
-        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
+        guard profiles.contains(where: { $0.id == profileId }) else {
             throw ClaudeCodeError.noProfileCredentials
         }
 
-        profiles[index].cliCredentialsJSON = jsonData
-        profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(jsonData)
-
-        if activeProfile?.id == profileId {
-            activeProfile = profiles[index]
+        updateProfile(profileId) { profile in
+            profile.cliCredentialsJSON = jsonData
+            profile.hasValidOAuthCredentials = Profile.isValidOAuthJSON(jsonData)
         }
 
-        profileStore.saveProfiles(profiles)
         LoggingService.shared.log("Synced CLI credentials to profile: \(profileId)")
     }
 
@@ -281,18 +278,15 @@ final class ProfileManager: ObservableObject {
     /// Removes CLI credentials from a profile (doesn't affect system Keychain).
     /// Updates both persistent storage and in-memory state.
     func removeCLICredentials(fromProfile profileId: UUID) throws {
-        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
+        guard profiles.contains(where: { $0.id == profileId }) else {
             throw ClaudeCodeError.noProfileCredentials
         }
 
-        profiles[index].cliCredentialsJSON = nil
-        profiles[index].hasValidOAuthCredentials = false
-
-        if activeProfile?.id == profileId {
-            activeProfile = profiles[index]
+        updateProfile(profileId) { profile in
+            profile.cliCredentialsJSON = nil
+            profile.hasValidOAuthCredentials = false
         }
 
-        profileStore.saveProfiles(profiles)
         LoggingService.shared.log("Removed CLI credentials from profile: \(profileId)")
     }
 
@@ -306,19 +300,16 @@ final class ProfileManager: ObservableObject {
             return
         }
 
-        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
+        guard profiles.contains(where: { $0.id == profileId }) else {
             return
         }
 
-        profiles[index].cliCredentialsJSON = freshJSON
-        profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(freshJSON)
-        profiles[index].cliAccountSyncedAt = Date()
-
-        if activeProfile?.id == profileId {
-            activeProfile = profiles[index]
+        updateProfile(profileId) { profile in
+            profile.cliCredentialsJSON = freshJSON
+            profile.hasValidOAuthCredentials = Profile.isValidOAuthJSON(freshJSON)
+            profile.cliAccountSyncedAt = Date()
         }
 
-        profileStore.saveProfiles(profiles)
         LoggingService.shared.log("Re-synced CLI credentials from system and updated timestamp")
     }
 
@@ -350,17 +341,11 @@ final class ProfileManager: ObservableObject {
         creds.organizationId = nil
         try profileStore.saveProfileCredentials(profileId, credentials: creds)
 
-        // Update Profile model in memory
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].claudeSessionKey = nil
-            profiles[index].organizationId = nil
-            profiles[index].claudeUsage = nil  // Clear saved usage data
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
-
-            profileStore.saveProfiles(profiles)
+        // Update Profile model in memory and persist through the canonical write path
+        updateProfile(profileId) { profile in
+            profile.claudeSessionKey = nil
+            profile.organizationId = nil
+            profile.claudeUsage = nil  // Clear saved usage data
         }
 
         LoggingService.shared.log("ProfileManager: Removed Claude.ai credentials for profile \(profileId)")
@@ -377,17 +362,11 @@ final class ProfileManager: ObservableObject {
         creds.apiOrganizationId = nil
         try profileStore.saveProfileCredentials(profileId, credentials: creds)
 
-        // Update Profile model in memory
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].apiSessionKey = nil
-            profiles[index].apiOrganizationId = nil
-            profiles[index].apiUsage = nil  // Clear saved usage data
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
-
-            profileStore.saveProfiles(profiles)
+        // Update Profile model in memory and persist through the canonical write path
+        updateProfile(profileId) { profile in
+            profile.apiSessionKey = nil
+            profile.apiOrganizationId = nil
+            profile.apiUsage = nil  // Clear saved usage data
         }
 
         LoggingService.shared.log("ProfileManager: Removed API credentials for profile \(profileId)")
