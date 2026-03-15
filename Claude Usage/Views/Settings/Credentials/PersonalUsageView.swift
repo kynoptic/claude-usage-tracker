@@ -34,7 +34,7 @@ struct PersonalUsageView: View {
                             .font(DesignTokens.Typography.bodyMedium)
 
                         if let creds = currentCredentials, creds.hasClaudeAI {
-                            Text(maskKey(creds.claudeSessionKey ?? ""))
+                            Text((creds.claudeSessionKey ?? "").maskedKey())
                                 .font(DesignTokens.Typography.captionMono)
                                 .foregroundColor(.secondary)
                         }
@@ -121,13 +121,6 @@ struct PersonalUsageView: View {
     private func loadCurrentCredentials() {
         guard let profile = profileManager.activeProfile else { return }
         currentCredentials = try? ProfileStore.shared.loadProfileCredentials(profile.id)
-    }
-
-    private func maskKey(_ key: String) -> String {
-        guard key.count > 20 else { return "•••••••••" }
-        let prefix = String(key.prefix(12))
-        let suffix = String(key.suffix(4))
-        return "\(prefix)•••••\(suffix)"
     }
 
     private func removeCredentials() {
@@ -457,7 +450,7 @@ struct ConfirmStep: View {
                         Text("wizard.session_key".localized)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
-                        Text(maskSessionKey(wizardState.sessionKey))
+                        Text(wizardState.sessionKey.maskedKey())
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundColor(.primary)
                     }
@@ -612,12 +605,6 @@ struct ConfirmStep: View {
         }
     }
 
-    private func maskSessionKey(_ key: String) -> String {
-        guard key.count > 20 else { return "•••••••••" }
-        let prefix = String(key.prefix(12))
-        let suffix = String(key.suffix(4))
-        return "\(prefix)•••••\(suffix)"
-    }
 }
 
 // MARK: - Visual Components (kept minimal)

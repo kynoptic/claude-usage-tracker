@@ -34,13 +34,7 @@ struct SmartHeader: View {
 
     /// Get initials from profile name
     private func profileInitials(for name: String) -> String {
-        let words = name.split(separator: " ")
-        if words.count >= 2 {
-            return String(words[0].prefix(1) + words[1].prefix(1)).uppercased()
-        } else if let first = words.first {
-            return String(first.prefix(2)).uppercased()
-        }
-        return "?"
+        name.profileInitials()
     }
 
     var body: some View {
@@ -309,14 +303,7 @@ struct ProfileSwitcherBar: View {
     }
 
     private var profileInitials: String {
-        guard let name = profileManager.activeProfile?.name else { return "?" }
-        let words = name.split(separator: " ")
-        if words.count >= 2 {
-            return String(words[0].prefix(1) + words[1].prefix(1)).uppercased()
-        } else if let first = words.first {
-            return String(first.prefix(2)).uppercased()
-        }
-        return "?"
+        profileManager.activeProfile?.name.profileInitials() ?? "?"
     }
 }
 
