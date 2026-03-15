@@ -9,6 +9,7 @@ import Foundation
 
 /// Protocol defining API operations for Claude services
 /// Enables dependency injection and testing with mock API services
+@MainActor
 protocol APIServiceProtocol {
     // MARK: - Claude.ai API
     func fetchOrganizationId(sessionKey: String, storedOrgId: String?) async throws -> (orgId: String, isNewlyFetched: Bool)

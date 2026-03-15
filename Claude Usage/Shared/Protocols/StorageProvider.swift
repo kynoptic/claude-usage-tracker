@@ -9,6 +9,7 @@ import Foundation
 
 /// Protocol defining storage operations for the application
 /// This enables dependency injection and testing with mock storage
+@MainActor
 protocol StorageProvider {
     // MARK: - Usage Data
     func saveUsage(_ usage: ClaudeUsage)
