@@ -92,10 +92,9 @@ final class StatuslineService {
     /// Reads user preferences from ~/.claude/statusline-config.txt and displays selected components.
     /// `internal` for threshold-parity testing via `@testable import`.
     var bashScript: String {
-        guard let script = try? loadBundleScript(name: "statusline", withExtension: "sh") else {
-            fatalError("Missing bundle resource: statusline.sh")
+        get throws {
+            try loadBundleScript(name: "statusline", withExtension: "sh")
         }
-        return script
     }
 
     // MARK: - Installation

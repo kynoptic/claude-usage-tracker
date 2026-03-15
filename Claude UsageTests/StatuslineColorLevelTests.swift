@@ -134,8 +134,8 @@ final class StatuslineColorLevelTests: XCTestCase {
     ///
     /// The Swift thresholds are 0.9, 1.1, 1.5 (fractions of full utilization),
     /// which correspond to integer percentages 90, 110, 150 in the bash script.
-    func testBashScript_ContainsMatchingThresholds() {
-        let script = StatuslineService.shared.bashScript
+    func testBashScript_ContainsMatchingThresholds() throws {
+        let script = try StatuslineService.shared.bashScript
 
         // The bash script should contain these comparison patterns twice each
         // (once for pacing mode, once for fallback mode):
