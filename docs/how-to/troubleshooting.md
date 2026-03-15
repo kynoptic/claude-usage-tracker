@@ -29,7 +29,7 @@ The wizard preserves your organisation selection when you update the key, so you
 
 ## Menu bar icons briefly flash to zero
 
-Fixed in v2.1.0. Stale data is now held until new data arrives. Update to the latest version.
+Stale data is held until new data arrives. If you see this, update to the latest version.
 
 ## Session key expired
 
@@ -42,8 +42,7 @@ Session keys expire periodically without warning. Extract a fresh key from `clau
 
 ## Automatic updates not working
 
-1. Confirm you're running v2.0.0 or later (earlier versions have no auto-update)
-2. Check **Settings** → **Updates** and ensure automatic checking is enabled
+1. Check **Settings** → **Updates** and ensure automatic checking is enabled
 3. Verify your internet connection
 4. Download the latest release manually from the [releases page](https://github.com/kynoptic/Claude-Usage-Tracker/releases) if needed
 

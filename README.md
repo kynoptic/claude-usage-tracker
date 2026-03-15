@@ -60,7 +60,7 @@ See [`docs/explanations/architecture.md`](docs/explanations/architecture.md) for
 
 - **Architecture & decisions** — [`docs/`](docs/): overview, multi-profile system, authentication flow, design decisions
 - **Contribution guide** — [`CONTRIBUTING.md`](CONTRIBUTING.md): build commands, commit conventions, testing strategy
-- **Project instructions** — [`CLAUDE.md`](CLAUDE.md): deployment, release procedures, build details
+- **Project instructions** — [`CLAUDE.md`](CLAUDE.md): AI agent instructions covering code conventions, singleton patterns, and git rules
 
 ## Attribution
 

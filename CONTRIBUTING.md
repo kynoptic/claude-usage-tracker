@@ -289,7 +289,7 @@ Use descriptive branch names with prefixes:
 
 4. **Commit your changes**
    ```bash
-   git add .
+   git add path/to/changed/file.swift
    git commit -m "feat(scope): description of changes"
    ```
 
