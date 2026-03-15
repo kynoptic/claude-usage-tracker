@@ -84,7 +84,7 @@ Common scopes: `api`, `menubar`, `statusline`, `settings`, `services`, `models`,
 
 **Branches:** `feat/`, `fix/`, `docs/`, `refactor/`, `chore/` prefixes (overrides global `issue-<id>-<slug>` convention)
 
-**Remote:** `origin` → `https://github.com/kynoptic/Claude-Usage-Tracker.git` (your fork)
+**Remote:** `github` → `https://github.com/kynoptic/Claude-Usage-Tracker.git` (your fork)
 
 > [!CAUTION]
 > **This is a fork.** All work — commits, issues, PRs, releases — happens exclusively on this fork (`kynoptic/claude-usage-tracker`).
