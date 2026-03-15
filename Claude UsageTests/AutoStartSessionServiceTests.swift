@@ -52,10 +52,12 @@ final class AutoStartSessionServiceTests: XCTestCase {
             return (makeUsage(sessionPercentage: stubbedSessionPercentage), nil)
         }
 
-        func sendInitializationMessage(sessionKey: String, organizationId: String) async throws {
+        @discardableResult
+        func sendInitializationMessage(sessionKey: String, organizationId: String) async throws -> Data? {
             initMessageCallCount += 1
             lastInitSessionKey = sessionKey
             lastInitOrgId = organizationId
+            return nil
         }
 
         func fetchConsoleOrganizations(apiSessionKey: String) async throws -> [APIOrganization] {

@@ -20,7 +20,8 @@ protocol APIServiceProtocol {
         checkOverageLimitEnabled: Bool,
         sessionKeyFallback: String?
     ) async throws -> (usage: ClaudeUsage, newlyFetchedOrgId: String?)
-    func sendInitializationMessage(sessionKey: String, organizationId: String) async throws
+    @discardableResult
+    func sendInitializationMessage(sessionKey: String, organizationId: String) async throws -> Data?
 
     // MARK: - Console API
     func fetchConsoleOrganizations(apiSessionKey: String) async throws -> [APIOrganization]

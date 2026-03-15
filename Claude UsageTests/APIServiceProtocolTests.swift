@@ -47,8 +47,8 @@ final class APIServiceProtocolTests: XCTestCase {
             return (stubbedUsage, nil)
         }
 
-        func sendInitializationMessage(sessionKey: String, organizationId: String) async throws {
-            // no-op
+        func sendInitializationMessage(sessionKey: String, organizationId: String) async throws -> Data? {
+            return nil
         }
 
         func fetchConsoleOrganizations(apiSessionKey: String) async throws -> [APIOrganization] {
