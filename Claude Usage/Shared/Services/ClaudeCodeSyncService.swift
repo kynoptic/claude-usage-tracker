@@ -9,6 +9,19 @@ import Foundation
 import Security
 
 /// Manages synchronization of Claude Code CLI credentials between system Keychain and profiles
+///
+/// ## Concurrency model
+///
+/// `ClaudeCodeSyncService` is **not** `@MainActor`. It is called from `@MainActor` contexts
+/// (e.g. `ProfileManager`, `AppDelegate`) via `await`, which would ordinarily inherit the
+/// caller's actor and run synchronous work on the main thread.
+///
+/// To prevent the blocking Security framework calls (`SecItemCopyMatching`, `SecItemUpdate`,
+/// `SecItemAdd`) from executing on the main thread, the async public methods dispatch their
+/// work onto a detached task. This keeps the main thread responsive during Keychain I/O.
+///
+/// The private `*Sync` helpers are marked `nonisolated` to make their actor-independence
+/// explicit and to satisfy Swift's strict concurrency checks when called from a detached task.
 final class ClaudeCodeSyncService {
     static let shared = ClaudeCodeSyncService()
 
@@ -20,13 +33,19 @@ final class ClaudeCodeSyncService {
     // MARK: - System Keychain Access
 
     /// Reads Claude Code credentials from system Keychain using Security framework.
+    /// Dispatches to a detached task so Security calls do not block the main thread.
     func readSystemCredentials() async throws -> String? {
-        try readSystemCredentialsSync()
+        try await Task.detached(priority: .userInitiated) {
+            try self.readSystemCredentialsSync()
+        }.value
     }
 
     /// Writes Claude Code credentials to system Keychain using Security framework.
+    /// Dispatches to a detached task so Security calls do not block the main thread.
     func writeSystemCredentials(_ jsonData: String) async throws {
-        try writeSystemCredentialsSync(jsonData)
+        try await Task.detached(priority: .userInitiated) {
+            try self.writeSystemCredentialsSync(jsonData)
+        }.value
     }
 
     // MARK: - Profile Sync Operations
@@ -106,7 +125,7 @@ final class ClaudeCodeSyncService {
     // MARK: - Private Methods
 
     /// Reads Claude Code credentials from the system Keychain using the Security framework.
-    private func readSystemCredentialsSync() throws -> String? {
+    private nonisolated func readSystemCredentialsSync() throws -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Self.keychainService,
@@ -134,7 +153,7 @@ final class ClaudeCodeSyncService {
 
     /// Writes Claude Code credentials to the system Keychain using the Security framework.
     /// Attempts an update first; falls back to add if the item does not yet exist.
-    private func writeSystemCredentialsSync(_ jsonData: String) throws {
+    private nonisolated func writeSystemCredentialsSync(_ jsonData: String) throws {
         LoggingService.shared.log("Writing credentials to keychain using Security framework")
 
         guard let data = jsonData.data(using: .utf8) else {
