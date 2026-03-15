@@ -11,6 +11,8 @@ extension MenuBarManager {
 
     // MARK: - Icon Configuration
 
+    /// Registers a `NotificationCenter` observer for `.menuBarIconConfigChanged`.
+    /// When the notification fires, updates the status-bar icon configuration for the active display mode.
     func observeIconConfigChanges() {
         iconConfigObserver = NotificationCenter.default.addObserver(
             forName: .menuBarIconConfigChanged,
@@ -32,6 +34,9 @@ extension MenuBarManager {
 
     // MARK: - Credential Changes
 
+    /// Registers a `NotificationCenter` observer for `.credentialsChanged`.
+    /// When credentials are updated, triggers an immediate usage refresh if the active profile
+    /// now has valid credentials, or falls back to the default logo state if it does not.
     func observeCredentialChanges() {
         credentialsObserver = NotificationCenter.default.addObserver(
             forName: .credentialsChanged,
@@ -57,6 +62,9 @@ extension MenuBarManager {
 
     // MARK: - Display Mode
 
+    /// Registers a `NotificationCenter` observer for `.displayModeChanged`.
+    /// When the display mode changes, delegates to `handleDisplayModeChange()` to switch the
+    /// status-bar UI between single-profile and multi-profile layouts.
     func observeDisplayModeChanges() {
         displayModeObserver = NotificationCenter.default.addObserver(
             forName: .displayModeChanged,
