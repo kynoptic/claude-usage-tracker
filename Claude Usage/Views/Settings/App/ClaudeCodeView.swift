@@ -10,12 +10,12 @@ import SwiftUI
 /// Claude Code statusline integration settings
 struct ClaudeCodeView: View {
     // Component visibility settings
-    @State private var showDirectory: Bool = SharedDataStore.shared.loadStatuslineShowDirectory()
-    @State private var showBranch: Bool = SharedDataStore.shared.loadStatuslineShowBranch()
-    @State private var showUsage: Bool = SharedDataStore.shared.loadStatuslineShowUsage()
-    @State private var showProgressBar: Bool = SharedDataStore.shared.loadStatuslineShowProgressBar()
-    @State private var showResetTime: Bool = SharedDataStore.shared.loadStatuslineShowResetTime()
-    @State private var showTimeMarker: Bool = SharedDataStore.shared.loadStatuslineShowTimeMarker()
+    @State private var showDirectory: Bool = DataStore.shared.loadStatuslineShowDirectory()
+    @State private var showBranch: Bool = DataStore.shared.loadStatuslineShowBranch()
+    @State private var showUsage: Bool = DataStore.shared.loadStatuslineShowUsage()
+    @State private var showProgressBar: Bool = DataStore.shared.loadStatuslineShowProgressBar()
+    @State private var showResetTime: Bool = DataStore.shared.loadStatuslineShowResetTime()
+    @State private var showTimeMarker: Bool = DataStore.shared.loadStatuslineShowTimeMarker()
 
     // Status feedback
     @State private var statusMessage: String?
@@ -193,12 +193,12 @@ struct ClaudeCodeView: View {
         }
 
         // Save user preferences
-        SharedDataStore.shared.saveStatuslineShowDirectory(showDirectory)
-        SharedDataStore.shared.saveStatuslineShowBranch(showBranch)
-        SharedDataStore.shared.saveStatuslineShowUsage(showUsage)
-        SharedDataStore.shared.saveStatuslineShowProgressBar(showProgressBar)
-        SharedDataStore.shared.saveStatuslineShowResetTime(showResetTime)
-        SharedDataStore.shared.saveStatuslineShowTimeMarker(showTimeMarker)
+        DataStore.shared.saveStatuslineShowDirectory(showDirectory)
+        DataStore.shared.saveStatuslineShowBranch(showBranch)
+        DataStore.shared.saveStatuslineShowUsage(showUsage)
+        DataStore.shared.saveStatuslineShowProgressBar(showProgressBar)
+        DataStore.shared.saveStatuslineShowResetTime(showResetTime)
+        DataStore.shared.saveStatuslineShowTimeMarker(showTimeMarker)
 
         do {
             // Install scripts to ~/.claude/

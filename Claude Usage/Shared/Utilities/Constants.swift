@@ -60,6 +60,15 @@ enum Constants {
 
         // Localization
         static let appLanguage = "appLanguage"
+        static let selectedLanguageCode = "selectedLanguageCode"
+
+        // Statusline component configuration (additional)
+        static let statuslineShowResetTime = "statuslineShowResetTime"
+        static let statuslineShowTimeMarker = "statuslineShowTimeMarker"
+
+        // Setup state
+        static let hasCompletedSetup = "hasCompletedSetup"
+        static let hasShownWizardOnce = "hasShownWizardOnce"
 
         // Overage & organization
         static let checkOverageLimitEnabled = "checkOverageLimitEnabled"

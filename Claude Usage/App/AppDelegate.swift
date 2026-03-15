@@ -44,26 +44,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             } else {
                 showSetupWizardManually()
                 // Mark that wizard has been shown once
-                SharedDataStore.shared.markWizardShown()
+                DataStore.shared.markWizardShown()
             }
         }
 
         // Track first launch date for GitHub star prompt
-        if SharedDataStore.shared.loadFirstLaunchDate() == nil {
-            SharedDataStore.shared.saveFirstLaunchDate(Date())
+        if DataStore.shared.loadFirstLaunchDate() == nil {
+            DataStore.shared.saveFirstLaunchDate(Date())
         }
 
         // TESTING: Check for launch argument to force GitHub star prompt
         if CommandLine.arguments.contains("--show-github-prompt") {
-            SharedDataStore.shared.resetGitHubStarPromptForTesting()
-            SharedDataStore.shared.saveFirstLaunchDate(Date().addingTimeInterval(-2 * 24 * 60 * 60))
+            DataStore.shared.resetGitHubStarPromptForTesting()
+            DataStore.shared.saveFirstLaunchDate(Date().addingTimeInterval(-2 * 24 * 60 * 60))
         }
 
         // Check if we should show GitHub star prompt (with a slight delay to not interrupt app startup)
         Task { [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(2.0 * 1_000_000_000))
             await MainActor.run {
-                if SharedDataStore.shared.shouldShowGitHubStarPrompt() {
+                if DataStore.shared.shouldShowGitHubStarPrompt() {
                     self?.menuBarManager?.showGitHubStarPrompt()
                 }
             }
@@ -82,7 +82,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func shouldShowSetupWizard() async -> Bool {
         // FORCE SHOW wizard on very first app launch (one-time)
         // This ensures users see the migration option if they have old data
-        if !SharedDataStore.shared.hasShownWizardOnce() {
+        if !DataStore.shared.hasShownWizardOnce() {
             LoggingService.shared.log("AppDelegate: First launch - forcing wizard to show migration option")
             return true
         }

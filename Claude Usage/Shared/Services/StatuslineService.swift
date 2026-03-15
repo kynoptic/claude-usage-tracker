@@ -538,7 +538,7 @@ GREY_THRESHOLD=\(Int(greyThreshold * 100))
     func updateScriptsIfInstalled() throws {
         guard isInstalled else { return }
         try installScripts(injectSessionKey: true)
-        let store = SharedDataStore.shared
+        let store = DataStore.shared
         try updateConfiguration(
             showDirectory: store.loadStatuslineShowDirectory(),
             showBranch: store.loadStatuslineShowBranch(),
@@ -552,10 +552,10 @@ GREY_THRESHOLD=\(Int(greyThreshold * 100))
     }
 
     /// Updates the grey zone setting in the statusline config file if statusline is installed.
-    /// Reads all other statusline settings from SharedDataStore to preserve them.
+    /// Reads all other statusline settings from DataStore to preserve them.
     func updateGreyZoneIfInstalled(_ show: Bool) throws {
         guard isInstalled else { return }
-        let store = SharedDataStore.shared
+        let store = DataStore.shared
         try updateConfiguration(
             showDirectory: store.loadStatuslineShowDirectory(),
             showBranch: store.loadStatuslineShowBranch(),

@@ -170,22 +170,109 @@ final class DataStore: StorageProvider {
         return defaults.bool(forKey: Constants.UserDefaultsKeys.debugAPILoggingEnabled)
     }
 
+    // MARK: - Language & Localization
+
+    /// Saves the selected language code
+    func saveLanguageCode(_ code: String) {
+        defaults.set(code, forKey: Constants.UserDefaultsKeys.selectedLanguageCode)
+    }
+
+    /// Loads the selected language code
+    func loadLanguageCode() -> String? {
+        return defaults.string(forKey: Constants.UserDefaultsKeys.selectedLanguageCode)
+    }
+
     // MARK: - Statusline Configuration
-    // NOTE: Statusline settings have been moved to SharedDataStore.swift
-    // as they are app-wide settings, not profile-specific.
-    // Use SharedDataStore.shared for statusline preferences.
+
+    /// Saves statusline show directory preference (defaults to true)
+    func saveStatuslineShowDirectory(_ show: Bool) {
+        defaults.set(show, forKey: Constants.UserDefaultsKeys.statuslineShowDirectory)
+    }
+
+    /// Loads statusline show directory preference (defaults to true)
+    func loadStatuslineShowDirectory() -> Bool {
+        if defaults.object(forKey: Constants.UserDefaultsKeys.statuslineShowDirectory) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.statuslineShowDirectory)
+    }
+
+    /// Saves statusline show branch preference (defaults to true)
+    func saveStatuslineShowBranch(_ show: Bool) {
+        defaults.set(show, forKey: Constants.UserDefaultsKeys.statuslineShowBranch)
+    }
+
+    /// Loads statusline show branch preference (defaults to true)
+    func loadStatuslineShowBranch() -> Bool {
+        if defaults.object(forKey: Constants.UserDefaultsKeys.statuslineShowBranch) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.statuslineShowBranch)
+    }
+
+    /// Saves statusline show usage preference (defaults to true)
+    func saveStatuslineShowUsage(_ show: Bool) {
+        defaults.set(show, forKey: Constants.UserDefaultsKeys.statuslineShowUsage)
+    }
+
+    /// Loads statusline show usage preference (defaults to true)
+    func loadStatuslineShowUsage() -> Bool {
+        if defaults.object(forKey: Constants.UserDefaultsKeys.statuslineShowUsage) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.statuslineShowUsage)
+    }
+
+    /// Saves statusline show progress bar preference (defaults to true)
+    func saveStatuslineShowProgressBar(_ show: Bool) {
+        defaults.set(show, forKey: Constants.UserDefaultsKeys.statuslineShowProgressBar)
+    }
+
+    /// Loads statusline show progress bar preference (defaults to true)
+    func loadStatuslineShowProgressBar() -> Bool {
+        if defaults.object(forKey: Constants.UserDefaultsKeys.statuslineShowProgressBar) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.statuslineShowProgressBar)
+    }
+
+    /// Saves statusline show reset time preference (defaults to true)
+    func saveStatuslineShowResetTime(_ show: Bool) {
+        defaults.set(show, forKey: Constants.UserDefaultsKeys.statuslineShowResetTime)
+    }
+
+    /// Loads statusline show reset time preference (defaults to true)
+    func loadStatuslineShowResetTime() -> Bool {
+        if defaults.object(forKey: Constants.UserDefaultsKeys.statuslineShowResetTime) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.statuslineShowResetTime)
+    }
+
+    /// Saves statusline show time marker preference (defaults to true)
+    func saveStatuslineShowTimeMarker(_ show: Bool) {
+        defaults.set(show, forKey: Constants.UserDefaultsKeys.statuslineShowTimeMarker)
+    }
+
+    /// Loads statusline show time marker preference (defaults to true)
+    func loadStatuslineShowTimeMarker() -> Bool {
+        if defaults.object(forKey: Constants.UserDefaultsKeys.statuslineShowTimeMarker) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.statuslineShowTimeMarker)
+    }
 
     // MARK: - Setup State
 
     /// Saves whether the user has completed the setup wizard
     func saveHasCompletedSetup(_ completed: Bool) {
-        defaults.set(completed, forKey: "hasCompletedSetup")
+        defaults.set(completed, forKey: Constants.UserDefaultsKeys.hasCompletedSetup)
     }
 
     /// Checks if the user has completed the setup wizard
     func hasCompletedSetup() -> Bool {
         // Check if flag is set
-        if defaults.bool(forKey: "hasCompletedSetup") {
+        if defaults.bool(forKey: Constants.UserDefaultsKeys.hasCompletedSetup) {
             return true
         }
 
@@ -200,6 +287,16 @@ final class DataStore: StorageProvider {
         }
 
         return false
+    }
+
+    /// Checks if the setup wizard has been shown at least once
+    func hasShownWizardOnce() -> Bool {
+        return defaults.bool(forKey: Constants.UserDefaultsKeys.hasShownWizardOnce)
+    }
+
+    /// Marks the setup wizard as having been shown
+    func markWizardShown() {
+        defaults.set(true, forKey: Constants.UserDefaultsKeys.hasShownWizardOnce)
     }
 
     // MARK: - GitHub Star Prompt Tracking
