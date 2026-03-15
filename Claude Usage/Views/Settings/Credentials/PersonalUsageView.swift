@@ -7,28 +7,6 @@
 
 import SwiftUI
 
-// MARK: - Wizard State Machine
-
-enum WizardStep: Int, Comparable {
-    case enterKey = 1
-    case selectOrg = 2
-    case confirm = 3
-
-    static func < (lhs: WizardStep, rhs: WizardStep) -> Bool {
-        lhs.rawValue < rhs.rawValue
-    }
-}
-
-struct WizardState {
-    var currentStep: WizardStep = .enterKey
-    var sessionKey: String = ""
-    var validationState: ValidationState = .idle
-    var testedOrganizations: [ClaudeAPIService.AccountInfo] = []
-    var selectedOrgId: String? = nil
-    var originalSessionKey: String? = nil
-    var originalOrgId: String? = nil
-}
-
 /// Claude.ai personal usage tracking (free tier)
 struct PersonalUsageView: View {
     @StateObject private var profileManager = ProfileManager.shared

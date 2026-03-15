@@ -1,32 +1,10 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Wizard State Machine
-
-enum SetupWizardStep: Int, Comparable {
-    case enterKey = 1
-    case selectOrg = 2
-    case confirm = 3
-
-    static func < (lhs: SetupWizardStep, rhs: SetupWizardStep) -> Bool {
-        lhs.rawValue < rhs.rawValue
-    }
-}
-
-struct SetupWizardState {
-    var currentStep: SetupWizardStep = .enterKey
-    var sessionKey: String = ""
-    var validationState: ValidationState = .idle
-    var testedOrganizations: [ClaudeAPIService.AccountInfo] = []
-    var selectedOrgId: String? = nil
-    var autoStartSessionEnabled: Bool = false
-    var showInstructions: Bool = false
-}
-
 /// Professional, native macOS setup wizard with 3-step flow
 struct SetupWizardView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var wizardState = SetupWizardState()
+    @State private var wizardState = WizardState()
     @State private var hasClaudeCodeCredentials = false
     @State private var isMigrating = false
     @State private var migrationMessage: String?
@@ -239,7 +217,7 @@ struct SetupWizardView: View {
 
 struct EnterKeyStepSetup: View {
     @Environment(\.dismiss) var dismiss
-    @Binding var wizardState: SetupWizardState
+    @Binding var wizardState: WizardState
     let apiService: ClaudeAPIService
 
     var body: some View {
@@ -400,7 +378,7 @@ struct EnterKeyStepSetup: View {
 // MARK: - Step 2: Select Organization
 
 struct SelectOrgStepSetup: View {
-    @Binding var wizardState: SetupWizardState
+    @Binding var wizardState: WizardState
 
     var body: some View {
         VStack(spacing: 0) {
@@ -489,7 +467,7 @@ struct SelectOrgStepSetup: View {
 // MARK: - Step 3: Confirm & Save
 
 struct ConfirmStepSetup: View {
-    @Binding var wizardState: SetupWizardState
+    @Binding var wizardState: WizardState
     let apiService: ClaudeAPIService
     let dismiss: DismissAction
     @State private var isSaving = false
