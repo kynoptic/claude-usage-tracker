@@ -538,7 +538,10 @@ class ClaudeAPIService: APIServiceProtocol {
     /// - Parameters:
     ///   - sessionKey: The Claude.ai session key for authentication
     ///   - organizationId: The organization ID to create the conversation under
-    func sendInitializationMessage(sessionKey: String, organizationId: String) async throws {
+    /// - Returns: The raw SSE response data from the completion endpoint, or `nil` if unavailable.
+    ///   The delete step is always attempted but non-fatal.
+    @discardableResult
+    func sendInitializationMessage(sessionKey: String, organizationId: String) async throws -> Data? {
         // Create a new conversation
         let conversationURL = try URLBuilder(baseURL: baseURL)
             .appendingPathComponents(["/organizations", organizationId, "/chat_conversations"])
@@ -596,7 +599,7 @@ class ClaudeAPIService: APIServiceProtocol {
         ]
         messageRequest.httpBody = try JSONSerialization.data(withJSONObject: messageBody)
 
-        let (_, messageResponse) = try await session.data(for: messageRequest)
+        let (messageData, messageResponse) = try await session.data(for: messageRequest)
 
         guard let messageHTTPResponse = messageResponse as? HTTPURLResponse else {
             throw AppError(
@@ -622,14 +625,12 @@ class ClaudeAPIService: APIServiceProtocol {
         // Attempt to delete, but don't fail if deletion fails
         // The session is already initialized, which is the primary goal
         do {
-            let (_, deleteResponse) = try await session.data(for: deleteRequest)
-            if let deleteHTTPResponse = deleteResponse as? HTTPURLResponse {
-                // Successfully deleted conversation - status code 200 or 204 expected
-                _ = deleteHTTPResponse.statusCode
-            }
+            _ = try await session.data(for: deleteRequest)
         } catch {
             // Silently ignore deletion errors - session is already initialized
         }
+
+        return messageData
     }
 
 }
