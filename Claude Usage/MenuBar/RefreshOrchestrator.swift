@@ -50,6 +50,16 @@ final class RefreshOrchestrator {
     ) async -> SingleProfileRefreshResult {
         var result = SingleProfileRefreshResult()
 
+        // Short-circuit if too many recent failures have opened the circuit breaker
+        if ErrorRecovery.shared.isCircuitOpen(for: .api) {
+            result.usageError = AppError(
+                code: .apiServiceUnavailable,
+                message: "Service temporarily unavailable — too many recent failures",
+                isRecoverable: true
+            )
+            return result
+        }
+
         // Resolve authentication from the profile
         let auth: ClaudeAPIService.AuthenticationType
         do {
