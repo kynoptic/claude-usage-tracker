@@ -38,6 +38,12 @@ init:
 	fi; \
 	echo "✓ 'github' remote configured"
 	@echo ""
+	@echo "Resolving SPM dependencies..."
+	@xcodebuild -resolvePackageDependencies \
+		-project "$(PROJECT)" \
+		-scheme "$(SCHEME)" \
+		> /dev/null 2>&1 && echo "✓ SPM dependencies resolved" || echo "⚠ SPM resolution failed — try opening Xcode once to resolve"
+	@echo ""
 	@echo "Installing pre-commit hooks..."
 	@pre-commit install --hook-type commit-msg > /dev/null 2>&1 && echo "✓ pre-commit hooks installed" || echo "⚠ pre-commit not found — run: pip install pre-commit"
 	@echo ""
