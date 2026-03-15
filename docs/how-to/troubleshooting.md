@@ -6,7 +6,7 @@ Common problems with Claude Usage Tracker and how to fix them.
 
 1. Verify your session key is valid in **Settings** → **Claude.AI**
 2. Confirm you're logged into `claude.ai` in your browser
-3. Try extracting a fresh session key (see [quick start](../../README.md#quick-start))
+3. Try extracting a fresh session key (see [getting started](../../README.md#getting-started))
 4. Ensure you have an active internet connection
 
 ## 403 / unauthorized errors

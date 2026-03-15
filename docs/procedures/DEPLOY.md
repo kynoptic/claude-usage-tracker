@@ -154,4 +154,4 @@ PNGs are written to `.screenshots/`. Open with: `open .screenshots/<name>.png`
 
 - [CLAUDE.md](../../CLAUDE.md) — Project instructions and build environment
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) — Contribution guidelines
-- [GitHub Actions Workflows](./.github/workflows/) — CI/CD automation
+- [GitHub Actions Workflows](../../.github/workflows/) — CI/CD automation
