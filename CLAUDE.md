@@ -31,7 +31,12 @@ Claude Usage/
     ├── Services/     # API, notifications, statusline (async/await)
     ├── Storage/      # DataStore (UserDefaults wrapper)
     ├── Extensions/   # Date, UserDefaults helpers
-    └── Utilities/    # Constants, FormatterHelper
+    ├── Utilities/    # Constants, FormatterHelper
+    ├── Components/   # Reusable SwiftUI components
+    ├── ErrorHandling/# Error types, presenter, logger, recovery
+    ├── Localization/ # LanguageManager, string resources
+    ├── Patterns/     # SingletonBase protocol
+    └── Protocols/    # Shared protocol definitions
 ```
 
 Business logic belongs in managers/services. Prefer `async/await` over completion handlers.
