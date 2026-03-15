@@ -26,12 +26,14 @@ final class AutoStartSessionService {
     private let apiService: ClaudeAPIService
     private let profileManager: ProfileManager
     private let notificationManager: NotificationManager
+    private let session: URLSession
 
     // Track last captured reset time per profile to prevent duplicate auto-starts
     private var lastCapturedResetTime: [UUID: Date] = [:]
 
     private init() {
-        self.apiService = ClaudeAPIService()
+        self.session = .shared
+        self.apiService = ClaudeAPIService(session: .shared)
         self.profileManager = ProfileManager.shared
         self.notificationManager = NotificationManager.shared
     }
@@ -274,7 +276,7 @@ final class AutoStartSessionService {
         ]
         conversationRequest.httpBody = try JSONSerialization.data(withJSONObject: conversationBody)
 
-        let (conversationData, conversationResponse) = try await URLSession.shared.data(for: conversationRequest)
+        let (conversationData, conversationResponse) = try await session.data(for: conversationRequest)
 
         guard let httpResponse = conversationResponse as? HTTPURLResponse,
               (httpResponse.statusCode == 200 || httpResponse.statusCode == 201) else {
@@ -304,7 +306,7 @@ final class AutoStartSessionService {
         ]
         messageRequest.httpBody = try JSONSerialization.data(withJSONObject: messageBody)
 
-        let (messageData, messageResponse) = try await URLSession.shared.data(for: messageRequest)
+        let (messageData, messageResponse) = try await session.data(for: messageRequest)
 
         guard let messageHTTPResponse = messageResponse as? HTTPURLResponse,
               messageHTTPResponse.statusCode == 200 else {
@@ -325,7 +327,7 @@ final class AutoStartSessionService {
 
         // Attempt to delete, but don't fail if deletion fails
         do {
-            _ = try await URLSession.shared.data(for: deleteRequest)
+            _ = try await session.data(for: deleteRequest)
         } catch {
             // Silently ignore deletion errors - session is already initialized
         }

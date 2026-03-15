@@ -17,14 +17,20 @@ class ClaudeAPIService: APIServiceProtocol {
     let sessionKeyValidator: SessionKeyValidator
     let baseURL = Constants.APIEndpoints.claudeBase
     let consoleBaseURL = Constants.APIEndpoints.consoleBase
+    private let session: URLSession
 
     // MARK: - Initialization
 
-    init(sessionKeyPath: URL? = nil, sessionKeyValidator: SessionKeyValidator = SessionKeyValidator()) {
+    init(
+        sessionKeyPath: URL? = nil,
+        sessionKeyValidator: SessionKeyValidator = SessionKeyValidator(),
+        session: URLSession = .shared
+    ) {
         // Default path: ~/.claude-session-key
         self.sessionKeyPath = sessionKeyPath ?? Constants.ClaudePaths.homeDirectory
             .appendingPathComponent(".claude-session-key")
         self.sessionKeyValidator = sessionKeyValidator
+        self.session = session
     }
 
     // MARK: - Organization ID Caching
@@ -63,7 +69,7 @@ class ClaudeAPIService: APIServiceProtocol {
 
             let (data, response): (Data, URLResponse)
             do {
-                (data, response) = try await URLSession.shared.data(for: request)
+                (data, response) = try await self.session.data(for: request)
             } catch {
                 // Network errors
                 let appError = AppError(
@@ -224,7 +230,7 @@ class ClaudeAPIService: APIServiceProtocol {
         request.httpMethod = "GET"
         request.timeoutInterval = 30
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AppError(
@@ -336,7 +342,7 @@ class ClaudeAPIService: APIServiceProtocol {
         request.httpMethod = "GET"
         request.timeoutInterval = 30
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AppError(
@@ -399,7 +405,7 @@ class ClaudeAPIService: APIServiceProtocol {
 
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await session.data(for: request)
         } catch {
             // Network-level errors
             LoggingService.shared.logAPIError(endpoint, error: error)
@@ -552,7 +558,7 @@ class ClaudeAPIService: APIServiceProtocol {
         ]
         conversationRequest.httpBody = try JSONSerialization.data(withJSONObject: conversationBody)
 
-        let (conversationData, conversationResponse) = try await URLSession.shared.data(for: conversationRequest)
+        let (conversationData, conversationResponse) = try await session.data(for: conversationRequest)
 
         guard let httpResponse = conversationResponse as? HTTPURLResponse else {
             throw AppError(
@@ -593,7 +599,7 @@ class ClaudeAPIService: APIServiceProtocol {
         ]
         messageRequest.httpBody = try JSONSerialization.data(withJSONObject: messageBody)
 
-        let (_, messageResponse) = try await URLSession.shared.data(for: messageRequest)
+        let (_, messageResponse) = try await session.data(for: messageRequest)
 
         guard let messageHTTPResponse = messageResponse as? HTTPURLResponse else {
             throw AppError(
@@ -619,7 +625,7 @@ class ClaudeAPIService: APIServiceProtocol {
         // Attempt to delete, but don't fail if deletion fails
         // The session is already initialized, which is the primary goal
         do {
-            let (_, deleteResponse) = try await URLSession.shared.data(for: deleteRequest)
+            let (_, deleteResponse) = try await session.data(for: deleteRequest)
             if let deleteHTTPResponse = deleteResponse as? HTTPURLResponse {
                 // Successfully deleted conversation - status code 200 or 204 expected
                 _ = deleteHTTPResponse.statusCode
