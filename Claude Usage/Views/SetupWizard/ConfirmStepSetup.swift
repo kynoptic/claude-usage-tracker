@@ -23,7 +23,7 @@ struct ConfirmStepSetup: View {
                             Text("wizard.session_key".localized)
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.secondary)
-                            Text(maskSessionKey(wizardState.sessionKey))
+                            Text(wizardState.sessionKey.maskedKey())
                                 .font(.system(size: 11, design: .monospaced))
                         }
 
@@ -156,10 +156,4 @@ struct ConfirmStepSetup: View {
         }
     }
 
-    private func maskSessionKey(_ key: String) -> String {
-        guard key.count > 20 else { return "•••••••••" }
-        let prefix = String(key.prefix(12))
-        let suffix = String(key.suffix(4))
-        return "\(prefix)•••••\(suffix)"
-    }
 }

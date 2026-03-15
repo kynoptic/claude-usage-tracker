@@ -57,7 +57,7 @@ struct APIBillingView: View {
                             .font(DesignTokens.Typography.bodyMedium)
 
                         if let creds = currentCredentials, let apiKey = creds.apiSessionKey {
-                            Text(maskKey(apiKey))
+                            Text(apiKey.maskedKey())
                                 .font(DesignTokens.Typography.captionMono)
                                 .foregroundColor(.secondary)
                         }
@@ -144,13 +144,6 @@ struct APIBillingView: View {
     private func loadCurrentCredentials() {
         guard let profile = profileManager.activeProfile else { return }
         currentCredentials = try? ProfileStore.shared.loadProfileCredentials(profile.id)
-    }
-
-    private func maskKey(_ key: String) -> String {
-        guard key.count > 20 else { return "•••••••••" }
-        let prefix = String(key.prefix(12))
-        let suffix = String(key.suffix(4))
-        return "\(prefix)•••••\(suffix)"
     }
 
     private func removeCredentials() {
@@ -463,7 +456,7 @@ struct APIConfirmStep: View {
                         Text("wizard.api_session_key".localized)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
-                        Text(maskSessionKey(wizardState.apiSessionKey))
+                        Text(wizardState.apiSessionKey.maskedKey())
                             .font(.system(size: 12, design: .monospaced))
                             .foregroundColor(.primary)
                     }
@@ -611,12 +604,6 @@ struct APIConfirmStep: View {
         }
     }
 
-    private func maskSessionKey(_ key: String) -> String {
-        guard key.count > 20 else { return "•••••••••" }
-        let prefix = String(key.prefix(12))
-        let suffix = String(key.suffix(4))
-        return "\(prefix)•••••\(suffix)"
-    }
 }
 
 // MARK: - Previews
