@@ -4,6 +4,22 @@ Engineering record — refactors, internal tooling, build changes, ADRs, depende
 
 ## [Unreleased]
 
+## [2.4.4] - 2026-03-15
+
+Architecture decomposition, thread safety hardening, and tooling additions.
+
+- `ClaudeAPIService` split into `+AuthBuilder` and `+ResponseParser` extensions — auth and parsing logic was coupled inside one 900-line class, making both untestable in isolation
+- `SetupWizardView`, `PopoverContentView`, and `MenuBarIconRenderer` each decomposed into focused subdirectory components — the monolithic files were 750–1 300 lines and could not be reviewed or tested without reading the whole class
+- `ProfileManager` update mutation extracted to a dedicated helper — reduces repetition across the three update call sites
+- `@MainActor` enforced on all singleton services per ADR-007; redundant `DispatchQueue.main.async` calls removed from `@MainActor` contexts where they were no-ops
+- `NSLock` replaces `bool` flag for profile-switching guard — eliminates a race window when two async paths enter `switchProfile` concurrently
+- `SessionHistoryStore` and `UsageHistoryStore` simplified to single concurrency model — the dual model added complexity with no isolation benefit in a `@MainActor`-constrained service
+- Makefile added with `build`, `build-release`, `test`, `deploy`, and `clean` targets — reproduces CI commands locally without consulting docs
+- `.type_baseline` added; `.markdownlint.json` added; pre-commit hooks configured for Conventional Commits enforcement
+- CI: Xcode path detection made dynamic — the hard-coded path broke silently across Xcode updates (minor version bumps changed the path)
+- ADR-007: Singleton pattern — `@MainActor` thread safety — see docs/decisions/ADR-007-singleton-pattern.md
+- `STORAGE.md` architecture guide added; `DEPLOY.md` deployment procedure added; changelog migrated to two-doc split (user-facing in CHANGELOG.md, engineering in DEVLOG.md)
+
 ## [2.4.3] - 2026-03-14
 
 MenuBarManager decomposition and commit quality tooling.

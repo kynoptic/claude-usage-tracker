@@ -4,6 +4,14 @@ User-facing changes — new capabilities, behavior changes, fixes that affected 
 
 ## [Unreleased]
 
+## [2.4.4] - 2026-03-15
+
+Wizard credential-save fix and internal architecture cleanup.
+
+### Fixed
+
+- Credentials entered in the Setup Wizard now save correctly — a routing bug prevented them from reaching storage on first-time setup
+
 ## [2.4.3] - 2026-03-14
 
 Improved rate-limit handling and error visibility in the popover.
