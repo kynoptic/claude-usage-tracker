@@ -78,12 +78,14 @@ If a rollback path for users is required, it can be implemented as an export-and
 ## Consequences
 
 **Positive:**
-- Credentials are protected by the Keychain's ACL; no other process can read them without user approval.
+
+- Credentials are protected by the Keychain's ACL. Without App Sandbox, processes running as the same user can still query Keychain items, but the attack surface is narrower than plaintext `UserDefaults` JSON (requires explicit Keychain API calls rather than a simple `defaults read`).
 - Deleting a profile removes all its credentials atomically.
 - `UserDefaults` no longer contains any sensitive material.
 - Opens the path to App Sandbox and notarization.
 
 **Negative:**
+
 - Profile deletion requires a Keychain delete call; if this is skipped (e.g. via direct `UserDefaults` manipulation), orphaned Keychain items accumulate.
 - Credential reads are now synchronous Security framework calls on `@MainActor`; latency is negligible for a menu bar app but worth monitoring if profile count grows large.
 - Migration adds a new launch-time pass and a new `UserDefaults` flag to track.
@@ -94,6 +96,6 @@ If a rollback path for users is required, it can be implemented as an export-and
 
 2. **Organization IDs:** `organizationId` and `apiOrganizationId` are not secret (they appear in API URLs), but storing them in the Keychain alongside the session keys simplifies the credential bundle and avoids a split-storage pattern. The alternative — keep org IDs in `UserDefaults` — reduces Keychain item count at the cost of a mixed-storage model. This should be decided before implementation.
 
-3. **`cliCredentialsJSON` size:** The CLI OAuth JSON blob may be large (full token response). Keychain items have a practical limit around 4 KB for the data field. Confirm the JSON stays under this limit in production; if not, store a file path and protect the file with POSIX permissions instead.
+3. **`cliCredentialsJSON` size:** The CLI OAuth JSON blob may be large (full token response). Keychain generic-password items support up to ~1 MB of data in modern macOS, but very large items affect Keychain performance. Measure the actual JSON size in production; if it consistently exceeds a few KB, store a file path in the Keychain and protect the file with POSIX permissions instead.
 
 4. **Keychain prompts without App Sandbox:** Without a sandbox entitlement, the app reads its own Keychain items silently. Once a sandbox entitlement is added, the first read triggers a user prompt. UX review is needed before flipping that switch.
