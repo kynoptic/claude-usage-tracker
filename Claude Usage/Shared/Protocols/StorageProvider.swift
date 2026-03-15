@@ -82,6 +82,4 @@ protocol StorageProvider {
 
     func saveNeverShowGitHubPrompt(_ neverShow: Bool)
     func loadNeverShowGitHubPrompt() -> Bool
-
-    func shouldShowGitHubStarPrompt() -> Bool
 }

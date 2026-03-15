@@ -7,6 +7,45 @@
 
 import Foundation
 
+/// Menu bar icon style options
+enum MenuBarIconStyle: String, CaseIterable, Codable {
+    case battery
+    case progressBar
+    case percentageOnly
+    case icon
+    case compact
+
+    var displayName: String {
+        switch self {
+        case .battery:
+            return "Battery (Classic)"
+        case .progressBar:
+            return "Progress Bar"
+        case .percentageOnly:
+            return "Percentage"
+        case .icon:
+            return "Icon with Bar"
+        case .compact:
+            return "Compact"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .battery:
+            return "Original battery-style bar with Claude text below"
+        case .progressBar:
+            return "Clean horizontal progress bar only"
+        case .percentageOnly:
+            return "Just the percentage in color-coded text"
+        case .icon:
+            return "Circular ring with progress indicator"
+        case .compact:
+            return "Minimalist dot indicator"
+        }
+    }
+}
+
 /// Types of metrics that can be displayed in the menu bar
 enum MenuBarMetricType: String, Codable, CaseIterable, Identifiable {
     case session

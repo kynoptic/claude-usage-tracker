@@ -1,44 +1,5 @@
 import Foundation
 
-/// Menu bar icon style options
-enum MenuBarIconStyle: String, CaseIterable, Codable {
-    case battery
-    case progressBar
-    case percentageOnly
-    case icon
-    case compact
-
-    var displayName: String {
-        switch self {
-        case .battery:
-            return "Battery (Classic)"
-        case .progressBar:
-            return "Progress Bar"
-        case .percentageOnly:
-            return "Percentage"
-        case .icon:
-            return "Icon with Bar"
-        case .compact:
-            return "Compact"
-        }
-    }
-
-    var description: String {
-        switch self {
-        case .battery:
-            return "Original battery-style bar with Claude text below"
-        case .progressBar:
-            return "Clean horizontal progress bar only"
-        case .percentageOnly:
-            return "Just the percentage in color-coded text"
-        case .icon:
-            return "Circular ring with progress indicator"
-        case .compact:
-            return "Minimalist dot indicator"
-        }
-    }
-}
-
 /// Manages shared data storage using standard UserDefaults (app container)
 @MainActor
 final class DataStore: StorageProvider {
@@ -339,48 +300,6 @@ final class DataStore: StorageProvider {
     /// Loads the user's preference to never show GitHub prompt
     func loadNeverShowGitHubPrompt() -> Bool {
         return defaults.bool(forKey: Constants.UserDefaultsKeys.neverShowGitHubPrompt)
-    }
-
-    /// Determines whether the GitHub star prompt should be shown
-    /// Returns true if all conditions are met:
-    /// - User hasn't opted out with "Don't ask again"
-    /// - User hasn't already starred the repo
-    /// - Either: 1+ days since first launch (never shown before), OR 10+ days since last shown
-    func shouldShowGitHubStarPrompt() -> Bool {
-        // Don't show if user said "don't ask again"
-        if loadNeverShowGitHubPrompt() {
-            return false
-        }
-
-        // Don't show if user already starred
-        if loadHasStarredGitHub() {
-            return false
-        }
-
-        let now = Date()
-
-        // Check if we have a first launch date
-        guard let firstLaunch = loadFirstLaunchDate() else {
-            // If no first launch date, save it now and don't show prompt yet
-            saveFirstLaunchDate(now)
-            return false
-        }
-
-        // Check if it's been at least 1 day since first launch
-        let timeSinceFirstLaunch = now.timeIntervalSince(firstLaunch)
-        if timeSinceFirstLaunch < Constants.GitHubPromptTiming.initialDelay {
-            return false
-        }
-
-        // Check if we've ever shown the prompt before
-        guard let lastPrompt = loadLastGitHubStarPromptDate() else {
-            // Never shown before, and it's been 1+ days since first launch
-            return true
-        }
-
-        // Has been shown before - check if enough time has passed for a reminder
-        let timeSinceLastPrompt = now.timeIntervalSince(lastPrompt)
-        return timeSinceLastPrompt >= Constants.GitHubPromptTiming.reminderInterval
     }
 
     // MARK: - API Usage Tracking

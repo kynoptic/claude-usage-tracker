@@ -63,7 +63,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         Task { [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(2.0 * 1_000_000_000))
             await MainActor.run {
-                if DataStore.shared.shouldShowGitHubStarPrompt() {
+                if GitHubStarPromptManager.shared.shouldShowGitHubStarPrompt() {
                     self?.menuBarManager?.showGitHubStarPrompt()
                 }
             }
