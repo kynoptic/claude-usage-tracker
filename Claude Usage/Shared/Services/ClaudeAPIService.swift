@@ -273,7 +273,9 @@ class ClaudeAPIService: APIServiceProtocol {
         return try parseUsageResponse(data)
     }
 
-    /// Fetches usage data using a resolved authentication type
+    /// Fetches usage data using a resolved authentication type.
+    ///
+    /// Coordinates between session-based, OAuth, and fallback auth flows.
     /// - Parameters:
     ///   - auth: The authentication method (resolved by the caller)
     ///   - storedOrgId: The stored organization ID for session-based auth (optional)
@@ -288,72 +290,20 @@ class ClaudeAPIService: APIServiceProtocol {
     ) async throws -> (usage: ClaudeUsage, newlyFetchedOrgId: String?) {
         switch auth {
         case .claudeAISession(let sessionKey):
-            // Use existing claude.ai flow
-            let (orgId, isNewlyFetched) = try await fetchOrganizationId(sessionKey: sessionKey, storedOrgId: storedOrgId)
-
-            async let usageDataTask = performRequest(endpoint: "/organizations/\(orgId)/usage", sessionKey: sessionKey)
-
-            async let overageDataTask: Data? = checkOverageLimitEnabled ? performRequest(endpoint: "/organizations/\(orgId)/overage_spend_limit", sessionKey: sessionKey) : nil
-
-            let usageData = try await usageDataTask
-            var claudeUsage = try parseUsageResponse(usageData)
-
-            if checkOverageLimitEnabled,
-               let data = try? await overageDataTask,
-               let overage = try? JSONDecoder().decode(OverageSpendLimitResponse.self, from: data),
-               overage.isEnabled == true {
-                claudeUsage.costUsed = overage.usedCredits
-                claudeUsage.costLimit = overage.monthlyCreditLimit
-                claudeUsage.costCurrency = overage.currency
-            }
-
-            return (claudeUsage, isNewlyFetched ? orgId : nil)
+            return try await fetchUsageDataViaSession(
+                sessionKey: sessionKey,
+                storedOrgId: storedOrgId,
+                checkOverageLimitEnabled: checkOverageLimitEnabled
+            )
 
         case .cliOAuth:
-            // Use OAuth endpoint (no organization ID needed)
-            LoggingService.shared.log("ClaudeAPIService: Fetching usage via OAuth endpoint")
-
-            guard let url = URL(string: Constants.APIEndpoints.oauthUsage) else {
-                throw AppError(
-                    code: .urlMalformed,
-                    message: "Invalid OAuth usage endpoint",
-                    isRecoverable: false
-                )
-            }
-
-            var request = buildAuthenticatedRequest(url: url, auth: auth)
-            request.httpMethod = "GET"
-            request.timeoutInterval = 30
-
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw AppError(
-                    code: .apiInvalidResponse,
-                    message: "Invalid response from OAuth endpoint",
-                    isRecoverable: true
-                )
-            }
-
-            guard httpResponse.statusCode == 200 else {
-                // On 429, fall back to the claude.ai session key endpoint if one is available.
-                // That endpoint has more lenient rate limits and is what the statusline uses.
-                if httpResponse.statusCode == 429,
-                   let sessionKey = sessionKeyFallback,
-                   (try? sessionKeyValidator.validate(sessionKey)) != nil {
-                    LoggingService.shared.log("ClaudeAPIService: OAuth rate limited — falling back to claude.ai session endpoint")
-                    let (orgId, isNewlyFetched) = try await fetchOrganizationId(sessionKey: sessionKey, storedOrgId: storedOrgId)
-                    let usageData = try await performRequest(endpoint: "/organizations/\(orgId)/usage", sessionKey: sessionKey)
-                    let usage = try parseUsageResponse(usageData)
-                    return (usage, isNewlyFetched ? orgId : nil)
-                }
-                throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth authentication failed", httpResponse: httpResponse)
-            }
-
-            return (try parseUsageResponse(data), nil)
+            return try await fetchUsageDataViaOAuth(
+                auth: auth,
+                storedOrgId: storedOrgId,
+                sessionKeyFallback: sessionKeyFallback
+            )
 
         case .consoleAPISession:
-            // Console API is for billing/credits only, not usage data
             throw AppError(
                 code: .sessionKeyNotFound,
                 message: "No valid credentials for usage data",
@@ -362,6 +312,107 @@ class ClaudeAPIService: APIServiceProtocol {
                 recoverySuggestion: "Please add a claude.ai session key or sync your CLI account"
             )
         }
+    }
+
+    /// Fetches usage via the claude.ai session-key endpoint.
+    ///
+    /// Resolves the organization ID (using cached or freshly-fetched value), then
+    /// fetches usage and optionally overage-limit data in parallel.
+    private func fetchUsageDataViaSession(
+        sessionKey: String,
+        storedOrgId: String?,
+        checkOverageLimitEnabled: Bool
+    ) async throws -> (usage: ClaudeUsage, newlyFetchedOrgId: String?) {
+        let (orgId, isNewlyFetched) = try await fetchOrganizationId(sessionKey: sessionKey, storedOrgId: storedOrgId)
+
+        async let usageDataTask = performRequest(endpoint: "/organizations/\(orgId)/usage", sessionKey: sessionKey)
+
+        async let overageDataTask: Data? = checkOverageLimitEnabled ? performRequest(endpoint: "/organizations/\(orgId)/overage_spend_limit", sessionKey: sessionKey) : nil
+
+        let usageData = try await usageDataTask
+        var claudeUsage = try parseUsageResponse(usageData)
+
+        if checkOverageLimitEnabled,
+           let data = try? await overageDataTask,
+           let overage = try? JSONDecoder().decode(OverageSpendLimitResponse.self, from: data),
+           overage.isEnabled == true {
+            claudeUsage.costUsed = overage.usedCredits
+            claudeUsage.costLimit = overage.monthlyCreditLimit
+            claudeUsage.costCurrency = overage.currency
+        }
+
+        return (claudeUsage, isNewlyFetched ? orgId : nil)
+    }
+
+    /// Fetches usage via the CLI OAuth endpoint.
+    ///
+    /// On HTTP 429 (rate limit), falls back to the session-key endpoint if a
+    /// valid `sessionKeyFallback` is available, since that endpoint has more
+    /// lenient rate limits.
+    private func fetchUsageDataViaOAuth(
+        auth: AuthenticationType,
+        storedOrgId: String?,
+        sessionKeyFallback: String?
+    ) async throws -> (usage: ClaudeUsage, newlyFetchedOrgId: String?) {
+        LoggingService.shared.log("ClaudeAPIService: Fetching usage via OAuth endpoint")
+
+        guard let url = URL(string: Constants.APIEndpoints.oauthUsage) else {
+            throw AppError(
+                code: .urlMalformed,
+                message: "Invalid OAuth usage endpoint",
+                isRecoverable: false
+            )
+        }
+
+        var request = buildAuthenticatedRequest(url: url, auth: auth)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 30
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AppError(
+                code: .apiInvalidResponse,
+                message: "Invalid response from OAuth endpoint",
+                isRecoverable: true
+            )
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            if let result = try await fetchUsageDataWithSessionFallback(
+                statusCode: httpResponse.statusCode,
+                sessionKeyFallback: sessionKeyFallback,
+                storedOrgId: storedOrgId
+            ) {
+                return result
+            }
+            throw oauthError(statusCode: httpResponse.statusCode, data: data, context: "OAuth authentication failed", httpResponse: httpResponse)
+        }
+
+        return (try parseUsageResponse(data), nil)
+    }
+
+    /// Falls back to session-key auth when OAuth returns 429.
+    ///
+    /// Returns `nil` when fallback is not applicable (non-429 status or no valid
+    /// session key), signalling the caller to throw the original error.
+    private func fetchUsageDataWithSessionFallback(
+        statusCode: Int,
+        sessionKeyFallback: String?,
+        storedOrgId: String?
+    ) async throws -> (usage: ClaudeUsage, newlyFetchedOrgId: String?)? {
+        guard statusCode == 429,
+              let sessionKey = sessionKeyFallback,
+              (try? sessionKeyValidator.validate(sessionKey)) != nil else {
+            return nil
+        }
+
+        LoggingService.shared.log("ClaudeAPIService: OAuth rate limited — falling back to claude.ai session endpoint")
+        return try await fetchUsageDataViaSession(
+            sessionKey: sessionKey,
+            storedOrgId: storedOrgId,
+            checkOverageLimitEnabled: false
+        )
     }
 
     private func performRequest(endpoint: String, sessionKey: String) async throws -> Data {
