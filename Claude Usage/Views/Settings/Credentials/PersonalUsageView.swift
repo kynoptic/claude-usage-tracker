@@ -80,7 +80,12 @@ struct PersonalUsageView: View {
                     case .enterKey:
                         EnterKeyStep(wizardState: $wizardState, apiService: apiService)
                     case .selectOrg:
-                        SelectOrgStep(wizardState: $wizardState)
+                        SelectOrgStepView(
+                            organizations: wizardState.testedOrganizations,
+                            selectedId: $wizardState.selectedOrgId,
+                            onBack: { wizardState.currentStep = .enterKey },
+                            onNext: { wizardState.currentStep = .confirm }
+                        )
                     case .confirm:
                         ConfirmStep(
                             wizardState: $wizardState,
@@ -289,132 +294,6 @@ struct EnterKeyStep: View {
                     let errorMessage = "\(appError.message)\n\nError Code: \(appError.code.rawValue)"
                     wizardState.validationState = .error(errorMessage)
                 }
-            }
-        }
-    }
-}
-
-// MARK: - Step 2: Select Organization
-
-struct SelectOrgStep: View {
-    @Binding var wizardState: WizardState
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("wizard.select_organization".localized)
-                    .font(.system(size: 13, weight: .medium))
-                Text("wizard.choose_organization".localized)
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
-
-            // Balanced organization list
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(wizardState.testedOrganizations, id: \.uuid) { org in
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            wizardState.selectedOrgId = org.uuid
-                        }
-                    }) {
-                        HStack(spacing: 10) {
-                            // Radio button
-                            ZStack {
-                                Circle()
-                                    .strokeBorder(
-                                        wizardState.selectedOrgId == org.uuid
-                                            ? Color.accentColor
-                                            : Color.secondary.opacity(0.3),
-                                        lineWidth: 1.5
-                                    )
-                                    .frame(width: 16, height: 16)
-
-                                if wizardState.selectedOrgId == org.uuid {
-                                    Circle()
-                                        .fill(Color.accentColor)
-                                        .frame(width: 8, height: 8)
-                                }
-                            }
-
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(org.name)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.primary)
-                                Text(org.uuid)
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
-
-                            Spacer()
-
-                            if wizardState.selectedOrgId == org.uuid {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                        .padding(10)
-                        .background(
-                            wizardState.selectedOrgId == org.uuid
-                                ? Color.accentColor.opacity(0.06)
-                                : Color(nsColor: .controlBackgroundColor).opacity(0.3)
-                        )
-                        .cornerRadius(6)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(
-                                    wizardState.selectedOrgId == org.uuid
-                                        ? Color.accentColor.opacity(0.3)
-                                        : Color.secondary.opacity(0.15),
-                                    lineWidth: 1
-                                )
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            // Navigation buttons
-            HStack(spacing: 10) {
-                Button(action: {
-                    withAnimation {
-                        wizardState.currentStep = .enterKey
-                    }
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 11))
-                        Text("common.back".localized)
-                            .font(.system(size: 12))
-                    }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
-
-                Spacer()
-
-                Button(action: {
-                    withAnimation {
-                        wizardState.currentStep = .confirm
-                    }
-                }) {
-                    HStack(spacing: 6) {
-                        Text("common.next".localized)
-                            .font(.system(size: 12))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11))
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
-                .disabled(wizardState.selectedOrgId == nil)
-            }
-        }
-        .onAppear {
-            if wizardState.selectedOrgId == nil,
-               let firstOrg = wizardState.testedOrganizations.first {
-                wizardState.selectedOrgId = firstOrg.uuid
             }
         }
     }
