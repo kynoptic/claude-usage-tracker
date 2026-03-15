@@ -9,7 +9,7 @@ import Foundation
 
 /// Manages storage and retrieval of profiles and profile-related data
 @MainActor
-class ProfileStore {
+final class ProfileStore {
     static let shared = ProfileStore()
 
     private let defaults: UserDefaults

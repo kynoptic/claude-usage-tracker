@@ -9,7 +9,7 @@ import Foundation
 
 /// Handles data migration from App Group container to standard container
 @MainActor
-class MigrationService {
+final class MigrationService {
     static let shared = MigrationService()
 
     private init() {}
@@ -51,9 +51,6 @@ class MigrationService {
             UserDefaults.standard.set(value, forKey: key)
         }
 
-        // Synchronize to ensure data is written
-        UserDefaults.standard.synchronize()
-
         // Mark migration as complete
         UserDefaults.standard.set(true, forKey: migrationKey)
 
@@ -73,9 +70,6 @@ class MigrationService {
         for key in allKeys {
             UserDefaults.standard.removeObject(forKey: key)
         }
-
-        // Synchronize
-        UserDefaults.standard.synchronize()
 
         LoggingService.shared.log("MigrationService: ✅ App data reset complete (\(allKeys.count) keys removed)")
     }

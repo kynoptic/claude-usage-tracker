@@ -41,7 +41,7 @@ enum MenuBarIconStyle: String, CaseIterable, Codable {
 
 /// Manages shared data storage between app and widgets using App Groups
 @MainActor
-class DataStore: StorageProvider {
+final class DataStore: StorageProvider {
     static let shared = DataStore()
 
     private let defaults: UserDefaults

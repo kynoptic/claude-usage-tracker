@@ -9,7 +9,7 @@ import Foundation
 
 /// Intelligent retry system for network and API operations
 @MainActor
-class ErrorRecovery {
+final class ErrorRecovery {
 
     static let shared = ErrorRecovery()
 

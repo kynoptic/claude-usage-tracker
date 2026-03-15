@@ -9,7 +9,7 @@ import Foundation
 
 /// Centralized error logging system
 @MainActor
-class ErrorLogger {
+final class ErrorLogger {
 
     static let shared = ErrorLogger()
 

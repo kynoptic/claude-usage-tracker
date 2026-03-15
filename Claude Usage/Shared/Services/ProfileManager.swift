@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 @MainActor
-class ProfileManager: ObservableObject {
+final class ProfileManager: ObservableObject {
     static let shared = ProfileManager()
 
     @Published var profiles: [Profile] = []
@@ -20,8 +20,6 @@ class ProfileManager: ObservableObject {
 
     private let profileStore = ProfileStore.shared
     private let cliSyncService = ClaudeCodeSyncService.shared
-
-    private let switchLock = NSLock()
 
     private init() {}
 
@@ -167,11 +165,12 @@ class ProfileManager: ObservableObject {
     // MARK: - Profile Activation (Centralized)
 
     func activateProfile(_ id: UUID) async {
-        guard switchLock.try() else {
+        guard !isSwitchingProfile else {
             LoggingService.shared.log("Profile switch already in progress, ignoring")
             return
         }
-        defer { switchLock.unlock() }
+        isSwitchingProfile = true
+        defer { isSwitchingProfile = false }
 
         guard let profile = profiles.first(where: { $0.id == id }) else {
             LoggingService.shared.log("Profile not found: \(id)")
@@ -181,11 +180,6 @@ class ProfileManager: ObservableObject {
         if activeProfile?.id == id {
             LoggingService.shared.log("Profile already active: \(profile.name)")
             return
-        }
-
-        isSwitchingProfile = true
-        defer {
-            isSwitchingProfile = false
         }
 
         LoggingService.shared.log("Switching to profile: \(profile.name)")

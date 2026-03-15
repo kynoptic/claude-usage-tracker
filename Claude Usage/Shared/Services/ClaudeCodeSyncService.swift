@@ -9,7 +9,7 @@ import Foundation
 import Security
 
 /// Manages synchronization of Claude Code CLI credentials between system Keychain and profiles
-class ClaudeCodeSyncService {
+final class ClaudeCodeSyncService {
     static let shared = ClaudeCodeSyncService()
 
     /// Maximum time to wait for a security subprocess before timing out

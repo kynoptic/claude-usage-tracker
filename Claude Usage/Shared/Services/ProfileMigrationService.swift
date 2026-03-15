@@ -9,7 +9,7 @@ import Foundation
 
 /// Handles migration from single-profile (v2.x) to multi-profile system (v3.0)
 @MainActor
-class ProfileMigrationService {
+final class ProfileMigrationService {
     static let shared = ProfileMigrationService()
 
     private let migrationKey = "didMigrateToProfilesV3"

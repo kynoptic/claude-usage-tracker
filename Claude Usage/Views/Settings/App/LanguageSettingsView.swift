@@ -93,9 +93,6 @@ struct LanguageSettingsView: View {
     }
 
     private func restartApp() {
-        // Save the current state
-        UserDefaults.standard.synchronize()
-
         // Get the app path
         let task = Process()
         task.launchPath = "/bin/sh"

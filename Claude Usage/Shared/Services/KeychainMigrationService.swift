@@ -9,7 +9,7 @@ import Foundation
 
 /// Service for migrating session keys from file-based and UserDefaults storage to Keychain
 @MainActor
-class KeychainMigrationService {
+final class KeychainMigrationService {
     static let shared = KeychainMigrationService()
 
     private init() {}

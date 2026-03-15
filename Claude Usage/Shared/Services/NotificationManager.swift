@@ -3,7 +3,7 @@ import UserNotifications
 
 /// Manages user notifications for usage threshold alerts
 @MainActor
-class NotificationManager: NotificationServiceProtocol {
+final class NotificationManager: NotificationServiceProtocol {
     static let shared = NotificationManager()
 
     // Track previous session percentage to detect resets

@@ -19,7 +19,7 @@ struct Contributor: Codable, Identifiable {
 
 /// Service for fetching GitHub repository contributors
 @MainActor
-class GitHubService {
+final class GitHubService {
     static let shared = GitHubService()
 
     private let repoOwner = "kynoptic"

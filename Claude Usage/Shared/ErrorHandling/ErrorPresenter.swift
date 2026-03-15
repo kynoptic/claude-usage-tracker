@@ -10,7 +10,7 @@ import AppKit
 
 /// Presents errors to users in a friendly way
 @MainActor
-class ErrorPresenter {
+final class ErrorPresenter {
 
     static let shared = ErrorPresenter()
 

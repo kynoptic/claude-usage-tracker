@@ -11,7 +11,7 @@ import Combine
 
 /// Manages app language selection and switching
 @MainActor
-class LanguageManager: ObservableObject {
+final class LanguageManager: ObservableObject {
     static let shared = LanguageManager()
 
     @Published var currentLanguage: SupportedLanguage {
@@ -38,7 +38,6 @@ class LanguageManager: ObservableObject {
     /// Apply the selected language to the app
     private func applyLanguage() {
         UserDefaults.standard.set([currentLanguage.code], forKey: "AppleLanguages")
-        UserDefaults.standard.synchronize()
 
         // Post notification for views that need to refresh
         NotificationCenter.default.post(name: .languageChanged, object: nil)
