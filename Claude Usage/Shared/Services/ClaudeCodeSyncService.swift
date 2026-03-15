@@ -12,27 +12,21 @@ import Security
 final class ClaudeCodeSyncService {
     static let shared = ClaudeCodeSyncService()
 
-    /// Maximum time to wait for a security subprocess before timing out
-    static let subprocessTimeout: TimeInterval = 10
+    private static let keychainService = "Claude Code-credentials"
+    private static var keychainAccount: String { NSUserName() }
 
     private init() {}
 
     // MARK: - System Keychain Access
 
-    /// Reads Claude Code credentials from system Keychain using security command.
-    /// Runs subprocess off the main actor with a per-process timeout.
+    /// Reads Claude Code credentials from system Keychain using Security framework.
     func readSystemCredentials() async throws -> String? {
-        try await runOffMainActor {
-            try self.readSystemCredentialsSync()
-        }
+        try readSystemCredentialsSync()
     }
 
-    /// Writes Claude Code credentials to system Keychain using security command.
-    /// Runs subprocesses off the main actor with a per-process timeout.
+    /// Writes Claude Code credentials to system Keychain using Security framework.
     func writeSystemCredentials(_ jsonData: String) async throws {
-        try await runOffMainActor {
-            try self.writeSystemCredentialsSync(jsonData)
-        }
+        try writeSystemCredentialsSync(jsonData)
     }
 
     // MARK: - Profile Sync Operations
@@ -111,131 +105,75 @@ final class ClaudeCodeSyncService {
 
     // MARK: - Private Methods
 
-    /// Runs a throwing closure off the main actor to avoid blocking UI
-    private func runOffMainActor<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
-        try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    let result = try work()
-                    continuation.resume(returning: result)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
-    }
-
-    /// Synchronous implementation of readSystemCredentials with timeout
+    /// Reads Claude Code credentials from the system Keychain using the Security framework.
     private func readSystemCredentialsSync() throws -> String? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        process.arguments = [
-            "find-generic-password",
-            "-s", "Claude Code-credentials",
-            "-a", NSUserName(),
-            "-w"  // Print password only
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.keychainService,
+            kSecAttrAccount as String: Self.keychainAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
 
-        try process.run()
-        try waitForProcess(process, timeout: Self.subprocessTimeout)
-
-        let exitCode = process.terminationStatus
-
-        if exitCode == 0 {
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            guard let value = String(data: outputData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+        if status == errSecSuccess {
+            guard let data = result as? Data,
+                  let value = String(data: data, encoding: .utf8) else {
                 throw ClaudeCodeError.invalidJSON
             }
             return value
-        } else if exitCode == 44 {
-            // Exit code 44 = item not found
+        } else if status == errSecItemNotFound {
             return nil
         } else {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-            LoggingService.shared.log("Failed to read keychain: \(errorString)")
-            throw ClaudeCodeError.keychainReadFailed(status: OSStatus(exitCode))
+            LoggingService.shared.log("Failed to read keychain: OSStatus \(status)")
+            throw ClaudeCodeError.keychainReadFailed(status: status)
         }
     }
 
-    /// Synchronous implementation of writeSystemCredentials with timeout
+    /// Writes Claude Code credentials to the system Keychain using the Security framework.
+    /// Attempts an update first; falls back to add if the item does not yet exist.
     private func writeSystemCredentialsSync(_ jsonData: String) throws {
-        LoggingService.shared.log("Writing credentials to keychain using security command")
+        LoggingService.shared.log("Writing credentials to keychain using Security framework")
 
-        // First, delete existing item
-        let deleteProcess = Process()
-        deleteProcess.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        deleteProcess.arguments = [
-            "delete-generic-password",
-            "-s", "Claude Code-credentials",
-            "-a", NSUserName()
+        guard let data = jsonData.data(using: .utf8) else {
+            throw ClaudeCodeError.invalidJSON
+        }
+
+        let searchQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Self.keychainService,
+            kSecAttrAccount as String: Self.keychainAccount
         ]
 
-        try deleteProcess.run()
-        try waitForProcess(deleteProcess, timeout: Self.subprocessTimeout)
+        let updateStatus = SecItemUpdate(searchQuery as CFDictionary, [kSecValueData as String: data] as CFDictionary)
 
-        let deleteExitCode = deleteProcess.terminationStatus
-        if deleteExitCode == 0 {
-            LoggingService.shared.log("Deleted existing keychain item")
-        } else {
-            LoggingService.shared.log("No existing keychain item to delete (or delete failed with code \(deleteExitCode))")
+        if updateStatus == errSecSuccess {
+            LoggingService.shared.log("Updated Claude Code system credentials successfully")
+            return
         }
 
-        // Add new item using security command
-        let addProcess = Process()
-        addProcess.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        addProcess.arguments = [
-            "add-generic-password",
-            "-s", "Claude Code-credentials",
-            "-a", NSUserName(),
-            "-w", jsonData,
-            "-U"  // Update if exists
-        ]
+        if updateStatus == errSecItemNotFound {
+            let addQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: Self.keychainService,
+                kSecAttrAccount as String: Self.keychainAccount,
+                kSecValueData as String: data,
+                kSecAttrSynchronizable as String: false
+            ]
 
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        addProcess.standardOutput = outputPipe
-        addProcess.standardError = errorPipe
+            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
 
-        try addProcess.run()
-        try waitForProcess(addProcess, timeout: Self.subprocessTimeout)
-
-        let exitCode = addProcess.terminationStatus
-
-        if exitCode == 0 {
-            LoggingService.shared.log("Added Claude Code system credentials successfully using security command")
-        } else {
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-            LoggingService.shared.log("Failed to add credentials: \(errorString)")
-            throw ClaudeCodeError.keychainWriteFailed(status: OSStatus(exitCode))
-        }
-    }
-
-    /// Waits for a subprocess to exit within the given timeout.
-    /// Terminates the process and throws `subprocessTimedOut` if the deadline is exceeded.
-    private func waitForProcess(_ process: Process, timeout: TimeInterval) throws {
-        let semaphore = DispatchSemaphore(value: 0)
-
-        // Observe termination asynchronously so we can enforce a deadline
-        process.terminationHandler = { _ in
-            semaphore.signal()
-        }
-
-        let result = semaphore.wait(timeout: .now() + timeout)
-        if result == .timedOut {
-            process.terminate()
-            // Give it a brief moment to clean up, then force-kill if still running
-            let cleanup = semaphore.wait(timeout: .now() + 1)
-            if cleanup == .timedOut && process.isRunning {
-                kill(process.processIdentifier, SIGKILL)
+            if addStatus == errSecSuccess {
+                LoggingService.shared.log("Added Claude Code system credentials successfully")
+            } else {
+                LoggingService.shared.log("Failed to add credentials: OSStatus \(addStatus)")
+                throw ClaudeCodeError.keychainWriteFailed(status: addStatus)
             }
-            throw ClaudeCodeError.subprocessTimedOut(seconds: timeout)
+        } else {
+            LoggingService.shared.log("Failed to update credentials: OSStatus \(updateStatus)")
+            throw ClaudeCodeError.keychainWriteFailed(status: updateStatus)
         }
     }
 }
@@ -248,7 +186,6 @@ enum ClaudeCodeError: LocalizedError {
     case keychainReadFailed(status: OSStatus)
     case keychainWriteFailed(status: OSStatus)
     case noProfileCredentials
-    case subprocessTimedOut(seconds: TimeInterval)
 
     var errorDescription: String? {
         switch self {
@@ -262,8 +199,6 @@ enum ClaudeCodeError: LocalizedError {
             return "Failed to write credentials to system Keychain (status: \(status))."
         case .noProfileCredentials:
             return "This profile has no synced CLI account."
-        case .subprocessTimedOut(let seconds):
-            return "Security subprocess timed out after \(Int(seconds)) seconds."
         }
     }
 }
