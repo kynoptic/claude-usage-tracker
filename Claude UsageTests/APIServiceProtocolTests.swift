@@ -17,7 +17,7 @@ final class APIServiceProtocolTests: XCTestCase {
         var stubbedOrganizations: [APIOrganization] = []
         var stubbedAPIUsage: APIUsage?
         var fetchUsageCallCount = 0
-        var lastAuthType: ClaudeAPIService.AuthenticationType?
+        var lastAuthType: AuthenticationType?
 
         func fetchOrganizationId(sessionKey: String, storedOrgId: String?) async throws -> (orgId: String, isNewlyFetched: Bool) {
             if let stored = storedOrgId {
@@ -37,7 +37,7 @@ final class APIServiceProtocolTests: XCTestCase {
         }
 
         func fetchUsageData(
-            auth: ClaudeAPIService.AuthenticationType,
+            auth: AuthenticationType,
             storedOrgId: String?,
             checkOverageLimitEnabled: Bool,
             sessionKeyFallback: String?
