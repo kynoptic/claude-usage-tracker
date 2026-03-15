@@ -2,6 +2,7 @@ import Cocoa
 import SwiftUI
 import Combine
 
+@MainActor
 class MenuBarManager: NSObject, ObservableObject {
     // MARK: - Properties
 

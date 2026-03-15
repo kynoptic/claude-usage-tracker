@@ -10,6 +10,7 @@ import ServiceManagement
 
 /// Manages the "Launch at Login" functionality using SMAppService
 /// Provides a simple interface to enable/disable automatic app startup on macOS
+@MainActor
 final class LaunchAtLoginManager {
     static let shared = LaunchAtLoginManager()
 

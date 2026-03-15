@@ -9,6 +9,7 @@ import SwiftUI
 import AppKit
 
 /// Presents errors to users in a friendly way
+@MainActor
 class ErrorPresenter {
 
     static let shared = ErrorPresenter()

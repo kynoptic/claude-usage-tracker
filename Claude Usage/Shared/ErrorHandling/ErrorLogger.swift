@@ -8,6 +8,7 @@
 import Foundation
 
 /// Centralized error logging system
+@MainActor
 class ErrorLogger {
 
     static let shared = ErrorLogger()

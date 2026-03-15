@@ -2,6 +2,7 @@ import Foundation
 import UserNotifications
 
 /// Manages user notifications for usage threshold alerts
+@MainActor
 class NotificationManager: NotificationServiceProtocol {
     static let shared = NotificationManager()
 

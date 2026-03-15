@@ -2,6 +2,7 @@ import Foundation
 
 /// Persists usage snapshots for burn-up chart rendering.
 /// Each metric maintains its own history, auto-pruned to the metric's window duration.
+@MainActor
 final class UsageHistoryStore {
 
     static let shared = UsageHistoryStore()

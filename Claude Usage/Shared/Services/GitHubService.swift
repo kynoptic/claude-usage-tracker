@@ -18,6 +18,7 @@ struct Contributor: Codable, Identifiable {
 }
 
 /// Service for fetching GitHub repository contributors
+@MainActor
 class GitHubService {
     static let shared = GitHubService()
 

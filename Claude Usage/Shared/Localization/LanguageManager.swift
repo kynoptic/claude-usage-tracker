@@ -10,6 +10,7 @@ import SwiftUI
 import Combine
 
 /// Manages app language selection and switching
+@MainActor
 class LanguageManager: ObservableObject {
     static let shared = LanguageManager()
 

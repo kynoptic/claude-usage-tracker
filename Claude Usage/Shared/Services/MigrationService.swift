@@ -8,6 +8,7 @@
 import Foundation
 
 /// Handles data migration from App Group container to standard container
+@MainActor
 class MigrationService {
     static let shared = MigrationService()
 

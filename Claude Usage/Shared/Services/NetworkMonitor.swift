@@ -10,6 +10,7 @@ import Network
 
 /// Monitors network connectivity using NWPathMonitor
 /// Provides callback when network becomes available
+@MainActor
 final class NetworkMonitor {
     static let shared = NetworkMonitor()
 
@@ -30,15 +31,11 @@ final class NetworkMonitor {
     func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
             guard let self = self else { return }
-
-            let wasConnected = self.isConnected
             let nowConnected = path.status == .satisfied
-
-            self.isConnected = nowConnected
-
-            // Only fire callback when transitioning from disconnected to connected
-            if nowConnected && !wasConnected {
-                DispatchQueue.main.async {
+            Task { @MainActor in
+                let wasConnected = self.isConnected
+                self.isConnected = nowConnected
+                if nowConnected && !wasConnected {
                     LoggingService.shared.logInfo("Network became available")
                     self.onNetworkAvailable?()
                 }
