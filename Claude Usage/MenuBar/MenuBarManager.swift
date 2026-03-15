@@ -58,7 +58,7 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // MARK: - Setup
 
-    /// Initialises the status-bar UI, popover, network monitor, and auto-refresh timer.
+    /// Initializes the status-bar UI, popover, network monitor, and auto-refresh timer.
     /// Call once during app launch after the manager is instantiated.
     func setup() {
         cachedIsDarkMode = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
