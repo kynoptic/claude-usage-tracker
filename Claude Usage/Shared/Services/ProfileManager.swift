@@ -332,21 +332,13 @@ final class ProfileManager: ObservableObject {
         try profileStore.saveProfileCredentials(profileId, credentials: credentials)
 
         // Update profile in memory
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].claudeSessionKey = credentials.claudeSessionKey
-            profiles[index].organizationId = credentials.organizationId
-            profiles[index].apiSessionKey = credentials.apiSessionKey
-            profiles[index].apiOrganizationId = credentials.apiOrganizationId
-            profiles[index].cliCredentialsJSON = credentials.cliCredentialsJSON
-            if let json = credentials.cliCredentialsJSON {
-                profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(json)
-            } else {
-                profiles[index].hasValidOAuthCredentials = false
-            }
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
+        updateProfile(profileId) { profile in
+            profile.claudeSessionKey = credentials.claudeSessionKey
+            profile.organizationId = credentials.organizationId
+            profile.apiSessionKey = credentials.apiSessionKey
+            profile.apiOrganizationId = credentials.apiOrganizationId
+            profile.cliCredentialsJSON = credentials.cliCredentialsJSON
+            profile.hasValidOAuthCredentials = credentials.cliCredentialsJSON.map { Profile.isValidOAuthJSON($0) } ?? false
         }
     }
 
@@ -408,21 +400,13 @@ final class ProfileManager: ObservableObject {
 
     /// Saves Claude usage data for a specific profile
     func saveClaudeUsage(_ usage: ClaudeUsage, for profileId: UUID) {
-        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
+        guard profiles.contains(where: { $0.id == profileId }) else {
             LoggingService.shared.logError("saveClaudeUsage: Profile not found with ID: \(profileId)")
             return
         }
-
-        profiles[index].claudeUsage = usage
-
-        // Update activeProfile reference if it's the same profile
-        if activeProfile?.id == profileId {
-            activeProfile = profiles[index]
-        }
-
-        // Save to persistent storage
-        profileStore.saveProfiles(profiles)
-        LoggingService.shared.log("Saved Claude usage for profile: \(profiles[index].name)")
+        updateProfile(profileId) { $0.claudeUsage = usage }
+        let name = profiles.first(where: { $0.id == profileId })?.name ?? profileId.uuidString
+        LoggingService.shared.log("Saved Claude usage for profile: \(name)")
     }
 
     /// Loads Claude usage data for a specific profile
@@ -432,21 +416,13 @@ final class ProfileManager: ObservableObject {
 
     /// Saves API usage data for a specific profile
     func saveAPIUsage(_ usage: APIUsage, for profileId: UUID) {
-        guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
+        guard profiles.contains(where: { $0.id == profileId }) else {
             LoggingService.shared.logError("saveAPIUsage: Profile not found with ID: \(profileId)")
             return
         }
-
-        profiles[index].apiUsage = usage
-
-        // Update activeProfile reference if it's the same profile
-        if activeProfile?.id == profileId {
-            activeProfile = profiles[index]
-        }
-
-        // Save to persistent storage
-        profileStore.saveProfiles(profiles)
-        LoggingService.shared.log("Saved API usage for profile: \(profiles[index].name)")
+        updateProfile(profileId) { $0.apiUsage = usage }
+        let name = profiles.first(where: { $0.id == profileId })?.name ?? profileId.uuidString
+        LoggingService.shared.log("Saved API usage for profile: \(name)")
     }
 
     /// Loads API usage data for a specific profile
@@ -458,96 +434,48 @@ final class ProfileManager: ObservableObject {
 
     /// Updates icon configuration for a profile
     func updateIconConfig(_ config: MenuBarIconConfiguration, for profileId: UUID) {
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].iconConfig = config
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
-
-            profileStore.saveProfiles(profiles)
-        }
+        updateProfile(profileId) { $0.iconConfig = config }
     }
 
     /// Updates refresh interval for a profile
     func updateRefreshInterval(_ interval: TimeInterval, for profileId: UUID) {
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].refreshInterval = interval
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
-
-            profileStore.saveProfiles(profiles)
-        }
+        updateProfile(profileId) { $0.refreshInterval = interval }
     }
 
     /// Updates auto-start session setting for a profile
     func updateAutoStartSessionEnabled(_ enabled: Bool, for profileId: UUID) {
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].autoStartSessionEnabled = enabled
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
-
-            profileStore.saveProfiles(profiles)
-        }
+        updateProfile(profileId) { $0.autoStartSessionEnabled = enabled }
     }
 
     /// Updates check overage limit setting for a profile
     func updateCheckOverageLimitEnabled(_ enabled: Bool, for profileId: UUID) {
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].checkOverageLimitEnabled = enabled
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
-
-            profileStore.saveProfiles(profiles)
-        }
+        updateProfile(profileId) { $0.checkOverageLimitEnabled = enabled }
     }
 
     /// Updates notification settings for a profile
     func updateNotificationSettings(_ settings: NotificationSettings, for profileId: UUID) {
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].notificationSettings = settings
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
-
-            profileStore.saveProfiles(profiles)
-        }
+        updateProfile(profileId) { $0.notificationSettings = settings }
     }
 
     /// Updates organization ID for a profile
     func updateOrganizationId(_ orgId: String?, for profileId: UUID) {
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].organizationId = orgId
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
-
-            profileStore.saveProfiles(profiles)
-        }
+        updateProfile(profileId) { $0.organizationId = orgId }
     }
 
     /// Updates API organization ID for a profile
     func updateAPIOrganizationId(_ orgId: String?, for profileId: UUID) {
-        if let index = profiles.firstIndex(where: { $0.id == profileId }) {
-            profiles[index].apiOrganizationId = orgId
-
-            if activeProfile?.id == profileId {
-                activeProfile = profiles[index]
-            }
-
-            profileStore.saveProfiles(profiles)
-        }
+        updateProfile(profileId) { $0.apiOrganizationId = orgId }
     }
 
-    // MARK: - Private Helpers
+    // MARK: - Private Methods
+
+    /// Encapsulates the repeated firstIndex → mutate → syncActiveProfile → save pattern.
+    private func updateProfile(_ id: UUID, mutate: (inout Profile) -> Void) {
+        guard let index = profiles.firstIndex(where: { $0.id == id }) else { return }
+        mutate(&profiles[index])
+        if activeProfile?.id == id { activeProfile = profiles[index] }
+        profileStore.saveProfiles(profiles)
+    }
 
     /// Syncs CLI credentials to default profile on first launch only
     private func syncCLICredentialsToDefaultProfile(_ profileId: UUID) async {
