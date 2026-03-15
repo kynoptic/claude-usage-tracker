@@ -10,7 +10,6 @@ final class UsageHistoryStore {
     // MARK: - Properties
 
     private let fileManager = FileManager.default
-    private let queue = DispatchQueue(label: "com.claudeusagetracker.history", qos: .utility)
     private var cache: [UsageMetric: [UsageSnapshot]] = [:]
     private var loaded = false
 
@@ -39,66 +38,50 @@ final class UsageHistoryStore {
 
     /// Record a new snapshot for a metric
     func record(_ percentage: Double, for metric: UsageMetric, at date: Date = Date()) {
-        queue.sync {
-            ensureLoaded()
-            guard shouldRecord(percentage, for: metric) else { return }
-            let snapshot = UsageSnapshot(date: date, percentage: percentage)
-            cache[metric, default: []].append(snapshot)
-            prune(metric: metric)
-        }
-        persistAsync(metric: metric)
+        ensureLoaded()
+        guard shouldRecord(percentage, for: metric) else { return }
+        let snapshot = UsageSnapshot(date: date, percentage: percentage)
+        cache[metric, default: []].append(snapshot)
+        prune(metric: metric)
+        persist(metric: metric)
     }
 
     /// Record all metrics from a usage update at once
     func recordAll(from usage: ClaudeUsage, at date: Date = Date()) {
-        var changed: [UsageMetric] = []
+        ensureLoaded()
 
-        queue.sync {
-            ensureLoaded()
+        let metrics: [(UsageMetric, Double)] = [
+            (.session, usage.sessionPercentage),
+            (.weekly, usage.weeklyPercentage),
+            (.opus, usage.opusWeeklyPercentage),
+            (.sonnet, usage.sonnetWeeklyPercentage),
+        ]
 
-            let metrics: [(UsageMetric, Double)] = [
-                (.session, usage.sessionPercentage),
-                (.weekly, usage.weeklyPercentage),
-                (.opus, usage.opusWeeklyPercentage),
-                (.sonnet, usage.sonnetWeeklyPercentage),
-            ]
-
-            for (metric, percentage) in metrics {
-                guard shouldRecord(percentage, for: metric) else { continue }
-                let snapshot = UsageSnapshot(date: date, percentage: percentage)
-                cache[metric, default: []].append(snapshot)
-                prune(metric: metric)
-                changed.append(metric)
-            }
-        }
-
-        // Persist only changed metrics, off the main thread
-        for metric in changed {
-            persistAsync(metric: metric)
+        for (metric, percentage) in metrics {
+            guard shouldRecord(percentage, for: metric) else { continue }
+            let snapshot = UsageSnapshot(date: date, percentage: percentage)
+            cache[metric, default: []].append(snapshot)
+            prune(metric: metric)
+            persist(metric: metric)
         }
     }
 
     /// Get snapshots for a metric, sorted by date ascending
     func snapshots(for metric: UsageMetric) -> [UsageSnapshot] {
-        queue.sync {
-            ensureLoaded()
-            return cache[metric] ?? []
-        }
+        ensureLoaded()
+        return cache[metric] ?? []
     }
 
-    /// Block until all pending writes complete (for testing)
-    func flush() {
-        queue.sync {}
-    }
+    /// No-op: retained for API compatibility. @MainActor serialises all access and
+    /// persistence is now synchronous, so there is nothing to flush.
+    func flush() {}
 
     /// Remove all history (for testing or reset)
     func clearAll() {
-        queue.sync {
-            cache = [:]
-            loaded = true
-            for metric in UsageMetric.allCases {
-                try? fileManager.removeItem(at: fileURL(for: metric))
-            }
+        cache = [:]
+        loaded = true
+        for metric in UsageMetric.allCases {
+            try? fileManager.removeItem(at: fileURL(for: metric))
         }
     }
 
@@ -155,21 +138,18 @@ final class UsageHistoryStore {
         return result
     }
 
-    /// Persist asynchronously to avoid blocking the main thread on file I/O.
-    /// Safe to read `cache` here: this runs on the same serial queue used by
-    /// record()/recordAll(), so mutations are always complete before this block executes.
-    private func persistAsync(metric: UsageMetric) {
-        queue.async { [self] in
-            let url = fileURL(for: metric)
-            do {
-                try fileManager.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
-                let encoder = JSONEncoder()
-                encoder.dateEncodingStrategy = .iso8601
-                let data = try encoder.encode(cache[metric] ?? [])
-                try data.write(to: url, options: .atomic)
-            } catch {
-                LoggingService.shared.logError("UsageHistoryStore: Failed to persist \(metric.rawValue): \(error)")
-            }
+    /// Persist the current cache for a metric synchronously.
+    /// @MainActor isolation serialises all access; no queue is needed.
+    private func persist(metric: UsageMetric) {
+        let url = fileURL(for: metric)
+        do {
+            try fileManager.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(cache[metric] ?? [])
+            try data.write(to: url, options: .atomic)
+        } catch {
+            LoggingService.shared.logError("UsageHistoryStore: Failed to persist \(metric.rawValue): \(error)")
         }
     }
 }
