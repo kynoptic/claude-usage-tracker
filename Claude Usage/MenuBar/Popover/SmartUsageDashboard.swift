@@ -9,7 +9,7 @@ struct SmartUsageDashboard: View {
     var lastSuccessfulFetch: Date?
     var lastRefreshError: AppError?
     var nextRetryDate: Date?
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @ObservedObject var viewModel: SmartUsageDashboardViewModel
 
     // Get the display mode from active profile's icon config

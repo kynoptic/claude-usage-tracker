@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct UpdatesSettingsView: View {
-    @StateObject private var updateManager = UpdateManager.shared
+    @ObservedObject var updateManager = UpdateManager.shared
     @State private var autoUpdateEnabled: Bool = true
 
     private var appVersion: String {

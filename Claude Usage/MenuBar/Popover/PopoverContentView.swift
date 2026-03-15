@@ -9,7 +9,7 @@ struct PopoverContentView: View {
 
     @State private var isRefreshing = false
     @State private var showInsights = false
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @StateObject private var dashboardViewModel = SmartUsageDashboardViewModel()
 
     // Computed properties for multi-profile mode support

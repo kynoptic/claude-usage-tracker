@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Claude.ai personal usage tracking (free tier)
 struct PersonalUsageView: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @State private var wizardState = WizardState()
     @State private var currentCredentials: ProfileCredentials?
     private let apiService = ClaudeAPIService()

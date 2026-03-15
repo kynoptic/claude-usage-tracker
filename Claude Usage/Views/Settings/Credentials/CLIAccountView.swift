@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CLIAccountView: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @State private var isSyncing = false
     @State private var syncError: String?
     @State private var cliAccountInfo: CLIAccountInfo?

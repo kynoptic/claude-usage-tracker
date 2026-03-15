@@ -10,7 +10,7 @@ import UserNotifications
 
 /// General profile settings: Refresh interval, Auto-start, Notifications
 struct GeneralSettingsView: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
 
     var body: some View {
         ScrollView {

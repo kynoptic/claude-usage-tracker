@@ -31,7 +31,7 @@ struct APIWizardState {
 
 /// API Console billing and credits tracking
 struct APIBillingView: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @State private var wizardState = APIWizardState()
     @State private var currentCredentials: ProfileCredentials?
 

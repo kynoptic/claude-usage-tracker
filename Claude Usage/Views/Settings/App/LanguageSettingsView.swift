@@ -9,7 +9,7 @@ import SwiftUI
 
 /// App-level language settings (not profile-specific)
 struct LanguageSettingsView: View {
-    @StateObject private var languageManager = LanguageManager.shared
+    @ObservedObject var languageManager = LanguageManager.shared
     @State private var showRestartAlert = false
     @State private var pendingLanguage: LanguageManager.SupportedLanguage?
 

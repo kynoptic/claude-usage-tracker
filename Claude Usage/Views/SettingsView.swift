@@ -4,7 +4,7 @@ import UserNotifications
 /// Professional, native macOS Settings interface with multi-profile support
 struct SettingsView: View {
     @State private var selectedSection: SettingsSection = .appearance
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
 
     var body: some View {
         HSplitView {
@@ -65,7 +65,7 @@ struct SettingsView: View {
 
 struct ProfileSectionContainer: View {
     @Binding var selectedSection: SettingsSection
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
 
     var profileSections: [SettingsSection] {
         SettingsSection.allCases.filter { $0.isProfileSetting && !$0.isCredential }
@@ -314,7 +314,7 @@ struct SidebarItem: View {
 
 struct ProfileCredentialCardsRow: View {
     @Binding var selectedSection: SettingsSection
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @State private var credentials: ProfileCredentials?
 
     var body: some View {
