@@ -18,6 +18,9 @@ enum Constants {
         static let statuslineShowUsage = "statuslineShowUsage"
         static let statuslineShowProgressBar = "statuslineShowProgressBar"
 
+        // Migration
+        static let hasMigratedFromAppGroup = "HasMigratedFromAppGroup"
+
         // GitHub star prompt tracking
         static let firstLaunchDate = "firstLaunchDate"
         static let lastGitHubStarPromptDate = "lastGitHubStarPromptDate"

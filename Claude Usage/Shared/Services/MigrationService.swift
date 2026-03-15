@@ -14,7 +14,7 @@ final class MigrationService {
 
     private init() {}
 
-    private let migrationKey = "HasMigratedFromAppGroup"
+    private let migrationKey = Constants.UserDefaultsKeys.hasMigratedFromAppGroup
 
     /// Checks if migration has already been completed
     func hasMigrated() -> Bool {

@@ -90,7 +90,7 @@ struct SetupWizardMigrationBanner: View {
     }
 
     private func skipMigration() {
-        UserDefaults.standard.set(true, forKey: "HasMigratedFromAppGroup")
+        UserDefaults.standard.set(true, forKey: Constants.UserDefaultsKeys.hasMigratedFromAppGroup)
         migrationMessage = "wizard.migration_skipped".localized
     }
 }
