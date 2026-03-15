@@ -1,6 +1,13 @@
 repos:
   - repo: local
     hooks:
+      - id: xcode-version
+        name: Validate Xcode 16.0+
+        language: script
+        entry: build-tools/quality-checks/check-xcode-version.sh
+        stages: [commit]
+        pass_filenames: false
+
       - id: commit-body-format
         name: Commit body bullet format
         language: script

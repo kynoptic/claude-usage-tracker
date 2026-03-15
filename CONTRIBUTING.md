@@ -315,21 +315,7 @@ Use descriptive branch names with prefixes:
 
 ## Release Process
 
-Releases are automated via GitHub Actions. See [`.github/README.md`](.github/README.md) for technical details.
-
-**Quick reference:**
-
-```bash
-# 1. Bump MARKETING_VERSION in project.pbxproj
-# 2. Update CHANGELOG.md
-# 3. Commit and tag
-git commit -am "chore: bump version to X.Y.Z"
-git tag vX.Y.Z
-git push origin main --tags
-
-# 4. Workflow creates draft release with assets
-# 5. Review and publish at github.com/.../releases
-```
+See [`docs/procedures/DEPLOY.md`](docs/procedures/DEPLOY.md) for the complete release procedure, including version bumping, changelog updates, tagging, and GitHub Actions workflow details.
 
 ## Getting Help
 

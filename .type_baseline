@@ -1,0 +1,35 @@
+# Type Safety Baseline
+
+This file tracks type safety compliance. Type errors are blocking.
+
+## Swift Type Safety
+
+This project uses Swift's strong type system. All Swift code must compile without warnings or errors.
+
+## Enforcement
+
+- **Local**: `xcodebuild build` enforces type safety at compile time
+- **CI**: GitHub Actions workflows verify clean builds without warnings
+- **Pre-commit**: Consider adding swiftlint or swift-format to pre-commit hooks
+
+## Guidelines
+
+1. **Never suppress type warnings** — fix the root cause instead
+2. **Use explicit types where inference is ambiguous** — improves readability and clarity for AI
+3. **Protocol conformance must be complete** — no partial implementations
+4. **Optional handling** — prefer `guard let` over force unwrapping
+5. **Error types** — use typed errors (enum ErrorCode) instead of generic Error
+
+## Baseline Status
+
+Created 2026-03-14. No type violations at baseline.
+
+To verify clean build:
+```bash
+xcodebuild build -project "Claude Usage.xcodeproj" -scheme "Claude Usage" -configuration Debug
+```
+
+## Related Docs
+
+- See CONTRIBUTING.md for build instructions
+- See CLAUDE.md for local development setup

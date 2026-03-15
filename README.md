@@ -41,11 +41,26 @@ On first launch the app auto-detects your Claude Code credentials. Click the men
 > [!TIP]
 > To extract your session key: open `claude.ai` in a browser, open DevTools → **Application** → **Cookies**, and copy the `sessionKey` value (`sk-ant-sid01-...`).
 
+## Architecture at a Glance
+
+The app follows **MVVM** with clear separation between UI (views), logic (services), and storage:
+
+- **Views** — SwiftUI components (menu bar popover, settings, setup wizard)
+- **Services** — API clients (Claude API), authentication, polling, notifications
+- **Models** — Data structures (Profile, ClaudeUsage, AppError)
+- **Storage** — Profile credentials, user preferences, cached usage data
+
+**Key concept:** Profiles isolate credentials and settings. Switch between Claude Code accounts, Claude.ai, or Console API without logging out. Each profile caches its own usage independently.
+
+**Smart polling:** Uses exponential backoff on rate limits and respects server `Retry-After` headers to avoid hammering the API.
+
+See [`docs/explanations/architecture.md`](docs/explanations/architecture.md) for the full component map and data flow.
+
 ## Documentation
 
-Architecture guides and decision records live in [`docs/`](docs/). Start with the [architecture overview](docs/explanations/architecture.md).
-
-For contribution guidelines, build commands, and commit conventions see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- **Architecture & decisions** — [`docs/`](docs/): overview, multi-profile system, authentication flow, design decisions
+- **Contribution guide** — [`CONTRIBUTING.md`](CONTRIBUTING.md): build commands, commit conventions, testing strategy
+- **Project instructions** — [`CLAUDE.md`](CLAUDE.md): deployment, release procedures, build details
 
 ## Attribution
 
