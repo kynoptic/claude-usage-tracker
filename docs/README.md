@@ -43,3 +43,11 @@ Records of key design decisions and their rationale.
 | [ADR-003](decisions/ADR-003-credentials-embedded-in-profile.md) | Credentials stored directly in Profile struct |
 | [ADR-004](decisions/ADR-004-statusline-session-key-injection.md) | Session key injected into statusline script at install time |
 | [ADR-005](decisions/ADR-005-hard-fork-independent-development.md) | Declare hard fork and develop independently |
+| [ADR-006](decisions/ADR-006-codeql-removed.md) | Remove CodeQL workflow |
+| [ADR-007](decisions/ADR-007-singleton-pattern.md) | Singleton pattern for services and managers |
+
+## Storage
+
+| Document                                 | What it covers                                                           |
+|------------------------------------------|--------------------------------------------------------------------------|
+| [Storage strategy](decisions/STORAGE.md) | When to use each storage mechanism (Keychain, UserDefaults, file system) |
