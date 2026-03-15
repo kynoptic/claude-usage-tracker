@@ -23,7 +23,8 @@ struct MultiProfileRefreshResult {
     var status: ClaudeStatus?
     /// Keyed by profile ID.
     var profileUsage: [UUID: ClaudeUsage] = [:]
-    var hitRateLimit: Bool = false
+    /// True if at least one profile fetch was blocked by a 429 rate-limit response.
+    var encounteredRateLimit: Bool = false
     var rateLimitRetryAfter: TimeInterval?
 }
 
@@ -128,7 +129,7 @@ final class RefreshOrchestrator {
             } catch {
                 let appError = AppError.wrap(error)
                 if appError.code == .apiRateLimited {
-                    result.hitRateLimit = true
+                    result.encounteredRateLimit = true
                     if let ra = appError.retryAfter {
                         result.rateLimitRetryAfter = max(ra, result.rateLimitRetryAfter ?? 0)
                     }

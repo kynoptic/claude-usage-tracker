@@ -32,7 +32,8 @@ class MenuBarManager: NSObject, ObservableObject {
     private let autoStartService = AutoStartSessionService.shared
     private var cancellables = Set<AnyCancellable>()
     private var hasHandledFirstProfileSwitch = false
-    var iconStyleObserver: NSObjectProtocol?
+    // NotificationCenter observers — assigned in MenuBarManager+Observers.swift (requires internal access).
+    // All are removed in cleanup().
     var iconConfigObserver: NSObjectProtocol?
     var credentialsObserver: NSObjectProtocol?
     var displayModeObserver: NSObjectProtocol?
@@ -89,10 +90,10 @@ class MenuBarManager: NSObject, ObservableObject {
         refreshTimer?.invalidate(); refreshTimer = nil; nextRefreshAt = nil
         networkMonitor.stopMonitoring(); autoStartService.stop(); cancellables.removeAll()
         refreshIntervalObserver?.invalidate(); refreshIntervalObserver = nil
-        for obs in [iconStyleObserver, iconConfigObserver, credentialsObserver, displayModeObserver].compactMap({ $0 }) {
+        for obs in [iconConfigObserver, credentialsObserver, displayModeObserver].compactMap({ $0 }) {
             NotificationCenter.default.removeObserver(obs)
         }
-        iconStyleObserver = nil; iconConfigObserver = nil; credentialsObserver = nil; displayModeObserver = nil
+        iconConfigObserver = nil; credentialsObserver = nil; displayModeObserver = nil
         windowCoordinator.cleanup(); statusBarUIManager?.cleanup(); statusBarUIManager = nil
     }
 
@@ -235,9 +236,12 @@ class MenuBarManager: NSObject, ObservableObject {
     }
 
     @MainActor private func applySingleProfileResult(_ result: SingleProfileRefreshResult) {
+        // Status is independent of usage success — update whenever present.
         if let s = result.status { status = s }
+
         if let u = result.usage {
             usage = u
+            // Persist usage and any newly discovered org ID before updating UI.
             if let pid = profileManager.activeProfile?.id {
                 profileManager.saveClaudeUsage(u, for: pid)
                 if let orgId = result.newlyFetchedOrgId {
@@ -252,10 +256,13 @@ class MenuBarManager: NSObject, ObservableObject {
         } else if let err = result.usageError {
             recordRefreshError(err)
         }
+
+        // API usage is fetched independently; update it regardless of main usage result.
         if let a = result.apiUsage {
             apiUsage = a
             if let pid = profileManager.activeProfile?.id { profileManager.saveAPIUsage(a, for: pid) }
         }
+
         finalizeRefresh(userTriggeredSuccess: result.usageSuccess)
     }
 
@@ -283,7 +290,7 @@ class MenuBarManager: NSObject, ObservableObject {
 
         if let activeUsage = profileManager.activeProfile.flatMap({ result.profileUsage[$0.id] }) {
             recordRefreshSuccess(usage: activeUsage)
-        } else if result.hitRateLimit {
+        } else if result.encounteredRateLimit {
             pollingScheduler.recordRateLimitError(retryAfter: result.rateLimitRetryAfter)
             lastRefreshError = AppError(code: .apiRateLimited, message: "Rate limited by Claude API", isRecoverable: true, retryAfter: result.rateLimitRetryAfter)
             nextRetryDate = Date().addingTimeInterval(result.rateLimitRetryAfter ?? pollingScheduler.currentInterval)
