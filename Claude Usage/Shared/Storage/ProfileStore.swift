@@ -119,41 +119,65 @@ final class ProfileStore {
         }
     }
 
-    // MARK: - Credential Helpers
+    // MARK: - Credential Helpers (ADR-008: Keychain-backed)
 
+    /// Saves credentials for a profile to the Keychain.
+    /// Credential fields are NOT written to the `profiles_v3` UserDefaults blob.
     func saveProfileCredentials(_ profileId: UUID, credentials: ProfileCredentials) throws {
+        let keychain = keychainService
+        // Save each non-nil credential; delete the item when the value is nil.
+        try saveOrDelete(credentials.claudeSessionKey,
+                         profileId: profileId, type: .claudeSessionKey, keychain: keychain)
+        try saveOrDelete(credentials.organizationId,
+                         profileId: profileId, type: .organizationId, keychain: keychain)
+        try saveOrDelete(credentials.apiSessionKey,
+                         profileId: profileId, type: .apiSessionKey, keychain: keychain)
+        try saveOrDelete(credentials.apiOrganizationId,
+                         profileId: profileId, type: .apiOrganizationId, keychain: keychain)
+        try saveOrDelete(credentials.cliCredentialsJSON,
+                         profileId: profileId, type: .cliCredentialsJSON, keychain: keychain)
+
+        // Keep hasValidOAuthCredentials in sync on the in-memory + persisted profile struct
         var profiles = loadProfiles()
         guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
             throw ProfileStoreError.profileNotFound(profileId)
         }
-
-        // Update credentials directly in profile
-        profiles[index].claudeSessionKey = credentials.claudeSessionKey
-        profiles[index].organizationId = credentials.organizationId
-        profiles[index].apiSessionKey = credentials.apiSessionKey
-        profiles[index].apiOrganizationId = credentials.apiOrganizationId
-        profiles[index].cliCredentialsJSON = credentials.cliCredentialsJSON
         if let json = credentials.cliCredentialsJSON {
             profiles[index].hasValidOAuthCredentials = Profile.isValidOAuthJSON(json)
         } else {
             profiles[index].hasValidOAuthCredentials = false
         }
-
         saveProfiles(profiles)
+
+        LoggingService.shared.log("ProfileStore: Saved credentials for profile \(profileId) to Keychain")
     }
 
+    /// Loads credentials for a profile from the Keychain.
     func loadProfileCredentials(_ profileId: UUID) throws -> ProfileCredentials {
         let profiles = loadProfiles()
-        guard let profile = profiles.first(where: { $0.id == profileId }) else {
+        guard profiles.first(where: { $0.id == profileId }) != nil else {
             throw ProfileStoreError.profileNotFound(profileId)
         }
-
+        let keychain = keychainService
         return ProfileCredentials(
-            claudeSessionKey: profile.claudeSessionKey,
-            organizationId: profile.organizationId,
-            apiSessionKey: profile.apiSessionKey,
-            apiOrganizationId: profile.apiOrganizationId,
-            cliCredentialsJSON: profile.cliCredentialsJSON
+            claudeSessionKey: try keychain.loadPerProfile(profileId: profileId, credentialType: .claudeSessionKey),
+            organizationId: try keychain.loadPerProfile(profileId: profileId, credentialType: .organizationId),
+            apiSessionKey: try keychain.loadPerProfile(profileId: profileId, credentialType: .apiSessionKey),
+            apiOrganizationId: try keychain.loadPerProfile(profileId: profileId, credentialType: .apiOrganizationId),
+            cliCredentialsJSON: try keychain.loadPerProfile(profileId: profileId, credentialType: .cliCredentialsJSON)
         )
+    }
+
+    // MARK: - Private Helpers
+
+    private func saveOrDelete(_ value: String?,
+                              profileId: UUID,
+                              type: KeychainService.PerProfileCredentialType,
+                              keychain: KeychainService) throws {
+        if let value {
+            try keychain.savePerProfile(value, profileId: profileId, credentialType: type)
+        } else {
+            try keychain.deletePerProfile(profileId: profileId, credentialType: type)
+        }
     }
 }

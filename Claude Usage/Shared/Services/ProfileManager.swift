@@ -113,7 +113,8 @@ final class ProfileManager: ObservableObject {
 
         profiles.removeAll { $0.id == id }
 
-        // Credentials are deleted automatically with the profile
+        // Delete credentials from Keychain before removing the profile (ADR-008)
+        KeychainService.shared.deleteCredentials(for: id)
 
         // Switch to first profile if deleted active
         if activeProfile?.id == id {

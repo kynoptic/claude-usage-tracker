@@ -1,4 +1,5 @@
 import XCTest
+import Security
 @testable import Claude_Usage
 
 /// Unit tests for ProfileManager.
@@ -174,6 +175,67 @@ final class ProfileManagerTests: XCTestCase {
 
         XCTAssertEqual(manager.profiles.count, 1)
         XCTAssertEqual(manager.profiles[0].id, first.id)
+    }
+
+    func testDeleteProfile_DeletesKeychainCredentials() throws {
+        // This test only validates Keychain cleanup when Keychain is accessible.
+        // In unsigned CI the Keychain probe returns false and the test is skipped.
+        let keychainProbeService = "com.claudeusagetracker.test.probe.deletecleanup"
+        let probeAccount = "probe"
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainProbeService,
+            kSecAttrAccount as String: probeAccount
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        var accessControlError: Unmanaged<CFError>?
+        guard let accessControl = SecAccessControlCreateWithFlags(
+            kCFAllocatorDefault, kSecAttrAccessibleWhenUnlocked, [], &accessControlError
+        ) else {
+            return
+        }
+        let addQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainProbeService,
+            kSecAttrAccount as String: probeAccount,
+            kSecValueData as String: Data("x".utf8),
+            kSecAttrAccessControl as String: accessControl,
+            kSecAttrSynchronizable as String: false
+        ]
+        let probeStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        SecItemDelete(deleteQuery as CFDictionary)
+        try XCTSkipUnless(probeStatus == errSecSuccess,
+                          "Keychain not accessible without code-signing entitlement")
+
+        // Seed two profiles so deletion is allowed
+        let toKeep = makeProfile(name: "Keep")
+        let toDelete = makeProfile(name: "Delete Me")
+        manager.profiles = [toKeep, toDelete]
+        ProfileStore.shared.saveProfiles([toKeep, toDelete])
+
+        // Write a per-profile credential for the profile we will delete
+        try KeychainService.shared.savePerProfile(
+            "credentials-to-clean-up",
+            profileId: toDelete.id,
+            credentialType: .claudeSessionKey
+        )
+
+        // Verify credential is present before deletion
+        let before = try KeychainService.shared.loadPerProfile(
+            profileId: toDelete.id,
+            credentialType: .claudeSessionKey
+        )
+        XCTAssertEqual(before, "credentials-to-clean-up")
+
+        // Delete the profile
+        try manager.deleteProfile(toDelete.id)
+
+        // Credential must be gone from Keychain
+        let after = try KeychainService.shared.loadPerProfile(
+            profileId: toDelete.id,
+            credentialType: .claudeSessionKey
+        )
+        XCTAssertNil(after, "Keychain credential must be removed when profile is deleted")
     }
 
     // MARK: - getSelectedProfiles

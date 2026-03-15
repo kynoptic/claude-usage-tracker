@@ -18,6 +18,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Hide dock icon (menu bar app only)
         NSApp.setActivationPolicy(.accessory)
 
+        // Pass 1: v2.x single-profile → profiles_v3 (existing)
+        ProfileMigrationService.shared.migrateIfNeeded()
+
+        // Pass 2: profiles_v3 credential fields → per-profile Keychain items (ADR-008)
+        KeychainPerProfileMigrationService.shared.migrateIfNeeded()
+
         // Load profiles into ProfileManager (synchronously)
         ProfileManager.shared.loadProfiles()
 

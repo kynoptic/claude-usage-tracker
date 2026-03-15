@@ -165,6 +165,152 @@ final class KeychainService {
         return status == errSecSuccess
     }
 
+    // MARK: - Per-Profile Credential Methods (ADR-008)
+
+    /// Credential types stored per-profile in the Keychain.
+    /// Each type maps to a distinct `kSecAttrService`; `kSecAttrAccount` is the profile UUID string.
+    enum PerProfileCredentialType: String, CaseIterable {
+        case claudeSessionKey   = "com.claudeusagetracker.profile.claudeSessionKey"
+        case organizationId     = "com.claudeusagetracker.profile.organizationId"
+        case apiSessionKey      = "com.claudeusagetracker.profile.apiSessionKey"
+        case apiOrganizationId  = "com.claudeusagetracker.profile.apiOrganizationId"
+        case cliCredentialsJSON = "com.claudeusagetracker.profile.cliCredentialsJSON"
+
+        /// The `kSecAttrService` value for this credential type.
+        var service: String { rawValue }
+    }
+
+    /// Saves a per-profile credential to the Keychain.
+    /// - Parameters:
+    ///   - value: The string value to store.
+    ///   - profileId: The UUID of the profile that owns this credential.
+    ///   - credentialType: The kind of credential being stored.
+    /// - Throws: `KeychainError` if the save fails.
+    func savePerProfile(_ value: String,
+                        profileId: UUID,
+                        credentialType: PerProfileCredentialType) throws {
+        guard let data = value.data(using: .utf8) else {
+            throw KeychainError.invalidData
+        }
+
+        let service = credentialType.service
+        let account = profileId.uuidString
+
+        // Attempt update first
+        let updateQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        let attributes: [String: Any] = [kSecValueData as String: data]
+        let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
+
+        if updateStatus == errSecSuccess {
+            LoggingService.shared.log("Keychain: Updated per-profile \(credentialType) for \(profileId)")
+            return
+        }
+
+        if updateStatus == errSecItemNotFound {
+            var accessControlError: Unmanaged<CFError>?
+            guard let accessControl = SecAccessControlCreateWithFlags(
+                kCFAllocatorDefault,
+                kSecAttrAccessibleWhenUnlocked,
+                [],
+                &accessControlError
+            ) else {
+                throw KeychainError.saveFailed(status: errSecParam)
+            }
+
+            let addQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+                kSecValueData as String: data,
+                kSecAttrAccessControl as String: accessControl,
+                kSecAttrSynchronizable as String: false
+            ]
+
+            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            if addStatus == errSecSuccess {
+                LoggingService.shared.log("Keychain: Added per-profile \(credentialType) for \(profileId)")
+                return
+            } else {
+                throw KeychainError.saveFailed(status: addStatus)
+            }
+        } else {
+            throw KeychainError.saveFailed(status: updateStatus)
+        }
+    }
+
+    /// Loads a per-profile credential from the Keychain.
+    /// - Parameters:
+    ///   - profileId: The UUID of the profile that owns this credential.
+    ///   - credentialType: The kind of credential to retrieve.
+    /// - Returns: The stored string, or `nil` if not found.
+    /// - Throws: `KeychainError` if the load fails (other than item not found).
+    func loadPerProfile(profileId: UUID,
+                        credentialType: PerProfileCredentialType) throws -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: credentialType.service,
+            kSecAttrAccount as String: profileId.uuidString,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        if status == errSecSuccess {
+            guard let data = result as? Data,
+                  let value = String(data: data, encoding: .utf8) else {
+                throw KeychainError.invalidData
+            }
+            return value
+        } else if status == errSecItemNotFound {
+            return nil
+        } else {
+            throw KeychainError.loadFailed(status: status)
+        }
+    }
+
+    /// Deletes a single per-profile credential from the Keychain.
+    /// - Parameters:
+    ///   - profileId: The UUID of the profile that owns this credential.
+    ///   - credentialType: The kind of credential to delete.
+    /// - Throws: `KeychainError` if the delete fails (ignores item not found).
+    func deletePerProfile(profileId: UUID,
+                          credentialType: PerProfileCredentialType) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: credentialType.service,
+            kSecAttrAccount as String: profileId.uuidString
+        ]
+
+        let status = SecItemDelete(query as CFDictionary)
+        if status == errSecSuccess || status == errSecItemNotFound {
+            return
+        }
+        throw KeychainError.deleteFailed(status: status)
+    }
+
+    /// Deletes all per-profile credential types for a given profile.
+    /// Called by `ProfileManager.deleteProfile(_:)` to prevent orphaned Keychain items.
+    /// - Parameter profileId: The profile whose credentials should be erased.
+    func deleteCredentials(for profileId: UUID) {
+        for type_ in PerProfileCredentialType.allCases {
+            do {
+                try deletePerProfile(profileId: profileId, credentialType: type_)
+            } catch {
+                LoggingService.shared.logError(
+                    "Keychain: Failed to delete \(type_) for \(profileId) (non-fatal)",
+                    error: error
+                )
+            }
+        }
+        LoggingService.shared.log("Keychain: Deleted all credentials for profile \(profileId)")
+    }
+
 }
 
 // MARK: - KeychainError

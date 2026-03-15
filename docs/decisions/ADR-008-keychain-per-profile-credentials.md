@@ -1,6 +1,6 @@
 # ADR-008: Keychain-per-profile credential storage
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-03-15
 **Supersedes:** ADR-003 (when implemented)
 
