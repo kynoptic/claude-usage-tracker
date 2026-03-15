@@ -134,7 +134,7 @@ Before submitting a bug report:
 ### Suggesting Features
 
 We love feature suggestions! Please:
-1. Check existing issues and discussions first
+1. Check existing issues first
 2. Describe the problem your feature would solve
 3. Explain your proposed solution
 4. Consider alternative approaches
@@ -325,7 +325,7 @@ See [`docs/procedures/DEPLOY.md`](docs/procedures/DEPLOY.md) for the complete re
 
 ## Getting Help
 
-- **Questions?** Open a [Discussion](https://github.com/kynoptic/Claude-Usage-Tracker/discussions)
+- **Questions?** Open an [Issue](https://github.com/kynoptic/Claude-Usage-Tracker/issues)
 - **Found a bug?** Open an [Issue](https://github.com/kynoptic/Claude-Usage-Tracker/issues)
 - **Want to chat?** Reach out to maintainers
 
