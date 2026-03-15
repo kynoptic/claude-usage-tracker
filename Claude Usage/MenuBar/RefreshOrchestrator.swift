@@ -51,7 +51,7 @@ final class RefreshOrchestrator {
         var result = SingleProfileRefreshResult()
 
         // Resolve authentication from the profile
-        let auth: ClaudeAPIService.AuthenticationType
+        let auth: AuthenticationType
         do {
             auth = try await resolveAuthentication(for: profile)
         } catch {
@@ -176,7 +176,7 @@ final class RefreshOrchestrator {
 
     /// Resolves the best available authentication method for a profile.
     /// Priority: 1) CLI OAuth (auto-refreshing) -> 2) system Keychain CLI OAuth -> 3) claude.ai session
-    private func resolveAuthentication(for profile: Profile) async throws -> ClaudeAPIService.AuthenticationType {
+    private func resolveAuthentication(for profile: Profile) async throws -> AuthenticationType {
         // Try saved CLI OAuth token first (auto-refreshing, most reliable)
         if let cliJSON = profile.cliCredentialsJSON {
             if !ClaudeCodeSyncService.shared.isTokenExpired(cliJSON),

@@ -4,12 +4,9 @@ import Foundation
 class ClaudeAPIService: APIServiceProtocol {
     // MARK: - Types
 
-    /// Authentication method for API requests
-    enum AuthenticationType {
-        case claudeAISession(String)      // Cookie: sessionKey=...
-        case cliOAuth(String)              // Authorization: Bearer ... (with anthropic-beta header)
-        case consoleAPISession(String)     // Cookie: sessionKey=... (different endpoint)
-    }
+    /// Backward-compatibility alias — callers may use either `AuthenticationType` or
+    /// `ClaudeAPIService.AuthenticationType`; both resolve to the same top-level type.
+    typealias AuthenticationType = Claude_Usage.AuthenticationType
 
     // MARK: - Properties
 

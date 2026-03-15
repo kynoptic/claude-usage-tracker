@@ -1,5 +1,17 @@
 import Foundation
 
+// MARK: - Authentication
+
+/// Authentication method for Claude API requests.
+///
+/// Defined at the top level so `APIServiceProtocol` and its conformers can
+/// reference this type without depending on `ClaudeAPIService`.
+enum AuthenticationType {
+    case claudeAISession(String)      // Cookie: sessionKey=...
+    case cliOAuth(String)              // Authorization: Bearer ... (with anthropic-beta header)
+    case consoleAPISession(String)     // Cookie: sessionKey=... (different endpoint)
+}
+
 // MARK: - API Response Types
 
 extension ClaudeAPIService {

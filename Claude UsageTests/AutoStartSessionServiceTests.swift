@@ -43,7 +43,7 @@ final class AutoStartSessionServiceTests: XCTestCase {
         }
 
         func fetchUsageData(
-            auth: ClaudeAPIService.AuthenticationType,
+            auth: AuthenticationType,
             storedOrgId: String?,
             checkOverageLimitEnabled: Bool,
             sessionKeyFallback: String?

@@ -15,7 +15,7 @@ protocol APIServiceProtocol {
     func fetchUsageData(sessionKey: String, organizationId: String) async throws -> ClaudeUsage
     func fetchUsageData(oauthAccessToken: String) async throws -> ClaudeUsage
     func fetchUsageData(
-        auth: ClaudeAPIService.AuthenticationType,
+        auth: AuthenticationType,
         storedOrgId: String?,
         checkOverageLimitEnabled: Bool,
         sessionKeyFallback: String?
