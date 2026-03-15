@@ -66,82 +66,29 @@ struct PersonalUsageView: View {
                 )
 
                 // Configuration Card Container
-                VStack(alignment: .leading, spacing: 0) {
-                    // Step Indicator Header
-                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.medium) {
-                        Text("personal.configuration_title".localized)
-                            .font(DesignTokens.Typography.sectionTitle)
-                            .foregroundColor(.secondary)
-
-                        HStack(spacing: DesignTokens.Spacing.small) {
-                            ForEach(1...3, id: \.self) { step in
-                                if let stepEnum = WizardStep(rawValue: step) {
-                                    let isCurrent = wizardState.currentStep == stepEnum
-                                    let isCompleted = wizardState.currentStep > stepEnum
-
-                                    HStack(spacing: DesignTokens.Spacing.extraSmall) {
-                                        ZStack {
-                                            Circle()
-                                                .fill(isCompleted ? Color.green : (isCurrent ? Color.accentColor : Color.secondary.opacity(0.2)))
-                                                .frame(width: 20, height: 20)
-
-                                            if isCompleted {
-                                                Image(systemName: "checkmark")
-                                                    .font(.system(size: 10, weight: .semibold))
-                                                    .foregroundColor(.white)
-                                            } else {
-                                                Text("\(step)")
-                                                    .font(.system(size: 11, weight: .medium))
-                                                    .foregroundColor(isCurrent ? .white : .secondary)
-                                            }
-                                        }
-
-                                        if isCurrent {
-                                            Text(stepTitle(for: step))
-                                                .font(DesignTokens.Typography.body)
-                                                .fontWeight(.medium)
-                                                .foregroundColor(.primary)
-                                        }
-                                    }
-
-                                    if step < 3 {
-                                        Rectangle()
-                                            .fill(isCompleted ? Color.green.opacity(0.3) : Color.secondary.opacity(0.2))
-                                            .frame(height: 1)
-                                    }
-                                }
-                            }
-                        }
+                WizardContainerView(
+                    configurationTitle: "personal.configuration_title".localized,
+                    currentStep: wizardState.currentStep.rawValue,
+                    stepTitles: [
+                        "setup.step.enter_session_key".localized,
+                        "wizard.select_organization".localized,
+                        "wizard.review_config".localized
+                    ],
+                    animationValue: wizardState.currentStep
+                ) {
+                    switch wizardState.currentStep {
+                    case .enterKey:
+                        EnterKeyStep(wizardState: $wizardState, apiService: apiService)
+                    case .selectOrg:
+                        SelectOrgStep(wizardState: $wizardState)
+                    case .confirm:
+                        ConfirmStep(
+                            wizardState: $wizardState,
+                            apiService: apiService,
+                            onSave: { loadCurrentCredentials() }
+                        )
                     }
-                    .padding(DesignTokens.Spacing.cardPadding)
-                    .padding(.bottom, DesignTokens.Spacing.extraSmall)
-
-                    Divider()
-
-                    // Step Content
-                    Group {
-                        switch wizardState.currentStep {
-                        case .enterKey:
-                            EnterKeyStep(wizardState: $wizardState, apiService: apiService)
-                        case .selectOrg:
-                            SelectOrgStep(wizardState: $wizardState)
-                        case .confirm:
-                            ConfirmStep(
-                                wizardState: $wizardState,
-                                apiService: apiService,
-                                onSave: { loadCurrentCredentials() }
-                            )
-                        }
-                    }
-                    .padding(DesignTokens.Spacing.cardPadding)
-                    .animation(.easeInOut(duration: 0.25), value: wizardState.currentStep)
                 }
-                .background(DesignTokens.Colors.cardBackground)
-                .cornerRadius(DesignTokens.Radius.card)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.card)
-                        .strokeBorder(DesignTokens.Colors.cardBorder, lineWidth: 1)
-                )
 
                 Spacer()
             }
@@ -158,15 +105,6 @@ struct PersonalUsageView: View {
 
             // Reset wizard state
             wizardState = WizardState()
-        }
-    }
-
-    private func stepTitle(for step: Int) -> String {
-        switch step {
-        case 1: return "setup.step.enter_session_key".localized
-        case 2: return "wizard.select_organization".localized
-        case 3: return "wizard.review_config".localized
-        default: return ""
         }
     }
 

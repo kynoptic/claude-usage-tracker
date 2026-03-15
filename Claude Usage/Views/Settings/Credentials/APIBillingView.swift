@@ -89,82 +89,29 @@ struct APIBillingView: View {
                 )
 
                 // Configuration Card Container with 3 Steps
-                VStack(alignment: .leading, spacing: 0) {
-                        // Step Indicator Header
-                        VStack(alignment: .leading, spacing: DesignTokens.Spacing.medium) {
-                            Text("personal.configuration_title".localized)
-                                .font(DesignTokens.Typography.sectionTitle)
-                                .foregroundColor(.secondary)
-
-                            HStack(spacing: DesignTokens.Spacing.small) {
-                                ForEach(1...3, id: \.self) { step in
-                                    if let stepEnum = APIWizardStep(rawValue: step) {
-                                        let isCurrent = wizardState.currentStep == stepEnum
-                                        let isCompleted = wizardState.currentStep > stepEnum
-
-                                        HStack(spacing: DesignTokens.Spacing.extraSmall) {
-                                            ZStack {
-                                                Circle()
-                                                    .fill(isCompleted ? Color.green : (isCurrent ? Color.accentColor : Color.secondary.opacity(0.2)))
-                                                    .frame(width: 20, height: 20)
-
-                                                if isCompleted {
-                                                    Image(systemName: "checkmark")
-                                                        .font(.system(size: 10, weight: .semibold))
-                                                        .foregroundColor(.white)
-                                                } else {
-                                                    Text("\(step)")
-                                                        .font(.system(size: 11, weight: .medium))
-                                                        .foregroundColor(isCurrent ? .white : .secondary)
-                                                }
-                                            }
-
-                                            if isCurrent {
-                                                Text(stepTitle(for: step))
-                                                    .font(DesignTokens.Typography.body)
-                                                    .fontWeight(.medium)
-                                                    .foregroundColor(.primary)
-                                            }
-                                        }
-
-                                        if step < 3 {
-                                            Rectangle()
-                                                .fill(isCompleted ? Color.green.opacity(0.3) : Color.secondary.opacity(0.2))
-                                                .frame(height: 1)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(DesignTokens.Spacing.cardPadding)
-                        .padding(.bottom, DesignTokens.Spacing.extraSmall)
-
-                        Divider()
-
-                        // Step Content
-                        Group {
-                            switch wizardState.currentStep {
-                            case .enterKey:
-                                APIEnterKeyStep(wizardState: $wizardState, apiService: apiService)
-                            case .selectOrg:
-                                APISelectOrgStep(wizardState: $wizardState)
-                            case .confirm:
-                                APIConfirmStep(
-                                    wizardState: $wizardState,
-                                    apiService: apiService,
-                                    onSave: { loadCurrentCredentials() }
-                                )
-                            }
-                        }
-                        .padding(DesignTokens.Spacing.cardPadding)
-                        .animation(.easeInOut(duration: 0.25), value: wizardState.currentStep)
+                WizardContainerView(
+                    configurationTitle: "personal.configuration_title".localized,
+                    currentStep: wizardState.currentStep.rawValue,
+                    stepTitles: [
+                        "wizard.enter_key".localized,
+                        "wizard.select_org".localized,
+                        "wizard.confirm".localized
+                    ],
+                    animationValue: wizardState.currentStep
+                ) {
+                    switch wizardState.currentStep {
+                    case .enterKey:
+                        APIEnterKeyStep(wizardState: $wizardState, apiService: apiService)
+                    case .selectOrg:
+                        APISelectOrgStep(wizardState: $wizardState)
+                    case .confirm:
+                        APIConfirmStep(
+                            wizardState: $wizardState,
+                            apiService: apiService,
+                            onSave: { loadCurrentCredentials() }
+                        )
+                    }
                 }
-                .background(DesignTokens.Colors.cardBackground)
-                .cornerRadius(DesignTokens.Radius.card)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.card)
-                        .strokeBorder(DesignTokens.Colors.cardBorder, lineWidth: 1)
-                )
 
                 Spacer()
             }
@@ -181,15 +128,6 @@ struct APIBillingView: View {
 
             // Reset wizard state
             wizardState = APIWizardState()
-        }
-    }
-
-    private func stepTitle(for step: Int) -> String {
-        switch step {
-        case 1: return "wizard.enter_key".localized
-        case 2: return "wizard.select_org".localized
-        case 3: return "wizard.confirm".localized
-        default: return ""
         }
     }
 
