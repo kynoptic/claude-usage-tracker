@@ -44,7 +44,7 @@ Session keys expire periodically without warning. Extract a fresh key from `clau
 
 1. Check **Settings** → **Updates** and ensure automatic checking is enabled
 3. Verify your internet connection
-4. Download the latest release manually from the [releases page](https://github.com/kynoptic/Claude-Usage-Tracker/releases) if needed
+4. Download the latest release manually from the [releases page](https://github.com/kynoptic/claude-usage-tracker/releases) if needed
 
 ## Usage data looks stale
 

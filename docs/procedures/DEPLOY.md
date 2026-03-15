@@ -59,7 +59,7 @@ Edit `project.pbxproj` and update both:
 - `MARKETING_VERSION` — the user-facing version (e.g., 2.4.3)
 - `CURRENT_PROJECT_VERSION` — the build number (increment by 1)
 
-### Step 2: Update CHANGELOG
+### Step 2: Update CHANGELOG and DEVLOG
 
 Add a new section at the top of `CHANGELOG.md`:
 
@@ -75,6 +75,8 @@ Add a new section at the top of `CHANGELOG.md`:
 ### Changed
 - Change description
 ```
+
+If the release includes significant engineering changes (architecture, refactors, build changes), also add an entry to `DEVLOG.md` under the new version. User-facing changes belong in `CHANGELOG.md`; engineering rationale belongs in `DEVLOG.md`.
 
 ### Step 3: Commit and Tag
 
@@ -106,7 +108,7 @@ The CI workflow (`/.github/workflows/release.yml`) automatically:
 
 ### Step 5: Publish Release
 
-1. Go to [Releases](https://github.com/kynoptic/Claude-Usage-Tracker/releases)
+1. Go to [Releases](https://github.com/kynoptic/claude-usage-tracker/releases)
 2. Find the draft release for your tag
 3. Edit the description to match the CHANGELOG section
 4. Click **Publish release**

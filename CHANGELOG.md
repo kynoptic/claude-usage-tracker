@@ -388,25 +388,25 @@ Initial release.
 - Detailed usage dashboard with countdown timers
 - macOS 14.0+ (Sonoma) support
 
-[2.4.3]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.4.2...v2.4.3
-[2.4.2]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.4.1...v2.4.2
-[2.4.1]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.4.0...v2.4.1
-[2.4.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.3.0...v2.4.0
-[2.3.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.2.3...v2.3.0
-[2.2.3]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.2.2...v2.2.3
-[2.2.2]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.2.1...v2.2.2
-[2.2.1]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.2.0...v2.2.1
-[2.2.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.1.2...v2.2.0
-[2.1.2]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.1.1...v2.1.2
-[2.1.1]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.1.0...v2.1.1
-[2.1.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v2.0.0...v2.1.0
-[2.0.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v1.6.2...v2.0.0
-[1.6.2]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v1.6.1...v1.6.2
-[1.6.1]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v1.6.0...v1.6.1
-[1.6.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v1.5.0...v1.6.0
-[1.5.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v1.4.0...v1.5.0
-[1.4.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v1.3.0...v1.4.0
-[1.3.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/kynoptic/Claude-Usage-Tracker/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/kynoptic/Claude-Usage-Tracker/releases/tag/v1.0.0
+[2.4.3]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.2...v2.4.3
+[2.4.2]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.1...v2.4.2
+[2.4.1]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.0...v2.4.1
+[2.4.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.3.0...v2.4.0
+[2.3.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.2.3...v2.3.0
+[2.2.3]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.2.2...v2.2.3
+[2.2.2]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.2.1...v2.2.2
+[2.2.1]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.2.0...v2.2.1
+[2.2.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.1.2...v2.2.0
+[2.1.2]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.1.1...v2.1.2
+[2.1.1]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v1.6.2...v2.0.0
+[1.6.2]: https://github.com/kynoptic/claude-usage-tracker/compare/v1.6.1...v1.6.2
+[1.6.1]: https://github.com/kynoptic/claude-usage-tracker/compare/v1.6.0...v1.6.1
+[1.6.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/kynoptic/claude-usage-tracker/releases/tag/v1.0.0

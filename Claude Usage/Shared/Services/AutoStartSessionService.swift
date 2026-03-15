@@ -188,9 +188,7 @@ final class AutoStartSessionService {
         let usage = try await apiService.fetchUsageData(sessionKey: sessionKey, organizationId: orgId)
 
         // Save usage to profile
-        await MainActor.run {
-            profileManager.saveClaudeUsage(usage, for: profile.id)
-        }
+        profileManager.saveClaudeUsage(usage, for: profile.id)
 
         return usage
     }
@@ -232,25 +230,21 @@ final class AutoStartSessionService {
             LoggingService.shared.logInfo("Successfully auto-started session for profile '\(profile.name)'")
 
             // Send success notification
-            await MainActor.run {
-                notificationManager.sendAutoStartNotification(
-                    profileName: profile.name,
-                    success: true,
-                    error: nil
-                )
-            }
+            notificationManager.sendAutoStartNotification(
+                profileName: profile.name,
+                success: true,
+                error: nil
+            )
 
         } catch {
             LoggingService.shared.logError("Failed to auto-start session for profile '\(profile.name)': \(error.localizedDescription)")
 
             // Send failure notification
-            await MainActor.run {
-                notificationManager.sendAutoStartNotification(
-                    profileName: profile.name,
-                    success: false,
-                    error: error.localizedDescription
-                )
-            }
+            notificationManager.sendAutoStartNotification(
+                profileName: profile.name,
+                success: false,
+                error: error.localizedDescription
+            )
         }
     }
 

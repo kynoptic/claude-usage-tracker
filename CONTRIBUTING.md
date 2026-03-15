@@ -120,7 +120,7 @@ Claude Usage/
 ### Reporting Bugs
 
 Before submitting a bug report:
-1. Check existing [issues](https://github.com/kynoptic/Claude-Usage-Tracker/issues) to avoid duplicates
+1. Check existing [issues](https://github.com/kynoptic/claude-usage-tracker/issues) to avoid duplicates
 2. Ensure you're running the latest version
 
 **When reporting a bug, include:**
@@ -134,7 +134,7 @@ Before submitting a bug report:
 ### Suggesting Features
 
 We love feature suggestions! Please:
-1. Check existing issues and discussions first
+1. Check existing issues first
 2. Describe the problem your feature would solve
 3. Explain your proposed solution
 4. Consider alternative approaches
@@ -325,8 +325,8 @@ See [`docs/procedures/DEPLOY.md`](docs/procedures/DEPLOY.md) for the complete re
 
 ## Getting Help
 
-- **Questions?** Open a [Discussion](https://github.com/kynoptic/Claude-Usage-Tracker/discussions)
-- **Found a bug?** Open an [Issue](https://github.com/kynoptic/Claude-Usage-Tracker/issues)
+- **Questions?** Open an [Issue](https://github.com/kynoptic/claude-usage-tracker/issues)
+- **Found a bug?** Open an [Issue](https://github.com/kynoptic/claude-usage-tracker/issues)
 - **Want to chat?** Reach out to maintainers
 
 ---

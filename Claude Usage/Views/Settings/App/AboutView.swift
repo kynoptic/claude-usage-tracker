@@ -129,13 +129,13 @@ struct AboutView: View {
                         }
 
                         LinkButton(title: "about.report_issue".localized, icon: "exclamationmark.triangle") {
-                            if let url = URL(string: "https://github.com/kynoptic/Claude-Usage-Tracker/issues") {
+                            if let url = URL(string: "https://github.com/kynoptic/claude-usage-tracker/issues") {
                                 NSWorkspace.shared.open(url)
                             }
                         }
 
                         LinkButton(title: "about.send_feedback".localized, icon: "envelope") {
-                            if let url = URL(string: "https://github.com/kynoptic/Claude-Usage-Tracker/issues/new") {
+                            if let url = URL(string: "https://github.com/kynoptic/claude-usage-tracker/issues/new") {
                                 NSWorkspace.shared.open(url)
                             }
                         }

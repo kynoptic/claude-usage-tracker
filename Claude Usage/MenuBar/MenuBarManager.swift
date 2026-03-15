@@ -75,7 +75,7 @@ class MenuBarManager: NSObject, ObservableObject {
         if let profile = profileManager.activeProfile, profile.hasUsageCredentials {
             Task { [weak self] in
                 try? await Task.sleep(nanoseconds: UInt64(1.0 * 1_000_000_000))
-                await MainActor.run { self?.refreshUsage() }
+                self?.refreshUsage()
             }
         }
 
@@ -144,10 +144,8 @@ class MenuBarManager: NSObject, ObservableObject {
     private func handleProfileSwitch(to profile: Profile) async {
         LoggingService.shared.log("MenuBarManager: Handling profile switch to: \(profile.name)")
 
-        await MainActor.run {
-            self.usage = profile.claudeUsage ?? .empty
-            self.apiUsage = profile.apiUsage
-        }
+        self.usage = profile.claudeUsage ?? .empty
+        self.apiUsage = profile.apiUsage
 
         pollingScheduler = PollingScheduler(baseInterval: profile.refreshInterval)
         startAutoRefresh()
@@ -229,7 +227,7 @@ class MenuBarManager: NSObject, ObservableObject {
         guard let profile = profileManager.activeProfile, profile.hasUsageCredentials else { updateAllStatusBarIcons(); return }
 
         Task {
-            await MainActor.run { self.isRefreshing = true }
+            self.isRefreshing = true
             let result = await refreshOrchestrator.refreshSingleProfile(profile: profile, apiSessionKey: profile.apiSessionKey, apiOrganizationId: profile.apiOrganizationId)
             await applySingleProfileResult(result)
         }
@@ -271,7 +269,7 @@ class MenuBarManager: NSObject, ObservableObject {
         guard !selected.isEmpty else { updateAllStatusBarIcons(); return }
 
         Task {
-            await MainActor.run { self.isRefreshing = true }
+            self.isRefreshing = true
             let result = await refreshOrchestrator.refreshMultipleProfiles(selected)
             await applyMultiProfileResult(result)
         }
