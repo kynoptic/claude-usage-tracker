@@ -71,7 +71,7 @@ See [`docs/decisions/ADR-007-singleton-pattern.md`](docs/decisions/ADR-007-singl
 
 Follow `CONTRIBUTING.md` for all development conventions. The following **override global defaults**:
 
-**Issue and PR templates:** Use the templates in `.github/` for work on this fork. If contributing to upstream, follow the lighter format described in `CONTRIBUTING.md` (macOS version, steps to reproduce, expected vs actual, screenshots, Console logs) — do not use our templates there.
+**Issue and PR templates:** Use the templates in `.github/` for all issues and PRs on this fork.
 
 **Commits:** `<type>(<scope>): <description>` — scopes are required here (overrides global no-scope rule)
 

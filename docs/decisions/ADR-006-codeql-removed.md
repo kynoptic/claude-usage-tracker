@@ -5,7 +5,7 @@
 
 ## Context
 
-The repository inherited a CodeQL Advanced workflow that ran on every push and PR. It consistently failed because it used `macos-latest` (default Xcode) while the build requires Xcode 26.0.1 for Swift 6 concurrency rules. Each run consumed ~20 minutes of GitHub Actions macOS minutes.
+The repository inherited a CodeQL Advanced workflow that ran on every push and PR. It consistently failed because it used `macos-latest` (default Xcode) while the build requires Xcode 16 for Swift 6 concurrency rules. Each run consumed ~20 minutes of GitHub Actions macOS minutes.
 
 ## Decision
 

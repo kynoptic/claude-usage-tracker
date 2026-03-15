@@ -42,7 +42,7 @@ This project adheres to a code of conduct that all contributors are expected to 
 Before you begin, ensure you have the following installed:
 
 - **macOS 14.0+** (Sonoma or later)
-- **Xcode 26.0.1+** (required; CI uses Xcode 26.0.1 on macOS 15 — the minimum is enforced by the `PBXFileSystemSynchronizedRootGroup` project format introduced in Xcode 16)
+- **Xcode 16+** (required; CI uses Xcode 16 on macOS 15 — the minimum is enforced by the `PBXFileSystemSynchronizedRootGroup` project format introduced in Xcode 16)
 - **Git** for version control
 - **A Claude AI account** for testing (to obtain a session key)
 
@@ -77,36 +77,42 @@ Before you begin, ensure you have the following installed:
 ```
 Claude Usage/
 ├── App/
-│   ├── AppDelegate.swift          # App lifecycle, notifications setup
+│   ├── AppDelegate.swift           # App lifecycle, notifications setup
 │   └── ClaudeUsageTrackerApp.swift # SwiftUI app entry point
 │
 ├── MenuBar/
-│   ├── MenuBarManager.swift       # Status item, popover management
-│   └── PopoverContentView.swift   # Main UI for usage display
+│   ├── IconRendering/              # Menu bar icon renderers
+│   ├── Popover/                    # Popover UI components
+│   ├── MenuBarManager.swift        # Status item, popover management
+│   └── (supporting files)
 │
 ├── Views/
-│   ├── SettingsView.swift         # Settings window with tabs
-│   └── SetupWizardView.swift      # First-run configuration
+│   ├── Settings/
+│   │   ├── App/                    # App-level settings views
+│   │   ├── Components/             # Shared settings UI components
+│   │   ├── Credentials/            # API key / credential views
+│   │   ├── DesignSystem/           # Settings design tokens
+│   │   └── Profile/                # Profile management views
+│   ├── SetupWizard/                # First-run wizard steps
+│   ├── SettingsView.swift          # Settings window with tabs
+│   └── SetupWizardView.swift       # First-run configuration entry
 │
 ├── Shared/
-│   ├── Extensions/                # Date, UserDefaults extensions
-│   ├── Models/
-│   │   ├── ClaudeUsage.swift      # Usage data model
-│   │   └── ClaudeStatus.swift     # API status model
-│   ├── Services/
-│   │   ├── ClaudeAPIService.swift # API communication
-│   │   ├── ClaudeStatusService.swift
-│   │   ├── NotificationManager.swift
-│   │   └── StatuslineService.swift # Claude Code integration
-│   ├── Storage/
-│   │   └── DataStore.swift        # UserDefaults wrapper
-│   └── Utilities/
-│       ├── Constants.swift        # App-wide constants
-│       └── FormatterHelper.swift  # Formatting utilities
+│   ├── Components/                 # Reusable SwiftUI components
+│   ├── ErrorHandling/              # Error types and presentation
+│   ├── Extensions/                 # Date, UserDefaults, etc.
+│   ├── Localization/               # Language manager, strings
+│   ├── Models/                     # Pure Swift data structs
+│   ├── Patterns/                   # Singleton base pattern
+│   ├── Protocols/                  # Service and storage protocols
+│   ├── Services/                   # API, notifications, sync
+│   ├── Storage/                    # UserDefaults wrappers
+│   └── Utilities/                  # Constants, formatters, helpers
 │
-├── Assets.xcassets/               # Images, colors, icons
+├── Assets.xcassets/                # Images, colors, icons
 └── Resources/
-    └── Info.plist                 # App configuration
+    ├── Info.plist                  # App configuration
+    └── (*.lproj)                   # Localization string files
 ```
 
 ## How to Contribute
