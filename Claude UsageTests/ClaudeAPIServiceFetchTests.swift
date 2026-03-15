@@ -4,8 +4,8 @@ import XCTest
 /// Tests for `ClaudeAPIService.fetchUsageData(auth:...)` covering the three
 /// primary fetch paths: OAuth, session key, and 429 fallback.
 ///
-/// Uses `URLProtocol` to intercept `URLSession.shared` requests without
-/// modifying production code.
+/// Uses a `URLProtocol`-backed mock `URLSession` injected into `ClaudeAPIService`
+/// so that network calls never reach the live API.
 final class ClaudeAPIServiceFetchTests: XCTestCase {
 
     // MARK: - Mock URLProtocol
@@ -62,6 +62,7 @@ final class ClaudeAPIServiceFetchTests: XCTestCase {
     // MARK: - Properties
 
     private var service: ClaudeAPIService!
+    private var mockSession: URLSession!
 
     // Valid session key that passes SessionKeyValidator
     private let validSessionKey = "sk-ant-sid01-test-key-abcdefghij"
@@ -102,16 +103,18 @@ final class ClaudeAPIServiceFetchTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        service = ClaudeAPIService()
         MockURLProtocol.handlers = []
         MockURLProtocol.fallbackStatusCode = 200
         MockURLProtocol.fallbackData = usageJSON
-        URLProtocol.registerClass(MockURLProtocol.self)
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [MockURLProtocol.self]
+        mockSession = URLSession(configuration: config)
+        service = ClaudeAPIService(session: mockSession)
     }
 
     override func tearDown() {
-        URLProtocol.unregisterClass(MockURLProtocol.self)
         MockURLProtocol.handlers = []
+        mockSession = nil
         service = nil
         super.tearDown()
     }
@@ -417,5 +420,49 @@ final class ClaudeAPIServiceFetchTests: XCTestCase {
         } catch {
             XCTFail("Expected AppError, got \(type(of: error)): \(error)")
         }
+    }
+
+    // MARK: - URLSession Injection Tests
+
+    /// Verifies that the injected URLSession is used: a separate service instance
+    /// with its own mock session receives different stub data and parses it correctly.
+    func testInjectedSessionIsUsed() async throws {
+        // Configure a second mock session returning a distinct utilization value
+        let altJSON = Data("""
+        {
+            "five_hour": { "utilization": 99.9 },
+            "seven_day": { "utilization": 88.8 }
+        }
+        """.utf8)
+
+        final class AltMockURLProtocol: URLProtocol {
+            nonisolated(unsafe) static var data: Data = Data()
+            override class func canInit(with request: URLRequest) -> Bool { true }
+            override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+            override func startLoading() {
+                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+                client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                client?.urlProtocol(self, didLoad: AltMockURLProtocol.data)
+                client?.urlProtocolDidFinishLoading(self)
+            }
+            override func stopLoading() {}
+        }
+
+        AltMockURLProtocol.data = altJSON
+        let altConfig = URLSessionConfiguration.ephemeral
+        altConfig.protocolClasses = [AltMockURLProtocol.self]
+        let altSession = URLSession(configuration: altConfig)
+        let altService = ClaudeAPIService(session: altSession)
+
+        let (usage, _) = try await altService.fetchUsageData(
+            auth: .cliOAuth("test-token"),
+            storedOrgId: nil,
+            checkOverageLimitEnabled: false,
+            sessionKeyFallback: nil
+        )
+
+        XCTAssertEqual(usage.sessionPercentage, 99.9,
+                       "Service should use the injected session, not URLSession.shared")
+        XCTAssertEqual(usage.weeklyPercentage, 88.8)
     }
 }

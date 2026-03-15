@@ -15,7 +15,7 @@ extension ClaudeAPIService {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpMethod = "GET"
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -44,7 +44,7 @@ extension ClaudeAPIService {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpMethod = "GET"
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -72,7 +72,7 @@ extension ClaudeAPIService {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpMethod = "GET"
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
