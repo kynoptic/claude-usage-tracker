@@ -401,7 +401,7 @@ printf "%s\\n" "$output"
                 // secondary filesystem failure doesn't shadow the original safety error.
                 LoggingService.shared.logWarning("Credential safety check failed; installing placeholder script: \(error.localizedDescription)")
                 try? placeholderSwiftScript.write(to: swiftDestination, atomically: true, encoding: .utf8)
-                try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: swiftDestination.path)
+                try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: swiftDestination.path)
                 throw error
             }
         } else {
@@ -411,8 +411,11 @@ printf "%s\\n" "$output"
         }
 
         try swiftScriptContent.write(to: swiftDestination, atomically: true, encoding: .utf8)
+        // 0o600: owner read/write only — the Swift script is passed as an argument to `swift`,
+        // so it does not need execute permission. Restricting access limits exposure of the
+        // embedded session key to the owning user process only.
         try FileManager.default.setAttributes(
-            [.posixPermissions: 0o755],
+            [.posixPermissions: 0o600],
             ofItemAtPath: swiftDestination.path
         )
 
@@ -433,7 +436,7 @@ printf "%s\\n" "$output"
         // Replace with placeholder script that returns error
         try placeholderSwiftScript.write(to: swiftDestination, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes(
-            [.posixPermissions: 0o755],
+            [.posixPermissions: 0o600],
             ofItemAtPath: swiftDestination.path
         )
 
