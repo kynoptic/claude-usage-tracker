@@ -8,6 +8,7 @@
 import Foundation
 
 /// Manages app-wide settings that are shared across all profiles
+@MainActor
 class SharedDataStore {
     static let shared = SharedDataStore()
 

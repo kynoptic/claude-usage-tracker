@@ -9,6 +9,7 @@ import Foundation
 import Security
 
 /// Service for secure storage and retrieval of sensitive data using macOS Keychain
+@MainActor
 class KeychainService {
     static let shared = KeychainService()
 

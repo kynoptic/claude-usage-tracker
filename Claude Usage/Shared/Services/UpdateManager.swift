@@ -41,6 +41,7 @@ final class UpdateUserDriver: NSObject, SPUStandardUserDriverDelegate {
 }
 
 /// Manages automatic updates using Sparkle framework
+@MainActor
 final class UpdateManager: ObservableObject {
     static let shared = UpdateManager()
 

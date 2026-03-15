@@ -8,6 +8,7 @@
 import XCTest
 @testable import Claude_Usage
 
+@MainActor
 final class StatuslineServiceTests: XCTestCase {
 
     private var service: StatuslineService!

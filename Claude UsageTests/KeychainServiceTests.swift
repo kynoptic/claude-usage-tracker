@@ -10,6 +10,7 @@ import Security
 /// status -34018) and call `XCTSkip` so the suite stays green regardless of
 /// signing environment. Pure-logic tests (key metadata, error descriptions)
 /// always run.
+@MainActor
 final class KeychainServiceTests: XCTestCase {
 
     // MARK: - Properties

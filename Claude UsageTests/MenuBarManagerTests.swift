@@ -6,6 +6,7 @@ import XCTest
 /// Note: MenuBarManager cannot be instantiated in the test runner because its
 /// property initializers reference singletons that depend on NSApplication.
 /// Observer balance and static methods are tested without instantiation.
+@MainActor
 final class MenuBarManagerTests: XCTestCase {
 
     // MARK: - Observer Add/Remove Balance
