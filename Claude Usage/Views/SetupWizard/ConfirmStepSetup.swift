@@ -130,7 +130,7 @@ struct ConfirmStepSetup: View {
                 LoggingService.shared.log("SetupWizard: Saved credentials through ProfileManager")
 
                 try? StatuslineService.shared.updateScriptsIfInstalled()
-                SharedDataStore.shared.saveHasCompletedSetup(true)
+                DataStore.shared.saveHasCompletedSetup(true)
 
                 await MainActor.run {
                     ErrorRecovery.shared.recordSuccess(for: .api)
