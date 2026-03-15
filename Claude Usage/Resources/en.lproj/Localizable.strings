@@ -363,6 +363,7 @@
 "api.label_api_session_key" = "API Session Key";
 "api.placeholder_api_session_key" = "sk-ant-api03-...";
 "api.help_api_session_key" = "Your session key from console.anthropic.com";
+"api.button_open_console" = "Open Console";
 "api.button_fetch_organizations" = "Fetch Organizations";
 "api.button_fetching" = "Fetching...";
 "api.button_save_configuration" = "Save Configuration";

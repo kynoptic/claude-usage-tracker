@@ -306,6 +306,21 @@ struct APIEnterKeyStep: View {
 
             // Balanced buttons
             HStack(spacing: 10) {
+                Button(action: {
+                    if let url = URL(string: "https://console.anthropic.com") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "safari")
+                            .font(.system(size: 12))
+                        Text("api.button_open_console".localized)
+                            .font(.system(size: 12))
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+
                 Spacer()
 
                 Button(action: fetchOrganizations) {
