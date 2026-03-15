@@ -2,22 +2,37 @@ import Cocoa
 import SwiftUI
 import Combine
 
+/// Primary ViewModel for the menu bar app. Owns the refresh timer, orchestrates all service
+/// calls, manages the popover lifecycle, and is the main dependency of every SwiftUI view.
 @MainActor
 class MenuBarManager: NSObject, ObservableObject {
     // MARK: - Properties
 
+    /// The most recent Claude token-usage snapshot for the active profile.
     @Published private(set) var usage: ClaudeUsage = .empty
+    /// The current Claude API status (e.g., operational, degraded, incident).
     @Published private(set) var status: ClaudeStatus = .unknown
+    /// Raw API-level usage metrics for the active profile, if available.
     @Published private(set) var apiUsage: APIUsage?
+    /// `true` while a refresh network request is in flight.
     @Published private(set) var isRefreshing: Bool = false
+    /// Timestamp of the last successfully completed usage fetch.
     @Published private(set) var lastSuccessfulFetch: Date?
+    /// `true` when the cached usage data has exceeded the staleness threshold or the scheduler is backing off.
     @Published private(set) var isStale: Bool = false
+    /// The most recent error that caused a refresh to fail, or `nil` when the last refresh succeeded.
     @Published private(set) var lastRefreshError: AppError?
+    /// The earliest date at which an automatic retry will be attempted after an error.
     @Published private(set) var nextRetryDate: Date?
+    /// The scheduled date of the next automatic refresh when no error is pending.
     @Published private(set) var nextRefreshAt: Date?
+    /// Burn-up pacing context derived from the active profile's elapsed session fraction.
     @Published private(set) var pacingContext: PacingContext = .none
+    /// The ID of the profile whose status-bar button was most recently clicked.
     @Published private(set) var clickedProfileId: UUID?
+    /// The cached Claude usage snapshot for the profile that was clicked, used to populate the popover.
     @Published private(set) var clickedProfileUsage: ClaudeUsage?
+    /// The cached API usage snapshot for the profile that was clicked, used to populate the popover.
     @Published private(set) var clickedProfileAPIUsage: APIUsage?
 
     private var statusBarUIManager: StatusBarUIManager?
@@ -43,6 +58,8 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // MARK: - Setup
 
+    /// Initializes the status-bar UI, popover, network monitor, and auto-refresh timer.
+    /// Call once during app launch after the manager is instantiated.
     func setup() {
         cachedIsDarkMode = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         observeProfileChanges()
@@ -86,6 +103,8 @@ class MenuBarManager: NSObject, ObservableObject {
         observeDisplayModeChanges()
     }
 
+    /// Tears down all timers, observers, and UI resources. Call before the manager is deallocated
+    /// or the application terminates.
     func cleanup() {
         refreshTimer?.invalidate(); refreshTimer = nil; nextRefreshAt = nil
         networkMonitor.stopMonitoring(); autoStartService.stop(); cancellables.removeAll()
@@ -166,6 +185,8 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // MARK: - Status Bar Icons
 
+    /// Redraws all status-bar buttons with the latest usage data for the current display mode
+    /// (single-profile icon update or multi-profile button set).
     func updateAllStatusBarIcons() {
         if profileManager.displayMode == .multi {
             statusBarUIManager?.updateMultiProfileButtons(profiles: profileManager.profiles, config: profileManager.multiProfileConfig)
@@ -174,6 +195,9 @@ class MenuBarManager: NSObject, ObservableObject {
         }
     }
 
+    /// Applies a new icon configuration to the single-profile status-bar button and redraws it.
+    /// No-ops when the app is in multi-profile display mode.
+    /// - Parameter config: The icon configuration to apply to the active profile's status-bar button.
     func updateMenuBarDisplay(with config: MenuBarIconConfiguration) {
         guard profileManager.displayMode == .single else { return }
         let hasCredentials = profileManager.activeProfile?.hasUsageCredentials ?? false
@@ -183,6 +207,8 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // MARK: - Auto Refresh
 
+    /// Cancels any pending refresh timer and schedules the next one based on the current polling
+    /// interval from `PollingScheduler`. Updates `nextRefreshAt` accordingly.
     func startAutoRefresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
@@ -197,6 +223,8 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // MARK: - Display Mode
 
+    /// Responds to a change in the user's display-mode preference by switching the status-bar UI
+    /// between single-profile and multi-profile layouts.
     func handleDisplayModeChange() {
         if profileManager.displayMode == .multi {
             setupMultiProfileMode()
@@ -205,6 +233,8 @@ class MenuBarManager: NSObject, ObservableObject {
         }
     }
 
+    /// Configures the status-bar UI for multi-profile mode: creates a button per selected profile,
+    /// performs an initial icon update, and kicks off a refresh for all selected profiles.
     func setupMultiProfileMode() {
         let selectedProfiles = profileManager.getSelectedProfiles()
         statusBarUIManager?.setupMultiProfile(profiles: selectedProfiles, target: self, action: #selector(togglePopover))
@@ -222,6 +252,9 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // MARK: - Data Refresh
 
+    /// Triggers an immediate usage refresh for the active profile (single-profile mode) or all
+    /// selected profiles (multi-profile mode). Sets `isRefreshing` while the fetch is in flight
+    /// and reschedules the auto-refresh timer when it completes.
     func refreshUsage() {
         if profileManager.displayMode == .multi { refreshAllSelectedProfiles(); return }
         guard let profile = profileManager.activeProfile, profile.hasUsageCredentials else { updateAllStatusBarIcons(); return }
@@ -337,6 +370,8 @@ class MenuBarManager: NSObject, ObservableObject {
         NSApplication.shared.terminate(nil)
     }
 
+    /// Presents the GitHub star prompt sheet. Handles the three user actions: star the repo,
+    /// dismiss for later, or permanently suppress the prompt.
     func showGitHubStarPrompt() {
         windowCoordinator.showGitHubStarPrompt(
             onStar: { [weak self] in
@@ -350,6 +385,10 @@ class MenuBarManager: NSObject, ObservableObject {
 
     // MARK: - Private Helpers
 
+    /// Creates a new `NSHostingController` wrapping `PopoverContentView`, wired up with refresh,
+    /// preferences, and quit callbacks. Used to populate the popover on first show and after
+    /// profile switches.
+    /// - Returns: A hosting controller ready to be presented in the popover.
     func createContentViewController() -> NSHostingController<PopoverContentView> {
         let contentView = PopoverContentView(
             manager: self,
@@ -363,6 +402,12 @@ class MenuBarManager: NSObject, ObservableObject {
         return NSHostingController(rootView: contentView)
     }
 
+    /// Returns a display configuration for the status-bar icon, disabling all metrics when the
+    /// profile has no usage credentials so the icon falls back to the default logo state.
+    /// - Parameters:
+    ///   - config: The profile's stored `MenuBarIconConfiguration`.
+    ///   - hasUsageCredentials: Whether the active profile has valid API credentials.
+    /// - Returns: The original `config` when credentials are present; a metrics-disabled copy otherwise.
     static func displayConfig(from config: MenuBarIconConfiguration, hasUsageCredentials: Bool) -> MenuBarIconConfiguration {
         guard !hasUsageCredentials else { return config }
         return MenuBarIconConfiguration(
@@ -372,11 +417,17 @@ class MenuBarManager: NSObject, ObservableObject {
         )
     }
 
+    /// Derives the current burn-up `PacingContext` from a usage snapshot by computing
+    /// the elapsed fraction of the session window.
+    /// - Parameter usage: The `ClaudeUsage` snapshot to derive pacing from.
+    /// - Returns: A `PacingContext` reflecting the proportion of the session that has elapsed.
     static func buildPacingContext(for usage: ClaudeUsage) -> PacingContext {
         let elapsed = UsageStatusCalculator.elapsedFraction(resetTime: usage.sessionResetTime, duration: Constants.sessionWindow, showRemaining: false)
         return PacingContext(elapsedFraction: elapsed)
     }
 
+    /// Recomputes `isStale` based on the time since the last successful fetch and whether
+    /// the polling scheduler is currently in back-off. Only writes the property when the value changes.
     func updateStaleness() {
         let stale: Bool
         if pollingScheduler.isBackingOff {
