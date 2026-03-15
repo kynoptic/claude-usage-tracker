@@ -15,7 +15,7 @@ Native macOS menu bar app that monitors your Claude AI usage limits in real time
 
 ### Download (recommended)
 
-1. Download `Claude-Usage.zip` from the [latest release](https://github.com/kynoptic/Claude-Usage-Tracker/releases/latest)
+1. Download `Claude-Usage.zip` from the [latest release](https://github.com/kynoptic/claude-usage-tracker/releases/latest)
 2. Unzip and drag **Claude Usage.app** to `/Applications`
 3. Open it — macOS will block it on first launch because the app is not notarized
 4. Go to **System Settings → Privacy & Security** and click **Open Anyway**

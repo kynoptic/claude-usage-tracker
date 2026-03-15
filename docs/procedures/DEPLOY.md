@@ -108,7 +108,7 @@ The CI workflow (`/.github/workflows/release.yml`) automatically:
 
 ### Step 5: Publish Release
 
-1. Go to [Releases](https://github.com/kynoptic/Claude-Usage-Tracker/releases)
+1. Go to [Releases](https://github.com/kynoptic/claude-usage-tracker/releases)
 2. Find the draft release for your tag
 3. Edit the description to match the CHANGELOG section
 4. Click **Publish release**

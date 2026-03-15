@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Question or Discussion
-    url: https://github.com/kynoptic/Claude-Usage-Tracker/discussions
+    url: https://github.com/kynoptic/claude-usage-tracker/discussions
     about: For questions or general discussions, please use GitHub Discussions
