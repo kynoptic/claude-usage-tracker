@@ -39,7 +39,7 @@ enum MenuBarIconStyle: String, CaseIterable, Codable {
     }
 }
 
-/// Manages shared data storage between app and widgets using App Groups
+/// Manages shared data storage using standard UserDefaults (app container)
 @MainActor
 final class DataStore: StorageProvider {
     static let shared = DataStore()
@@ -53,7 +53,7 @@ final class DataStore: StorageProvider {
         return defaults
     }
 
-    init() {
+    private init() {
         // Use standard UserDefaults (app container)
         self.defaults = UserDefaults.standard
         LoggingService.shared.log("DataStore: Using standard app container storage")

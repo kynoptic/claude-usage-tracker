@@ -45,6 +45,7 @@ Records of key design decisions and their rationale.
 | [ADR-005](decisions/ADR-005-hard-fork-independent-development.md) | Declare hard fork and develop independently |
 | [ADR-006](decisions/ADR-006-codeql-removed.md) | Remove CodeQL workflow |
 | [ADR-007](decisions/ADR-007-singleton-pattern.md) | Singleton pattern for services and managers |
+| [ADR-008](decisions/ADR-008-keychain-per-profile-credentials.md) | Migrate credentials from UserDefaults to per-profile Keychain items |
 
 ## Storage
 

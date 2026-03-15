@@ -18,7 +18,7 @@ final class UsageHistoryStore {
 
     // MARK: - Initialization
 
-    init() {
+    private init() {
         guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             LoggingService.shared.logError("UsageHistoryStore: applicationSupportDirectory unavailable; falling back to temporary directory")
             self.storageDirectory = FileManager.default.temporaryDirectory

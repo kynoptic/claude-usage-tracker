@@ -1,6 +1,6 @@
 # ADR-003: Credentials stored directly in Profile struct
 
-**Status:** Accepted
+**Status:** Accepted (superseded by ADR-008 when implemented)
 **Date:** 2026-01-07
 
 ## Context
