@@ -76,7 +76,7 @@ let sessionKey = ProfileManager.shared.activeProfile?.claudeSessionKey
 let usage = ProfileManager.shared.activeProfile?.claudeUsage
 ```
 
-> **Note:** Credentials are currently embedded in the `Profile` struct serialised to `UserDefaults`. ADR-008 proposes migrating per-profile credentials to dedicated Keychain items.
+> **Note:** Per-profile credentials are being migrated from `UserDefaults` to dedicated Keychain items per [ADR-008](ADR-008-keychain-per-profile-credentials.md) (accepted). Migration runs automatically on launch.
 
 ---
 

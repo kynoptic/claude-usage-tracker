@@ -48,8 +48,8 @@ We'll keep you informed throughout the process and credit you in the security ad
 
 ### Session Key Storage
 
-- Session keys are stored in `UserDefaults` as part of the serialized `Profile` struct (see [ADR-003](docs/decisions/ADR-003-credentials-embedded-in-profile.md))
-- `UserDefaults` is less secure than the macOS Keychain — credentials are readable by any process running as the same user
+- Per-profile credentials are being migrated from `UserDefaults` to dedicated macOS Keychain items (see [ADR-008](docs/decisions/ADR-008-keychain-per-profile-credentials.md), which supersedes [ADR-003](docs/decisions/ADR-003-credentials-embedded-in-profile.md))
+- Keychain items use `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, limiting access to the current user session
 - Keys are never transmitted except to `claude.ai` via HTTPS
 - No cloud sync or external storage
 
