@@ -94,6 +94,32 @@ struct Profile: Codable, Identifiable, Equatable {
         self.lastUsedAt = lastUsedAt
     }
 
+    // MARK: - Codable
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        claudeSessionKey = try container.decodeIfPresent(String.self, forKey: .claudeSessionKey)
+        organizationId = try container.decodeIfPresent(String.self, forKey: .organizationId)
+        apiSessionKey = try container.decodeIfPresent(String.self, forKey: .apiSessionKey)
+        apiOrganizationId = try container.decodeIfPresent(String.self, forKey: .apiOrganizationId)
+        cliCredentialsJSON = try container.decodeIfPresent(String.self, forKey: .cliCredentialsJSON)
+        hasCliAccount = try container.decodeIfPresent(Bool.self, forKey: .hasCliAccount) ?? false
+        cliAccountSyncedAt = try container.decodeIfPresent(Date.self, forKey: .cliAccountSyncedAt)
+        hasValidOAuthCredentials = try container.decodeIfPresent(Bool.self, forKey: .hasValidOAuthCredentials) ?? false
+        claudeUsage = try container.decodeIfPresent(ClaudeUsage.self, forKey: .claudeUsage)
+        apiUsage = try container.decodeIfPresent(APIUsage.self, forKey: .apiUsage)
+        iconConfig = try container.decodeIfPresent(MenuBarIconConfiguration.self, forKey: .iconConfig) ?? .default
+        refreshInterval = try container.decodeIfPresent(TimeInterval.self, forKey: .refreshInterval) ?? 30.0
+        autoStartSessionEnabled = try container.decodeIfPresent(Bool.self, forKey: .autoStartSessionEnabled) ?? false
+        checkOverageLimitEnabled = try container.decodeIfPresent(Bool.self, forKey: .checkOverageLimitEnabled) ?? true
+        notificationSettings = try container.decodeIfPresent(NotificationSettings.self, forKey: .notificationSettings) ?? NotificationSettings()
+        isSelectedForDisplay = try container.decodeIfPresent(Bool.self, forKey: .isSelectedForDisplay) ?? true
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        lastUsedAt = try container.decodeIfPresent(Date.self, forKey: .lastUsedAt) ?? Date()
+    }
+
     // MARK: - Computed Properties
     var hasClaudeAI: Bool {
         claudeSessionKey != nil && organizationId != nil
