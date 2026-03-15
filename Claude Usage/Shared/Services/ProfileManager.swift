@@ -21,7 +21,7 @@ class ProfileManager: ObservableObject {
     private let profileStore = ProfileStore.shared
     private let cliSyncService = ClaudeCodeSyncService.shared
 
-    private var switchingSemaphore = false
+    private let switchLock = NSLock()
 
     private init() {}
 
@@ -167,10 +167,11 @@ class ProfileManager: ObservableObject {
     // MARK: - Profile Activation (Centralized)
 
     func activateProfile(_ id: UUID) async {
-        guard !switchingSemaphore else {
+        guard switchLock.try() else {
             LoggingService.shared.log("Profile switch already in progress, ignoring")
             return
         }
+        defer { switchLock.unlock() }
 
         guard let profile = profiles.first(where: { $0.id == id }) else {
             LoggingService.shared.log("Profile not found: \(id)")
@@ -182,10 +183,8 @@ class ProfileManager: ObservableObject {
             return
         }
 
-        switchingSemaphore = true
         isSwitchingProfile = true
         defer {
-            switchingSemaphore = false
             isSwitchingProfile = false
         }
 
