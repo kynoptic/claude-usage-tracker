@@ -27,9 +27,8 @@ Invoke this skill when the user says things like "prepare a release", "cut a rel
 
 4. **Commit**
    ```
-   chore(release): bump version to X.Y.Z
+   chore(release): vX.Y.Z
    ```
-   Note: scopes are required in this repo, but release commits use this exact format without a scope after `chore`.
 
 5. **Tag**
    ```bash
