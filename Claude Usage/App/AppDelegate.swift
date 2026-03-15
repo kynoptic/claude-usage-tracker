@@ -60,9 +60,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
 
         // Check if we should show GitHub star prompt (with a slight delay to not interrupt app startup)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            if SharedDataStore.shared.shouldShowGitHubStarPrompt() {
-                self?.menuBarManager?.showGitHubStarPrompt()
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(2.0 * 1_000_000_000))
+            await MainActor.run {
+                if SharedDataStore.shared.shouldShowGitHubStarPrompt() {
+                    self?.menuBarManager?.showGitHubStarPrompt()
+                }
             }
         }
     }

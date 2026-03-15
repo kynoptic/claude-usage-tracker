@@ -71,7 +71,10 @@ class MenuBarManager: NSObject, ObservableObject {
         networkMonitor.startMonitoring()
 
         if let profile = profileManager.activeProfile, profile.hasUsageCredentials {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in self?.refreshUsage() }
+            Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(1.0 * 1_000_000_000))
+                await MainActor.run { self?.refreshUsage() }
+            }
         }
 
         startAutoRefresh()

@@ -120,27 +120,30 @@ final class WindowCoordinator: NSObject {
         }
 
         // Small delay to ensure smooth transition
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
-            guard let self else { return }
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(0.15 * 1_000_000_000))
+            await MainActor.run {
+                guard let self else { return }
 
-            NSApp.setActivationPolicy(.regular)
+                NSApp.setActivationPolicy(.regular)
 
-            let settingsView = SettingsView()
-            let hostingController = NSHostingController(rootView: settingsView)
+                let settingsView = SettingsView()
+                let hostingController = NSHostingController(rootView: settingsView)
 
-            let window = NSWindow(contentViewController: hostingController)
-            window.title = "Claude Usage - Settings"
-            window.styleMask = [.titled, .closable, .miniaturizable]
-            window.setContentSize(NSSize(width: 720, height: 600))
-            window.center()
-            window.isReleasedWhenClosed = false
-            window.isRestorable = false
-            window.delegate = self
+                let window = NSWindow(contentViewController: hostingController)
+                window.title = "Claude Usage - Settings"
+                window.styleMask = [.titled, .closable, .miniaturizable]
+                window.setContentSize(NSSize(width: 720, height: 600))
+                window.center()
+                window.isReleasedWhenClosed = false
+                window.isRestorable = false
+                window.delegate = self
 
-            self.settingsWindow = window
+                self.settingsWindow = window
 
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
         }
     }
 

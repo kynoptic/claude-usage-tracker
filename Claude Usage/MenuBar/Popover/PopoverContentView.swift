@@ -33,7 +33,8 @@ struct PopoverContentView: View {
                         isRefreshing = true
                     }
                     onRefresh()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    Task {
+                        try? await Task.sleep(nanoseconds: UInt64(1.0 * 1_000_000_000))
                         withAnimation(.easeInOut(duration: 0.3)) {
                             isRefreshing = false
                         }
