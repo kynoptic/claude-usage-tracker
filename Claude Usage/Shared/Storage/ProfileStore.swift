@@ -7,6 +7,21 @@
 
 import Foundation
 
+// MARK: - ProfileStoreError
+
+/// Typed errors thrown by ProfileStore operations.
+enum ProfileStoreError: LocalizedError {
+    /// No profile with the given identifier exists in the store.
+    case profileNotFound(UUID)
+
+    var errorDescription: String? {
+        switch self {
+        case .profileNotFound(let id):
+            return "Profile not found: \(id.uuidString)"
+        }
+    }
+}
+
 /// Manages storage and retrieval of profiles and profile-related data
 @MainActor
 final class ProfileStore {
@@ -109,7 +124,7 @@ final class ProfileStore {
     func saveProfileCredentials(_ profileId: UUID, credentials: ProfileCredentials) throws {
         var profiles = loadProfiles()
         guard let index = profiles.firstIndex(where: { $0.id == profileId }) else {
-            throw NSError(domain: "ProfileStore", code: 404, userInfo: [NSLocalizedDescriptionKey: "Profile not found"])
+            throw ProfileStoreError.profileNotFound(profileId)
         }
 
         // Update credentials directly in profile
@@ -130,7 +145,7 @@ final class ProfileStore {
     func loadProfileCredentials(_ profileId: UUID) throws -> ProfileCredentials {
         let profiles = loadProfiles()
         guard let profile = profiles.first(where: { $0.id == profileId }) else {
-            throw NSError(domain: "ProfileStore", code: 404, userInfo: [NSLocalizedDescriptionKey: "Profile not found"])
+            throw ProfileStoreError.profileNotFound(profileId)
         }
 
         return ProfileCredentials(
