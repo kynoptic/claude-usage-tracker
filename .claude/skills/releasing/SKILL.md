@@ -1,5 +1,9 @@
 # Releasing
 
+<!-- This skill is the automation layer for releases. The authoritative
+     procedure with rationale lives in docs/procedures/DEPLOY.md.
+     Post-release verification and troubleshooting are in RELEASING.md. -->
+
 Invoke this skill when the user says things like "prepare a release", "cut a release", "bump the version", "release X.Y.Z", or "tag a release". It codifies the exact release workflow for this project, including where the version is stored and how CI handles draft creation.
 
 ## Workflow

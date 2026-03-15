@@ -1,31 +1,17 @@
 # Release process
 
-> [!IMPORTANT]
-> The authoritative release workflow is in `CLAUDE.md` under **Release**. Follow that — the steps below cover verification and troubleshooting only.
+The authoritative release procedure lives in [`docs/procedures/DEPLOY.md`](docs/procedures/DEPLOY.md). It covers version bumping, changelog updates, tagging, CI workflows, and publishing.
+
+This file covers post-release verification and troubleshooting only.
 
 ## After releasing
 
-Once the tag is pushed and `gh release create` completes:
+Once the tag is pushed and the CI draft release is published:
 
-1. **Check CI** — the Release workflow builds from the tag and attaches `Claude-Usage.zip` to the release. Confirm it completes green at `https://github.com/kynoptic/Claude-Usage-Tracker/actions`.
+1. **Check CI** — the Release workflow builds from the tag and attaches `Claude-Usage.zip` to the release. Confirm it completes green.
 2. **Check the release page** — confirm the ZIP and SHA256 checksum are attached.
-3. **Verify the appcast** — the Generate Appcast workflow runs after the release publishes. Check `https://kynoptic.github.io/Claude-Usage-Tracker/appcast.xml` contains the new version with a `<sparkle:version>` matching `CURRENT_PROJECT_VERSION`.
+3. **Verify the appcast** — the Generate Appcast workflow runs after the release publishes. Check `appcast.xml` contains the new version with a `<sparkle:version>` matching `CURRENT_PROJECT_VERSION`.
 4. **Test in-app update** — run an older installed version, open **Claude Usage → Check for Updates**, and confirm the new version appears and installs correctly.
-
-## Version numbering
-
-Follow [Semantic Versioning](https://semver.org/):
-
-- **Major** (`X.0.0`): Breaking changes
-- **Minor** (`x.Y.0`): New features, backwards compatible
-- **Patch** (`x.y.Z`): Bug fixes, minor improvements
-
-Both fields in `project.pbxproj` must be bumped for every release:
-
-| Field | Purpose |
-|-------|---------|
-| `MARKETING_VERSION` | User-facing version string (e.g. `2.4.2`) |
-| `CURRENT_PROJECT_VERSION` | Build number used by Sparkle to detect updates — must always increment, even for patches |
 
 ## Troubleshooting
 
