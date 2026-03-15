@@ -19,11 +19,12 @@ Invoke this skill when the user says things like "prepare a release", "cut a rel
    - Search for all occurrences of `MARKETING_VERSION` and update each to the new version.
    - This is the sole source of version truth — there is no `package.json`, `pyproject.toml`, or similar.
 
-3. **Update `CHANGELOG.md`**
+3. **Update `CHANGELOG.md` and `DEVLOG.md`**
    - Follow Keep a Changelog format.
    - Add a new `## [X.Y.Z] - YYYY-MM-DD` section immediately below `## [Unreleased]`.
    - Move relevant entries from `## [Unreleased]` into the new section.
    - Leave `## [Unreleased]` in place (empty or with any entries that are not part of this release).
+   - If the release includes significant engineering changes (architecture, refactors, build changes), also add an entry to `DEVLOG.md` under the new version. User-facing changes belong in `CHANGELOG.md`; engineering rationale belongs in `DEVLOG.md`.
 
 4. **Commit**
    ```
