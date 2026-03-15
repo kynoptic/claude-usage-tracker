@@ -20,30 +20,28 @@ final class ErrorPresenter {
 
     /// Show an error alert to the user
     func showAlert(for error: AppError, in window: NSWindow? = nil) {
-        DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = error.message
-            alert.informativeText = self.buildInformativeText(for: error)
-            alert.alertStyle = error.isRecoverable ? .warning : .critical
+        let alert = NSAlert()
+        alert.messageText = error.message
+        alert.informativeText = buildInformativeText(for: error)
+        alert.alertStyle = error.isRecoverable ? .warning : .critical
 
-            // Add buttons
-            alert.addButton(withTitle: "OK")
+        // Add buttons
+        alert.addButton(withTitle: "OK")
 
-            if error.code.category == .sessionKey || error.code.category == .api {
-                alert.addButton(withTitle: "Open Settings")
-            }
+        if error.code.category == .sessionKey || error.code.category == .api {
+            alert.addButton(withTitle: "Open Settings")
+        }
 
-            alert.addButton(withTitle: "Copy Error Code")
+        alert.addButton(withTitle: "Copy Error Code")
 
-            // Show alert
-            if let window = window {
-                alert.beginSheetModal(for: window) { response in
-                    self.handleAlertResponse(response, error: error)
-                }
-            } else {
-                let response = alert.runModal()
+        // Show alert
+        if let window = window {
+            alert.beginSheetModal(for: window) { response in
                 self.handleAlertResponse(response, error: error)
             }
+        } else {
+            let response = alert.runModal()
+            handleAlertResponse(response, error: error)
         }
     }
 
@@ -93,10 +91,8 @@ final class ErrorPresenter {
     private func showTooltip(_ message: String) {
         // For macOS, we can use NSUserNotification or create a custom tooltip window
         // This is a simplified version
-        DispatchQueue.main.async {
-            // Could implement custom toast window here
-            LoggingService.shared.logDebug("📱 Toast: \(message)")
-        }
+        // Could implement custom toast window here
+        LoggingService.shared.logDebug("📱 Toast: \(message)")
     }
 
     // MARK: - Error Details View
