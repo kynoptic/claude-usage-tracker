@@ -1,0 +1,7 @@
+#!/usr/bin/env swift
+
+import Foundation
+
+// No session key available - statusline is disabled
+print("ERROR:NO_SESSION_KEY")
+exit(1)
