@@ -44,6 +44,29 @@ Business logic belongs in managers/services. Prefer `async/await` over completio
 - Document public APIs with doc comments (`///`)
 - Extract complex SwiftUI sub-views into named structs
 
+### Singleton pattern
+
+Services and managers use the `@MainActor` singleton pattern for a single source of truth across the app. Thread safety and consistency are guaranteed by `@MainActor`.
+
+**Pattern:**
+
+```swift
+@MainActor
+final class ServiceName: ObservableObject {
+    static let shared = ServiceName()
+
+    @Published var state: SomeType?
+
+    private init() {}
+}
+```
+
+**When to use:** Services (`KeychainService`, `LoggingService`), managers (`ProfileManager`, `StatuslineService`), and storage (`DataStore`).
+
+**When NOT to use:** Data models (`Profile`, `ClaudeUsage`), SwiftUI views, or temporary objects.
+
+See [`docs/decisions/ADR-007-singleton-pattern.md`](docs/decisions/ADR-007-singleton-pattern.md) for detailed rationale, testing patterns, and thread safety guarantees. Optionally adopt the `Singleton` protocol in `Claude Usage/Shared/Patterns/SingletonBase.swift` to document the pattern explicitly (adoption is optional for existing singletons).
+
 ## Git
 
 Follow `CONTRIBUTING.md` for all development conventions. The following **override global defaults**:

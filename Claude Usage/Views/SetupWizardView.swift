@@ -322,9 +322,9 @@ struct EnterKeyStepSetup: View {
 
                     // Validation Status
                     if case .success(let message) = wizardState.validationState {
-                        WizardStatusBox(message: message, type: .success)
+                        StatusFeedbackBox(message: message, status: .success)
                     } else if case .error(let message) = wizardState.validationState {
-                        WizardStatusBox(message: message, type: .error)
+                        StatusFeedbackBox(message: message, status: .error)
                     }
                 }
                 .padding(32)
@@ -605,26 +605,19 @@ struct ConfirmStepSetup: View {
 
         Task {
             do {
-                guard let profileId = ProfileManager.shared.activeProfile?.id else {
+                // Update the Profile model with new credentials
+                // ProfileManager.updateProfile() handles both Keychain and in-memory sync
+                guard var profile = ProfileManager.shared.activeProfile else {
                     throw NSError(domain: "SetupWizard", code: 1, userInfo: [
                         NSLocalizedDescriptionKey: "No active profile found"
                     ])
                 }
 
-                // Save to profile-specific Keychain using the refactored pattern
-                var creds = try ProfileStore.shared.loadProfileCredentials(profileId)
-                creds.claudeSessionKey = wizardState.sessionKey
-                creds.organizationId = wizardState.selectedOrgId
-                try ProfileStore.shared.saveProfileCredentials(profileId, credentials: creds)
-
-                // Also update the Profile model with the new credentials
-                if var profile = ProfileManager.shared.activeProfile {
-                    profile.claudeSessionKey = wizardState.sessionKey
-                    profile.organizationId = wizardState.selectedOrgId
-                    profile.autoStartSessionEnabled = wizardState.autoStartSessionEnabled
-                    ProfileManager.shared.updateProfile(profile)
-                    LoggingService.shared.log("SetupWizard: Updated profile model with new credentials")
-                }
+                profile.claudeSessionKey = wizardState.sessionKey
+                profile.organizationId = wizardState.selectedOrgId
+                profile.autoStartSessionEnabled = wizardState.autoStartSessionEnabled
+                ProfileManager.shared.updateProfile(profile)
+                LoggingService.shared.log("SetupWizard: Saved credentials through ProfileManager")
 
                 // Update statusline scripts if installed
                 try? StatuslineService.shared.updateScriptsIfInstalled()
@@ -752,45 +745,6 @@ struct InstructionRow: View {
     }
 }
 
-struct WizardStatusBox: View {
-    let message: String
-    let type: StatusType
-
-    enum StatusType {
-        case success, error
-
-        var color: Color {
-            switch self {
-            case .success: return .green
-            case .error: return .red
-            }
-        }
-
-        var icon: String {
-            switch self {
-            case .success: return "checkmark.circle.fill"
-            case .error: return "xmark.circle.fill"
-            }
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: type.icon)
-                .font(.system(size: 12))
-            Text(message)
-                .font(.system(size: 12))
-        }
-        .foregroundColor(type.color)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(type.color.opacity(0.1))
-        )
-    }
-}
 
 #Preview {
     SetupWizardView()

@@ -18,13 +18,6 @@ struct APISettingsView: View {
 
     private let apiService = ClaudeAPIService()
 
-    enum ValidationState {
-        case idle
-        case validating
-        case success(String)
-        case error(String)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sectionSpacing) {
             // Header
@@ -133,9 +126,9 @@ struct APISettingsView: View {
 
                 // Validation Feedback
                 if case .success(let message) = validationState {
-                    APIStatusBox(message: message, type: .success)
+                    StatusFeedbackBox(message: message, status: .success)
                 } else if case .error(let message) = validationState {
-                    APIStatusBox(message: message, type: .error)
+                    StatusFeedbackBox(message: message, status: .error)
                 }
             }
 
@@ -187,49 +180,3 @@ struct APISettingsView: View {
 
 // MARK: - API Status Box
 
-struct APIStatusBox: View {
-    let message: String
-    let type: APIStatusType
-
-    enum APIStatusType {
-        case success
-        case error
-
-        var color: Color {
-            switch self {
-            case .success: return .green
-            case .error: return .red
-            }
-        }
-
-        var icon: String {
-            switch self {
-            case .success: return "checkmark.circle.fill"
-            case .error: return "exclamationmark.triangle.fill"
-            }
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: Spacing.iconTextSpacing) {
-            Image(systemName: type.icon)
-                .foregroundColor(type.color)
-                .font(.system(size: 14))
-
-            Text(message)
-                .font(Typography.label)
-                .foregroundColor(.primary)
-
-            Spacer()
-        }
-        .padding(Spacing.inputPadding)
-        .background(
-            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                .fill(type.color.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                        .strokeBorder(type.color.opacity(0.3), lineWidth: 1)
-                )
-        )
-    }
-}
