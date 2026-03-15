@@ -9,7 +9,7 @@ struct SmartHeader: View {
     let onManageProfiles: () -> Void
     var clickedProfileId: UUID? = nil  // Profile ID that was clicked in multi-profile mode
 
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
 
     private var statusColor: Color {
         switch status.indicator.color {
@@ -131,7 +131,7 @@ struct SmartHeader: View {
 // MARK: - Profile Switcher Compact (for header)
 
 struct ProfileSwitcherCompact: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @State private var isHovered = false
     let onManageProfiles: () -> Void
 
@@ -188,7 +188,7 @@ struct ProfileSwitcherCompact: View {
 // MARK: - Profile Switcher Bar
 
 struct ProfileSwitcherBar: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @State private var isHovered = false
     let onManageProfiles: () -> Void
 

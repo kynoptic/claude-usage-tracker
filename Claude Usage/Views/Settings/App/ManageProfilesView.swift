@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ManageProfilesView: View {
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @State private var showingCreateProfile = false
     @State private var newProfileName = ""
     @State private var errorMessage: String?
@@ -256,7 +256,7 @@ struct ManageProfilesView: View {
 
 struct ProfileRow: View {
     let profile: Profile
-    @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var profileManager = ProfileManager.shared
     @State private var isEditing = false
     @State private var editedName: String = ""
     @State private var showingDeleteConfirmation = false
