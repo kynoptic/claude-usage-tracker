@@ -10,6 +10,7 @@ struct PopoverContentView: View {
     @State private var isRefreshing = false
     @State private var showInsights = false
     @StateObject private var profileManager = ProfileManager.shared
+    @StateObject private var dashboardViewModel = SmartUsageDashboardViewModel()
 
     // Computed properties for multi-profile mode support
     private var displayUsage: ClaudeUsage {
@@ -52,7 +53,8 @@ struct PopoverContentView: View {
                 isStale: manager.isStale,
                 lastSuccessfulFetch: manager.lastSuccessfulFetch,
                 lastRefreshError: manager.lastRefreshError,
-                nextRetryDate: manager.nextRetryDate
+                nextRetryDate: manager.nextRetryDate,
+                viewModel: dashboardViewModel
             )
 
             // Contextual Insights

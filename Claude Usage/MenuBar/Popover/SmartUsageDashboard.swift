@@ -10,6 +10,7 @@ struct SmartUsageDashboard: View {
     var lastRefreshError: AppError?
     var nextRetryDate: Date?
     @StateObject private var profileManager = ProfileManager.shared
+    @ObservedObject var viewModel: SmartUsageDashboardViewModel
 
     // Get the display mode from active profile's icon config
     private var showRemainingPercentage: Bool {
@@ -18,11 +19,6 @@ struct SmartUsageDashboard: View {
 
     private var showTimeMarker: Bool {
         profileManager.activeProfile?.iconConfig.showTimeMarker ?? true
-    }
-
-    // Check if API tracking is enabled globally
-    private var isAPITrackingEnabled: Bool {
-        DataStore.shared.loadAPITrackingEnabled()
     }
 
     /// Formatted staleness label: explains why data is outdated (no error active).
@@ -134,7 +130,9 @@ struct SmartUsageDashboard: View {
                 showTimeMarker: showTimeMarker,
                 metric: .session,
                 isStale: isStale,
-                context: sessionContext
+                context: sessionContext,
+                showGreyZone: viewModel.showGreyZone,
+                greyThreshold: viewModel.greyThreshold
             )
 
             // Secondary Usage Cards
@@ -149,7 +147,9 @@ struct SmartUsageDashboard: View {
                     periodDuration: Constants.weeklyWindow,
                     showTimeMarker: showTimeMarker,
                     metric: .weekly,
-                    isStale: isStale
+                    isStale: isStale,
+                    showGreyZone: viewModel.showGreyZone,
+                    greyThreshold: viewModel.greyThreshold
                 )
 
                 if usage.opusWeeklyTokensUsed > 0 {
@@ -163,7 +163,9 @@ struct SmartUsageDashboard: View {
                         periodDuration: Constants.weeklyWindow,
                         showTimeMarker: showTimeMarker,
                         metric: .opus,
-                        isStale: isStale
+                        isStale: isStale,
+                        showGreyZone: viewModel.showGreyZone,
+                        greyThreshold: viewModel.greyThreshold
                     )
                 }
 
@@ -178,7 +180,9 @@ struct SmartUsageDashboard: View {
                         periodDuration: Constants.weeklyWindow,
                         showTimeMarker: showTimeMarker,
                         metric: .sonnet,
-                        isStale: isStale
+                        isStale: isStale,
+                        showGreyZone: viewModel.showGreyZone,
+                        greyThreshold: viewModel.greyThreshold
                     )
                 }
             }
@@ -194,12 +198,14 @@ struct SmartUsageDashboard: View {
                     resetTime: nil,
                     isPrimary: false,
                     periodDuration: nil,
-                    isStale: isStale
+                    isStale: isStale,
+                    showGreyZone: viewModel.showGreyZone,
+                    greyThreshold: viewModel.greyThreshold
                 )
             }
 
             // API Usage Card (only if tracking is enabled AND profile has credentials)
-            if isAPITrackingEnabled,
+            if viewModel.isAPITrackingEnabled,
                let apiUsage = apiUsage,
                let profile = profileManager.activeProfile,
                profile.hasAPIConsole {
@@ -224,6 +230,8 @@ struct SmartUsageCard: View {
     var metric: UsageMetric? = nil
     var isStale: Bool = false
     var context: PacingContext = .none
+    var showGreyZone: Bool = false
+    var greyThreshold: Double = Constants.greyThresholdDefault
 
     @State private var isFlipped = false
 
@@ -259,8 +267,8 @@ struct SmartUsageCard: View {
             usedPercentage: usedPercentage,
             showRemaining: showRemaining,
             elapsedFraction: elapsed,
-            showGrey: DataStore.shared.loadShowGreyZone(),
-            greyThreshold: DataStore.shared.loadGreyThreshold()
+            showGrey: showGreyZone,
+            greyThreshold: greyThreshold
         )
     }
 
