@@ -12,17 +12,16 @@ import os.log
 /// Provides consistent logging across the application
 @MainActor
 final class LoggingService {
-    static let shared = LoggingService()
+    nonisolated static let shared = LoggingService()
 
     // Category-specific loggers
-    nonisolated(unsafe) private let subsystemId = Bundle.main.bundleIdentifier ?? "com.claudeusage"
-    nonisolated(unsafe) private lazy var apiLogger = OSLog(subsystem: subsystemId, category: "API")
-    nonisolated(unsafe) private lazy var storageLogger = OSLog(subsystem: subsystemId, category: "Storage")
-    nonisolated(unsafe) private lazy var notificationLogger = OSLog(subsystem: subsystemId, category: "Notifications")
-    nonisolated(unsafe) private lazy var uiLogger = OSLog(subsystem: subsystemId, category: "UI")
-    nonisolated(unsafe) private lazy var generalLogger = OSLog(subsystem: subsystemId, category: "General")
+    nonisolated private let apiLogger = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "com.claudeusage", category: "API")
+    nonisolated private let storageLogger = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "com.claudeusage", category: "Storage")
+    nonisolated private let notificationLogger = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "com.claudeusage", category: "Notifications")
+    nonisolated private let uiLogger = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "com.claudeusage", category: "UI")
+    nonisolated private let generalLogger = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "com.claudeusage", category: "General")
 
-    private init() {}
+    nonisolated private init() {}
 
     // MARK: - API Logging
 

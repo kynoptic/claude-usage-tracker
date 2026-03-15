@@ -2,6 +2,7 @@ import XCTest
 @testable import Claude_Usage
 
 /// Tests for `ErrorRecovery` circuit-breaker state transitions and retry decisions.
+@MainActor
 final class ErrorRecoveryTests: XCTestCase {
 
     // MARK: - Properties

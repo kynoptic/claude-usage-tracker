@@ -9,7 +9,6 @@ import Foundation
 import Security
 
 /// Manages synchronization of Claude Code CLI credentials between system Keychain and profiles
-@MainActor
 class ClaudeCodeSyncService {
     static let shared = ClaudeCodeSyncService()
 
@@ -113,7 +112,7 @@ class ClaudeCodeSyncService {
     // MARK: - Private Methods
 
     /// Runs a throwing closure off the main actor to avoid blocking UI
-    nonisolated private func runOffMainActor<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+    private func runOffMainActor<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
@@ -127,7 +126,7 @@ class ClaudeCodeSyncService {
     }
 
     /// Synchronous implementation of readSystemCredentials with timeout
-    nonisolated private func readSystemCredentialsSync() throws -> String? {
+    private func readSystemCredentialsSync() throws -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
         process.arguments = [
@@ -165,7 +164,7 @@ class ClaudeCodeSyncService {
     }
 
     /// Synchronous implementation of writeSystemCredentials with timeout
-    nonisolated private func writeSystemCredentialsSync(_ jsonData: String) throws {
+    private func writeSystemCredentialsSync(_ jsonData: String) throws {
         LoggingService.shared.log("Writing credentials to keychain using security command")
 
         // First, delete existing item
@@ -220,7 +219,7 @@ class ClaudeCodeSyncService {
 
     /// Waits for a subprocess to exit within the given timeout.
     /// Terminates the process and throws `subprocessTimedOut` if the deadline is exceeded.
-    nonisolated private func waitForProcess(_ process: Process, timeout: TimeInterval) throws {
+    private func waitForProcess(_ process: Process, timeout: TimeInterval) throws {
         let semaphore = DispatchSemaphore(value: 0)
 
         // Observe termination asynchronously so we can enforce a deadline

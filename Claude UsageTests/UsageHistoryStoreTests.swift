@@ -1,6 +1,7 @@
 import XCTest
 @testable import Claude_Usage
 
+@MainActor
 final class UsageHistoryStoreTests: XCTestCase {
 
     private var store: UsageHistoryStore!

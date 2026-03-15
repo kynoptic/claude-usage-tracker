@@ -151,10 +151,7 @@ enum Constants {
 
     // HTTP headers
     /// User-Agent string sent with CLI OAuth requests
-    static let claudeCodeUserAgent: String = {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.1.5"
-        return "claude-code/\(version)"
-    }()
+    static let claudeCodeUserAgent = "claude-code/2.1.5"
 
     // UI Timing
     enum UITiming {

@@ -1,6 +1,7 @@
 import XCTest
 @testable import Claude_Usage
 
+@MainActor
 final class SharedDataStoreTests: XCTestCase {
 
     var sharedDataStore: SharedDataStore!

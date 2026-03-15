@@ -13,6 +13,7 @@ import XCTest
 /// Projection = utilization / elapsedFraction when elapsed ∈ (0, 1).
 /// Falls back to raw utilization when elapsed is nil or ≥ 1.
 /// No minimum-elapsed guard — projection fires from first poll.
+@MainActor
 final class StatuslineColorLevelTests: XCTestCase {
 
     private func level(_ utilization: Int, elapsed: Double?) -> Int {

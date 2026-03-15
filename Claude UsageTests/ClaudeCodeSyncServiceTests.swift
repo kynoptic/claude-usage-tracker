@@ -1,6 +1,7 @@
 import XCTest
 @testable import Claude_Usage
 
+@MainActor
 final class ClaudeCodeSyncServiceTests: XCTestCase {
 
     private let service = ClaudeCodeSyncService.shared
