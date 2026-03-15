@@ -17,7 +17,7 @@ class ClaudeAPIService: APIServiceProtocol {
     let sessionKeyValidator: SessionKeyValidator
     let baseURL = Constants.APIEndpoints.claudeBase
     let consoleBaseURL = Constants.APIEndpoints.consoleBase
-    private let session: URLSession
+    let session: URLSession
 
     // MARK: - Initialization
 
