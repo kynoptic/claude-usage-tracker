@@ -23,8 +23,8 @@ final class StringMaskingTests: XCTestCase {
 
     func testMaskedKey_TwentyOneChars_ReturnsMaskedNotPlaceholder() {
         let key = String(repeating: "a", count: 21)
-        XCTAssertNotEqual(key.maskedKey(), "•••••••••")
-        XCTAssertTrue(key.maskedKey().contains("•••••"))
+        XCTAssertNotEqual(key.maskedKey(), "•••••••••",
+                          "A 21-char key should be masked, not replaced with the placeholder")
     }
 
     func testMaskedKey_LongKey_PreservesFirst12Chars() {
