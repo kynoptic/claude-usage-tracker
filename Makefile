@@ -32,11 +32,11 @@ init:
 	echo "✓ Xcode $$xcode_version"
 	@echo ""
 	@echo "Checking git remote configuration..."
-	@if ! git remote | grep -q origin; then \
-		echo "❌ 'origin' remote not found"; \
+	@if ! git remote | grep -q github; then \
+		echo "❌ 'github' remote not found"; \
 		exit 1; \
 	fi; \
-	echo "✓ 'origin' remote configured"
+	echo "✓ 'github' remote configured"
 	@echo ""
 	@echo "Resolving SPM dependencies..."
 	@xcodebuild -resolvePackageDependencies \
@@ -84,8 +84,8 @@ test:
 deploy: build-release
 	@echo "Deploying to /Applications..."
 	@echo ""
-	@echo "Step 1: Pull latest from origin..."
-	git pull origin main
+	@echo "Step 1: Pull latest from github..."
+	git pull github main
 	@echo ""
 	@echo "Step 2: Killing running app instance..."
 	@kill $$(pgrep -f "$(APP_NAME)") 2>/dev/null; sleep 1 || true
