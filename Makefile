@@ -48,6 +48,19 @@ init:
 	@echo "Installing pre-commit hooks..."
 	@pre-commit install --hook-type commit-msg > /dev/null 2>&1 && echo "✓ pre-commit hooks installed" || echo "⚠ pre-commit not found — run: pip install pre-commit"
 	@echo ""
+	@echo "Installing SwiftLint pre-commit hook..."
+	@if [ -f .git/hooks/pre-commit ] && ! grep -q 'swiftlint' .git/hooks/pre-commit; then \
+		cat scripts/swiftlint-precommit.sh >> .git/hooks/pre-commit; \
+		echo "✓ SwiftLint pre-commit hook appended"; \
+	elif ! [ -f .git/hooks/pre-commit ]; then \
+		echo "#!/usr/bin/env bash" > .git/hooks/pre-commit; \
+		cat scripts/swiftlint-precommit.sh >> .git/hooks/pre-commit; \
+		chmod +x .git/hooks/pre-commit; \
+		echo "✓ SwiftLint pre-commit hook created"; \
+	else \
+		echo "✓ SwiftLint pre-commit hook already present"; \
+	fi
+	@echo ""
 	@echo "✓ Init checks passed"
 
 # Debug build (xcodebuild flags from CLAUDE.md)
