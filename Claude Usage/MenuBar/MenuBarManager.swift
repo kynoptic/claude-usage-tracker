@@ -284,7 +284,7 @@ final class MenuBarManager: NSObject, ObservableObject {
             UsageHistoryStore.shared.recordAll(from: u)
             pacingContext = Self.buildPacingContext(for: u)
             updateAllStatusBarIcons()
-            if let p = profileManager.activeProfile { NotificationManager.shared.checkAndNotify(usage: u, profileName: p.name, settings: p.notificationSettings) }
+            if let p = profileManager.activeProfile { NotificationManager.shared.checkAndNotify(usage: u, profileId: p.id, profileName: p.name, settings: p.notificationSettings) }
             recordRefreshSuccess(usage: u)
         } else if let err = result.usageError {
             recordRefreshError(err)
