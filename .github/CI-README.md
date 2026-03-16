@@ -47,6 +47,54 @@ CODE_SIGNING_ALLOWED=NO
 
 ---
 
+### `generate-appcast.yml` — Sparkle Appcast
+
+**Triggers:** Release published, manual dispatch (`workflow_dispatch`)
+
+**Purpose:** Regenerate the Sparkle appcast XML so users with automatic updates receive the release.
+
+**Steps:**
+
+1. Determine release tag (from event or manual input; defaults to latest)
+2. Check out `gh-pages` branch
+3. Download Sparkle 2.8.1 tools
+4. Download the `Claude-Usage.zip` release asset
+5. Extract `Info.plist` version metadata from the app bundle
+6. Run `generate_appcast` with EdDSA signing (key piped via stdin)
+7. Commit updated `appcast.xml` and release archive to `gh-pages`
+8. Verify the appcast URL is accessible on GitHub Pages
+
+**Secrets required:**
+
+- `SPARKLE_PRIVATE_KEY` — EdDSA private key for signing appcast entries
+- `RELEASE_TOKEN` — PAT with push access to `gh-pages`
+
+**Output:** `https://kynoptic.github.io/Claude-Usage-Tracker/appcast.xml`
+
+---
+
+### `update-homebrew-cask.yml` — Homebrew Tap (disabled)
+
+**Triggers:** Manual dispatch only (`workflow_dispatch`)
+
+**Status:** Disabled. No Homebrew tap (`kynoptic/homebrew-claude-usage`) exists yet. Re-enable the release trigger and configure the tap repository before use.
+
+**Purpose:** Update the Homebrew cask formula with the new version and SHA256 checksum after a release.
+
+**Steps:**
+
+1. Extract version from release tag
+2. Download `Claude-Usage.zip` and compute SHA256
+3. Check out `kynoptic/homebrew-claude-usage` tap repository
+4. Update `Casks/claude-usage-tracker.rb` with new version and hash
+5. Commit and push to the tap
+
+**Secrets required:**
+
+- `HOMEBREW_TAP_TOKEN` — PAT with push access to the tap repository
+
+---
+
 ## Release Process
 
 ```bash
