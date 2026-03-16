@@ -177,7 +177,7 @@ struct SmartUsageDashboard: View {
 // MARK: - Card Appearance
 
 /// Bundles the shared appearance properties passed identically to every SmartUsageCard.
-struct CardAppearance {
+struct CardAppearance: Equatable {
     var isStale: Bool = false
     var showGreyZone: Bool = false
     var greyThreshold: Double = Constants.greyThresholdDefault
