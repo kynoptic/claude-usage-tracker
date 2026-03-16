@@ -73,8 +73,7 @@ final class ScreenshotTests: XCTestCase {
             isPrimary: true,
             periodDuration: Constants.sessionWindow,
             showTimeMarker: true,
-            metric: nil,
-            isStale: false
+            metric: nil
         )
         try renderToPNG(view, size: CGSize(width: 288, height: 120), name: "session_safe")
     }
@@ -89,8 +88,7 @@ final class ScreenshotTests: XCTestCase {
             isPrimary: true,
             periodDuration: Constants.sessionWindow,
             showTimeMarker: true,
-            metric: nil,
-            isStale: false
+            metric: nil
         )
         try renderToPNG(view, size: CGSize(width: 288, height: 120), name: "session_moderate")
     }
@@ -105,8 +103,7 @@ final class ScreenshotTests: XCTestCase {
             isPrimary: true,
             periodDuration: Constants.sessionWindow,
             showTimeMarker: true,
-            metric: nil,
-            isStale: false
+            metric: nil
         )
         try renderToPNG(view, size: CGSize(width: 288, height: 120), name: "session_critical")
     }
@@ -122,7 +119,7 @@ final class ScreenshotTests: XCTestCase {
             periodDuration: Constants.sessionWindow,
             showTimeMarker: true,
             metric: nil,
-            isStale: true
+            appearance: CardAppearance(isStale: true)
         )
         try renderToPNG(view, size: CGSize(width: 288, height: 120), name: "session_stale")
     }
@@ -139,8 +136,7 @@ final class ScreenshotTests: XCTestCase {
             isPrimary: false,
             periodDuration: Constants.weeklyWindow,
             showTimeMarker: true,
-            metric: nil,
-            isStale: false
+            metric: nil
         )
         try renderToPNG(view, size: CGSize(width: 138, height: 100), name: "weekly_secondary")
     }
@@ -189,8 +185,7 @@ final class ScreenshotTests: XCTestCase {
                 isPrimary: true,
                 periodDuration: Constants.sessionWindow,
                 showTimeMarker: true,
-                metric: nil,
-                isStale: false
+                metric: nil
             )
 
             // Secondary cards side by side
@@ -204,8 +199,7 @@ final class ScreenshotTests: XCTestCase {
                     isPrimary: false,
                     periodDuration: Constants.weeklyWindow,
                     showTimeMarker: true,
-                    metric: nil,
-                    isStale: false
+                    metric: nil
                 )
 
                 SmartUsageCard(
@@ -217,8 +211,7 @@ final class ScreenshotTests: XCTestCase {
                     isPrimary: false,
                     periodDuration: Constants.weeklyWindow,
                     showTimeMarker: false,
-                    metric: nil,
-                    isStale: false
+                    metric: nil
                 )
             }
         }
@@ -242,8 +235,7 @@ final class ScreenshotTests: XCTestCase {
                 isPrimary: true,
                 periodDuration: Constants.sessionWindow,
                 showTimeMarker: true,
-                metric: nil,
-                isStale: false
+                metric: nil
             )
 
             HStack(spacing: 12) {
@@ -256,8 +248,7 @@ final class ScreenshotTests: XCTestCase {
                     isPrimary: false,
                     periodDuration: Constants.weeklyWindow,
                     showTimeMarker: true,
-                    metric: nil,
-                    isStale: false
+                    metric: nil
                 )
 
                 SmartUsageCard(
@@ -269,8 +260,7 @@ final class ScreenshotTests: XCTestCase {
                     isPrimary: false,
                     periodDuration: Constants.weeklyWindow,
                     showTimeMarker: false,
-                    metric: nil,
-                    isStale: false
+                    metric: nil
                 )
             }
         }
@@ -302,8 +292,7 @@ final class ScreenshotTests: XCTestCase {
                         isPrimary: false,
                         periodDuration: Constants.weeklyWindow,
                         showTimeMarker: false,
-                        metric: nil,
-                        isStale: false
+                        metric: nil
                     )
                 }
             }
@@ -335,8 +324,7 @@ final class ScreenshotTests: XCTestCase {
                         isPrimary: false,
                         periodDuration: Constants.weeklyWindow,
                         showTimeMarker: false,
-                        metric: nil,
-                        isStale: false
+                        metric: nil
                     )
                 }
             }
@@ -356,8 +344,7 @@ final class ScreenshotTests: XCTestCase {
             isPrimary: false,
             periodDuration: Constants.weeklyWindow,
             showTimeMarker: true,
-            metric: nil,
-            isStale: false
+            metric: nil
         )
         try renderToPNG(view, size: CGSize(width: 200, height: 110), name: "yellow_light_mode", colorScheme: .light)
     }
