@@ -6,28 +6,32 @@ import UserNotifications
 final class NotificationManager: NotificationServiceProtocol {
     static let shared = NotificationManager()
 
-    // Track previous session percentage to detect resets
-    private var previousSessionPercentage: Double = 0.0
+    // Track previous session percentage per profile to detect resets
+    private var previousSessionPercentages: [UUID: Double] = [:]
 
-    // Track which notifications have been sent to prevent duplicates
-    private var sentNotifications: Set<String> = []
+    // Track which notifications have been sent per profile to prevent duplicates
+    private var sentNotifications: [UUID: Set<String>] = [:]
 
     private init() {}
 
-    /// Sends a notification when approaching usage limits
+    /// Sends a notification when approaching usage limits (legacy, non-profile-aware)
     func sendUsageAlert(type: AlertType, percentage: Double, resetTime: Date?) {
         // Check if notifications are enabled in preferences
         guard DataStore.shared.loadNotificationsEnabled() else {
             return
         }
 
+        let legacyId = Self.legacyProfileId
         // Create unique identifier for this notification
-        let identifier = "\(type.rawValue)_\(Int(percentage))"
+        let deduplicationKey = "\(type.rawValue)_\(Int(percentage))"
 
         // Check if we've already sent this notification
-        guard !sentNotifications.contains(identifier) else {
+        guard !(sentNotifications[legacyId]?.contains(deduplicationKey) ?? false) else {
             return
         }
+
+        // Mark as sent immediately
+        sentNotifications[legacyId, default: []].insert(deduplicationKey)
 
         let content = UNMutableNotificationContent()
         content.title = type.title
@@ -36,15 +40,14 @@ final class NotificationManager: NotificationServiceProtocol {
         content.categoryIdentifier = "USAGE_ALERT"
 
         let request = UNNotificationRequest(
-            identifier: identifier,
+            identifier: deduplicationKey,
             content: content,
             trigger: nil // Show immediately
         )
 
-        UNUserNotificationCenter.current().add(request) { [weak self] error in
-            if error == nil {
-                // Mark this notification as sent
-                self?.sentNotifications.insert(identifier)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                LoggingService.shared.logError("Failed to send usage alert: \(error)")
             }
         }
     }
@@ -101,17 +104,19 @@ final class NotificationManager: NotificationServiceProtocol {
     }
 
     /// Checks usage and sends appropriate alerts (profile-aware)
-    func checkAndNotify(usage: ClaudeUsage, profileName: String, settings: NotificationSettings) {
+    func checkAndNotify(usage: ClaudeUsage, profileId: UUID, profileName: String, settings: NotificationSettings) {
         // Check if notifications are enabled for this profile
         guard settings.enabled else {
             return
         }
 
         let sessionPercentage = usage.sessionPercentage
+        let previousPercentage = previousSessionPercentages[profileId] ?? 0.0
 
         // Check for session reset (went from >0% to 0%)
-        if previousSessionPercentage > 0.0 && sessionPercentage == 0.0 {
+        if previousPercentage > 0.0 && sessionPercentage == 0.0 {
             sendProfileAlert(
+                profileId: profileId,
                 profileName: profileName,
                 type: .sessionReset,
                 percentage: sessionPercentage,
@@ -121,15 +126,16 @@ final class NotificationManager: NotificationServiceProtocol {
             // Note: Auto-start session is handled per-profile but called from elsewhere
         }
 
-        // Update previous percentage for next check
-        previousSessionPercentage = sessionPercentage
+        // Update previous percentage for this profile
+        previousSessionPercentages[profileId] = sessionPercentage
 
-        // Clear lower threshold notifications to allow re-notification
-        clearLowerThresholdNotifications(currentPercentage: sessionPercentage)
+        // Clear lower threshold notifications for this profile only
+        clearLowerThresholdNotifications(profileId: profileId, currentPercentage: sessionPercentage)
 
         // 95% threshold
         if sessionPercentage >= 95 && settings.threshold95Enabled {
             sendProfileAlert(
+                profileId: profileId,
                 profileName: profileName,
                 type: .sessionCritical,
                 percentage: sessionPercentage,
@@ -139,6 +145,7 @@ final class NotificationManager: NotificationServiceProtocol {
         // 90% threshold
         else if sessionPercentage >= 90 && settings.threshold90Enabled {
             sendProfileAlert(
+                profileId: profileId,
                 profileName: profileName,
                 type: .sessionWarning,
                 percentage: sessionPercentage,
@@ -148,6 +155,7 @@ final class NotificationManager: NotificationServiceProtocol {
         // 75% threshold
         else if sessionPercentage >= 75 && settings.threshold75Enabled {
             sendProfileAlert(
+                profileId: profileId,
                 profileName: profileName,
                 type: .sessionInfo,
                 percentage: sessionPercentage,
@@ -155,6 +163,9 @@ final class NotificationManager: NotificationServiceProtocol {
             )
         }
     }
+
+    /// Stable UUID for the legacy single-profile fallback path
+    private static let legacyProfileId = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
 
     /// Checks usage and sends appropriate alerts (legacy, for backwards compatibility)
     func checkAndNotify(usage: ClaudeUsage) {
@@ -170,18 +181,21 @@ final class NotificationManager: NotificationServiceProtocol {
             threshold95Enabled: true
         )
 
-        checkAndNotify(usage: usage, profileName: "Default", settings: settings)
+        checkAndNotify(usage: usage, profileId: Self.legacyProfileId, profileName: "Default", settings: settings)
     }
 
     /// Sends a profile-specific usage alert
-    private func sendProfileAlert(profileName: String, type: AlertType, percentage: Double, resetTime: Date?) {
-        // Create unique identifier for this notification
-        let identifier = "\(profileName)_\(type.rawValue)_\(Int(percentage))"
+    private func sendProfileAlert(profileId: UUID, profileName: String, type: AlertType, percentage: Double, resetTime: Date?) {
+        // Create unique identifier for this notification type within the profile
+        let deduplicationKey = "\(type.rawValue)_\(Int(percentage))"
 
-        // Check if we've already sent this notification
-        guard !sentNotifications.contains(identifier) else {
+        // Check if we've already sent this notification for this profile
+        guard !(sentNotifications[profileId]?.contains(deduplicationKey) ?? false) else {
             return
         }
+
+        // Mark as sent immediately to prevent races on @MainActor
+        sentNotifications[profileId, default: []].insert(deduplicationKey)
 
         let content = UNMutableNotificationContent()
         content.title = "\(profileName) - \(type.title)"
@@ -189,16 +203,17 @@ final class NotificationManager: NotificationServiceProtocol {
         content.sound = .default
         content.categoryIdentifier = "USAGE_ALERT"
 
+        // Include profile ID in notification center identifier for uniqueness
+        let notificationIdentifier = "\(profileId.uuidString)_\(deduplicationKey)"
         let request = UNNotificationRequest(
-            identifier: identifier,
+            identifier: notificationIdentifier,
             content: content,
             trigger: nil // Show immediately
         )
 
-        UNUserNotificationCenter.current().add(request) { [weak self] error in
-            if error == nil {
-                // Mark this notification as sent
-                self?.sentNotifications.insert(identifier)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                LoggingService.shared.logError("Failed to send profile alert: \(error)")
             }
         }
     }
@@ -243,19 +258,41 @@ final class NotificationManager: NotificationServiceProtocol {
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
     }
 
-    /// Clears sent notification tracking for lower percentages
+    /// Clears sent notification tracking for lower percentages for a specific profile
     /// This allows re-notification if usage goes back up
-    private func clearLowerThresholdNotifications(currentPercentage: Double) {
-        // Remove notifications for percentages lower than current
-        sentNotifications = sentNotifications.filter { identifier in
+    private func clearLowerThresholdNotifications(profileId: UUID, currentPercentage: Double) {
+        guard var profileNotifications = sentNotifications[profileId] else { return }
+        // Remove notifications for percentages higher than current
+        // (they should re-fire if usage climbs back up)
+        profileNotifications = profileNotifications.filter { identifier in
             // Extract percentage from identifier (format: "type_percentage")
             let components = identifier.components(separatedBy: "_")
             guard components.count >= 2,
                   let percentage = Double(components.last ?? "0") else {
                 return true // Keep if we can't parse
             }
-            return percentage >= currentPercentage
+            return percentage <= currentPercentage
         }
+        sentNotifications[profileId] = profileNotifications
+    }
+
+    // MARK: - Test Inspection
+
+    /// Returns the last recorded session percentage for a profile (test support)
+    func previousSessionPercentage(for profileId: UUID) -> Double {
+        previousSessionPercentages[profileId] ?? 0.0
+    }
+
+    /// Returns whether a notification has been sent for a specific profile, type, and percentage (test support)
+    func hasSentNotification(profileId: UUID, type: AlertType, percentage: Double) -> Bool {
+        let key = "\(type.rawValue)_\(Int(percentage))"
+        return sentNotifications[profileId]?.contains(key) ?? false
+    }
+
+    /// Resets all per-profile state (test support)
+    func resetAllState() {
+        previousSessionPercentages.removeAll()
+        sentNotifications.removeAll()
     }
 }
 
