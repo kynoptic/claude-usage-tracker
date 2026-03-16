@@ -17,6 +17,15 @@ struct SmartUsageDashboard: View {
         profileManager.activeProfile?.iconConfig.showRemainingPercentage ?? false
     }
 
+    private var cardAppearance: CardAppearance {
+        CardAppearance(
+            isStale: isStale,
+            showGreyZone: viewModel.showGreyZone,
+            greyThreshold: viewModel.greyThreshold,
+            chartColorMode: viewModel.chartColorMode
+        )
+    }
+
     private var showTimeMarker: Bool {
         profileManager.activeProfile?.iconConfig.showTimeMarker ?? true
     }
@@ -87,11 +96,8 @@ struct SmartUsageDashboard: View {
                 periodDuration: Constants.sessionWindow,
                 showTimeMarker: showTimeMarker,
                 metric: .session,
-                isStale: isStale,
                 context: sessionContext,
-                showGreyZone: viewModel.showGreyZone,
-                greyThreshold: viewModel.greyThreshold,
-                chartColorMode: viewModel.chartColorMode
+                appearance: cardAppearance
             )
 
             // Secondary Usage Cards
@@ -106,10 +112,7 @@ struct SmartUsageDashboard: View {
                     periodDuration: Constants.weeklyWindow,
                     showTimeMarker: showTimeMarker,
                     metric: .weekly,
-                    isStale: isStale,
-                    showGreyZone: viewModel.showGreyZone,
-                    greyThreshold: viewModel.greyThreshold,
-                    chartColorMode: viewModel.chartColorMode
+                    appearance: cardAppearance
                 )
 
                 if usage.opusWeeklyTokensUsed > 0 {
@@ -123,10 +126,7 @@ struct SmartUsageDashboard: View {
                         periodDuration: Constants.weeklyWindow,
                         showTimeMarker: showTimeMarker,
                         metric: .opus,
-                        isStale: isStale,
-                        showGreyZone: viewModel.showGreyZone,
-                        greyThreshold: viewModel.greyThreshold,
-                        chartColorMode: viewModel.chartColorMode
+                        appearance: cardAppearance
                     )
                 }
 
@@ -141,10 +141,7 @@ struct SmartUsageDashboard: View {
                         periodDuration: Constants.weeklyWindow,
                         showTimeMarker: showTimeMarker,
                         metric: .sonnet,
-                        isStale: isStale,
-                        showGreyZone: viewModel.showGreyZone,
-                        greyThreshold: viewModel.greyThreshold,
-                        chartColorMode: viewModel.chartColorMode
+                        appearance: cardAppearance
                     )
                 }
             }
@@ -160,10 +157,7 @@ struct SmartUsageDashboard: View {
                     resetTime: nil,
                     isPrimary: false,
                     periodDuration: nil,
-                    isStale: isStale,
-                    showGreyZone: viewModel.showGreyZone,
-                    greyThreshold: viewModel.greyThreshold,
-                    chartColorMode: viewModel.chartColorMode
+                    appearance: cardAppearance
                 )
             }
 
@@ -180,6 +174,16 @@ struct SmartUsageDashboard: View {
     }
 }
 
+// MARK: - Card Appearance
+
+/// Bundles the shared appearance properties passed identically to every SmartUsageCard.
+struct CardAppearance: Equatable {
+    var isStale: Bool = false
+    var showGreyZone: Bool = false
+    var greyThreshold: Double = Constants.greyThresholdDefault
+    var chartColorMode: ChartColorMode = .uniform
+}
+
 // MARK: - Smart Usage Card
 struct SmartUsageCard: View {
     let title: String
@@ -191,11 +195,14 @@ struct SmartUsageCard: View {
     let periodDuration: TimeInterval?
     var showTimeMarker: Bool = true
     var metric: UsageMetric? = nil
-    var isStale: Bool = false
     var context: PacingContext = .none
-    var showGreyZone: Bool = false
-    var greyThreshold: Double = Constants.greyThresholdDefault
-    var chartColorMode: ChartColorMode = .uniform
+    var appearance: CardAppearance = CardAppearance()
+
+    // Convenience accessors for appearance properties
+    private var isStale: Bool { appearance.isStale }
+    private var showGreyZone: Bool { appearance.showGreyZone }
+    private var greyThreshold: Double { appearance.greyThreshold }
+    private var chartColorMode: ChartColorMode { appearance.chartColorMode }
 
     @State private var isFlipped = false
 
