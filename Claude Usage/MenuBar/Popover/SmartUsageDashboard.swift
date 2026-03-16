@@ -236,16 +236,16 @@ struct SmartUsageCard: View {
         )
     }
 
+    /// Vibrant system color for non-text elements — icon, progress bar, charts.
     private var statusColor: Color { .usageStatus(usageStatus) }
 
-    /// Vibrant (unadjusted system) color for non-text elements — icon, progress bar.
-    /// Always uses the original system colors so icons and bars stay vivid.
-    private var vibrantStatusColor: Color {
+    /// Accessible color for text elements — adjusted for contrast on light backgrounds.
+    private var accessibleStatusColor: Color {
         switch usageStatus.zone {
         case .grey:   return Color(nsColor: .systemGray)
-        case .green:  return Color(nsColor: .systemGreen)
-        case .yellow: return Color(nsColor: .systemYellow)
-        case .orange: return Color(nsColor: .systemOrange)
+        case .green:  return Color("UsageGreen")
+        case .yellow: return Color("UsageYellow")
+        case .orange: return Color("UsageOrange")
         case .red:    return Color(nsColor: .systemRed)
         }
     }
@@ -305,11 +305,11 @@ struct SmartUsageCard: View {
                 HStack(spacing: 4) {
                     Image(systemName: statusIcon)
                         .font(.system(size: isPrimary ? 12 : 10, weight: .medium))
-                        .foregroundColor(vibrantStatusColor)
+                        .foregroundColor(statusColor)
 
                     Text("\(Int(displayPercentage))%")
                         .font(.system(size: isPrimary ? 16 : 14, weight: .bold, design: .monospaced))
-                        .foregroundColor(statusColor)
+                        .foregroundColor(accessibleStatusColor)
                 }
             }
 
@@ -324,7 +324,7 @@ struct SmartUsageCard: View {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(
                                 LinearGradient(
-                                    colors: [vibrantStatusColor, vibrantStatusColor.opacity(0.8)],
+                                    colors: [statusColor, statusColor.opacity(0.8)],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )

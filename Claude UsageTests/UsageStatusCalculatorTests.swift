@@ -20,7 +20,7 @@ final class UsageStatusCalculatorTests: XCTestCase {
         _ used: Double,
         elapsed: Double? = nil,
         showGrey: Bool = false,
-        greyThreshold: Double = 0.5
+        greyThreshold: Double = Constants.greyThresholdDefault
     ) -> UsageZone {
         UsageStatusCalculator.calculateStatus(
             usedPercentage: used,
@@ -33,19 +33,20 @@ final class UsageStatusCalculatorTests: XCTestCase {
 
     // MARK: - No elapsed: raw percentage zones
 
-    func testGrey_Under50_ShowGreyEnabled() {
+    func testGrey_UnderThreshold_ShowGreyEnabled() {
         XCTAssertEqual(zone(0,    showGrey: true), .grey)
-        XCTAssertEqual(zone(20,   showGrey: true), .grey)
-        XCTAssertEqual(zone(49.9, showGrey: true), .grey)
+        XCTAssertEqual(zone(10,   showGrey: true), .grey)
+        XCTAssertEqual(zone(24.9, showGrey: true), .grey)
     }
 
-    func testGreen_Under50_ShowGreyDisabled() {
+    func testGreen_UnderThreshold_ShowGreyDisabled() {
         XCTAssertEqual(zone(0),    .green)
-        XCTAssertEqual(zone(20),   .green)
-        XCTAssertEqual(zone(49.9), .green)
+        XCTAssertEqual(zone(10),   .green)
+        XCTAssertEqual(zone(24.9), .green)
     }
 
-    func testGreen_50to90() {
+    func testGreen_AboveThreshold() {
+        XCTAssertEqual(zone(25),   .green)
         XCTAssertEqual(zone(50),   .green)
         XCTAssertEqual(zone(70),   .green)
         XCTAssertEqual(zone(89.9), .green)
@@ -285,39 +286,6 @@ final class UsageStatusCalculatorTests: XCTestCase {
             showRemaining: false
         )
         XCTAssertNil(fraction)
-    }
-
-    // MARK: - Color asset
-
-    func testYellowZone_UsesNamedColorAsset() {
-        let status = UsageStatusCalculator.calculateStatus(
-            usedPercentage: 95, showRemaining: false, elapsedFraction: nil
-        )
-        let color = UsageStatusCalculator.color(for: status)
-        // Should resolve the "UsageYellow" asset, not raw systemYellow
-        XCTAssertNotEqual(color, .systemYellow,
-                          "Yellow zone should use the UsageYellow asset, not raw systemYellow")
-    }
-
-    func testGreenAndOrangeZones_UseNamedColorAssets() {
-        let green = UsageStatusCalculator.calculateStatus(
-            usedPercentage: 70, showRemaining: false, elapsedFraction: nil
-        )
-        XCTAssertNotEqual(UsageStatusCalculator.color(for: green), .systemGreen,
-                          "Green zone should use the UsageGreen asset, not raw systemGreen")
-
-        let orange = UsageStatusCalculator.calculateStatus(
-            usedPercentage: 130, showRemaining: false, elapsedFraction: nil
-        )
-        XCTAssertNotEqual(UsageStatusCalculator.color(for: orange), .systemOrange,
-                          "Orange zone should use the UsageOrange asset, not raw systemOrange")
-    }
-
-    func testGreyAndRedZones_StillUseSystemColors() {
-        let red = UsageStatusCalculator.calculateStatus(
-            usedPercentage: 160, showRemaining: false, elapsedFraction: nil
-        )
-        XCTAssertEqual(UsageStatusCalculator.color(for: red), .systemRed)
     }
 
     func testElapsedFraction_HalfwayThrough() {

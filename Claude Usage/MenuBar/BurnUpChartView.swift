@@ -203,7 +203,7 @@ struct BurnUpChartView: View {
         switch zone {
         case .grey:   return Color(nsColor: .systemGray)
         case .green:  return Color(nsColor: .systemGreen)
-        case .yellow: return Color("UsageYellow")
+        case .yellow: return Color(nsColor: .systemYellow)
         case .orange: return Color(nsColor: .systemOrange)
         case .red:    return Color(nsColor: .systemRed)
         }

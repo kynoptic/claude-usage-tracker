@@ -14,7 +14,7 @@ struct SmartHeader: View {
     private var statusColor: Color {
         switch status.indicator.color {
         case .green: return .green
-        case .yellow: return Color("UsageYellow")
+        case .yellow: return .yellow
         case .orange: return .orange
         case .red: return .red
         case .gray: return .gray
@@ -315,7 +315,7 @@ struct ClaudeStatusRow: View {
     private var statusColor: Color {
         switch status.indicator.color {
         case .green: return .green
-        case .yellow: return Color("UsageYellow")
+        case .yellow: return .yellow
         case .orange: return .orange
         case .red: return .red
         case .gray: return .gray
