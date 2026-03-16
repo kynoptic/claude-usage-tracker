@@ -30,7 +30,7 @@ final class WindowCoordinator: NSObject {
     func setupPopover(contentViewController: NSViewController) {
         let popover = NSPopover()
         popover.contentSize = NSSize(width: 320, height: 600)
-        popover.behavior = .semitransient
+        popover.behavior = .transient
         popover.animates = true
         popover.delegate = self
         popover.contentViewController = contentViewController
@@ -45,7 +45,7 @@ final class WindowCoordinator: NSObject {
 
         let newPopover = NSPopover()
         newPopover.contentSize = NSSize(width: 320, height: 600)
-        newPopover.behavior = .semitransient
+        newPopover.behavior = .transient
         newPopover.animates = true
         newPopover.delegate = self
         newPopover.contentViewController = contentViewController
