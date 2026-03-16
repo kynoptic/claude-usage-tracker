@@ -3,6 +3,7 @@ import XCTest
 
 /// Tests for `ClaudeAPIService.parseRetryAfter(from:)` and the
 /// Retry-After propagation through `oauthError`.
+@MainActor
 final class RetryAfterParsingTests: XCTestCase {
 
     // MARK: - Properties

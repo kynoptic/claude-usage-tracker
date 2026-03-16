@@ -138,17 +138,20 @@ final class ProfileManagerTests: XCTestCase {
 
     // MARK: - deleteProfile
 
-    func testDeleteProfile_RemovesProfileFromList() throws {
+    func testDeleteProfile_RemovesProfileFromList() async throws {
         let extra = makeProfile(name: "Extra")
         manager.profiles = [manager.profiles[0], extra]
 
-        try manager.deleteProfile(extra.id)
+        try await manager.deleteProfile(extra.id)
 
         XCTAssertFalse(manager.profiles.contains(where: { $0.id == extra.id }))
     }
 
-    func testDeleteProfile_LastProfile_ThrowsCannotDeleteLastProfile() {
-        XCTAssertThrowsError(try manager.deleteProfile(manager.profiles[0].id)) { error in
+    func testDeleteProfile_LastProfile_ThrowsCannotDeleteLastProfile() async {
+        do {
+            try await manager.deleteProfile(manager.profiles[0].id)
+            XCTFail("Expected ProfileError.cannotDeleteLastProfile to be thrown")
+        } catch {
             XCTAssertTrue(error is ProfileError)
             if let profileError = error as? ProfileError {
                 XCTAssertEqual(profileError, .cannotDeleteLastProfile)
@@ -156,28 +159,28 @@ final class ProfileManagerTests: XCTestCase {
         }
     }
 
-    func testDeleteProfile_ProfileCountDecrements() throws {
+    func testDeleteProfile_ProfileCountDecrements() async throws {
         let extra = makeProfile(name: "Extra")
         manager.profiles = [manager.profiles[0], extra]
         let before = manager.profiles.count
 
-        try manager.deleteProfile(extra.id)
+        try await manager.deleteProfile(extra.id)
 
         XCTAssertEqual(manager.profiles.count, before - 1)
     }
 
-    func testDeleteProfile_WithTwoProfiles_FirstRemainsAfterDeletingSecond() throws {
+    func testDeleteProfile_WithTwoProfiles_FirstRemainsAfterDeletingSecond() async throws {
         let first = makeProfile(name: "First")
         let second = makeProfile(name: "Second")
         manager.profiles = [first, second]
 
-        try manager.deleteProfile(second.id)
+        try await manager.deleteProfile(second.id)
 
         XCTAssertEqual(manager.profiles.count, 1)
         XCTAssertEqual(manager.profiles[0].id, first.id)
     }
 
-    func testDeleteProfile_DeletesKeychainCredentials() throws {
+    func testDeleteProfile_DeletesKeychainCredentials() async throws {
         // This test only validates Keychain cleanup when Keychain is accessible.
         // In unsigned CI the Keychain probe returns false and the test is skipped.
         let keychainProbeService = "com.claudeusagetracker.test.probe.deletecleanup"
@@ -228,7 +231,7 @@ final class ProfileManagerTests: XCTestCase {
         XCTAssertEqual(before, "credentials-to-clean-up")
 
         // Delete the profile
-        try manager.deleteProfile(toDelete.id)
+        try await manager.deleteProfile(toDelete.id)
 
         // Credential must be gone from Keychain
         let after = try KeychainService.shared.loadPerProfile(
@@ -690,16 +693,35 @@ final class ProfileManagerTests: XCTestCase {
         }
     }
 
-    func testDeleteProfile_NonExistentId_Throws() {
-        // With only one profile, any deletion attempt should throw
+    func testDeleteProfile_ActiveProfile_SwitchesImmediately() async throws {
+        let first = makeProfile(name: "First")
+        let second = makeProfile(name: "Second")
+        manager.profiles = [first, second]
+        manager.activeProfile = second
+        ProfileStore.shared.saveProfiles([first, second])
+        ProfileStore.shared.saveActiveProfileId(second.id)
+
+        // Delete the active profile — activation of the remaining profile
+        // must complete before deleteProfile returns (no fire-and-forget Task)
+        try await manager.deleteProfile(second.id)
+
+        XCTAssertEqual(manager.activeProfile?.id, first.id,
+                        "Active profile must switch to remaining profile immediately")
+        XCTAssertFalse(manager.isSwitchingProfile,
+                        "Profile switch must be complete, not in-flight")
+    }
+
+    func testDeleteProfile_NonExistentId_NoThrow() async {
+        // With two profiles, deleting a non-existent ID does nothing (no error)
         let nonExistentId = UUID()
-        // Even if we have two profiles, deleting a non-existent one just does nothing
-        // (no error). Guard against single-profile case first:
         let extra = makeProfile(name: "Extra")
         manager.profiles = [manager.profiles[0], extra]
 
-        // Deleting nonExistentId won't reduce count, and no throw expected for missing id
-        XCTAssertNoThrow(try manager.deleteProfile(nonExistentId))
+        do {
+            try await manager.deleteProfile(nonExistentId)
+        } catch {
+            XCTFail("Deleting a non-existent profile should not throw")
+        }
         XCTAssertEqual(manager.profiles.count, 2)
     }
 

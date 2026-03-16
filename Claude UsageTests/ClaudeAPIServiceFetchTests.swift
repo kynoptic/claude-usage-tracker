@@ -6,6 +6,7 @@ import XCTest
 ///
 /// Uses a `URLProtocol`-backed mock `URLSession` injected into `ClaudeAPIService`
 /// so that network calls never reach the live API.
+@MainActor
 final class ClaudeAPIServiceFetchTests: XCTestCase {
 
     // MARK: - Mock URLProtocol
