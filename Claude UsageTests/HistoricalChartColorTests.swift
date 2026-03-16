@@ -278,6 +278,177 @@ final class HistoricalChartColorTests: XCTestCase {
         XCTAssertEqual(store.loadChartColorMode(), .uniform)
     }
 
+    // MARK: - Despike Filter
+
+    func testDespikeRemovesSingleSpike() {
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-60), percentage: 50.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-2), percentage: 0.0),
+            UsageSnapshot(date: Date(), percentage: 51.0),
+        ]
+        let result = BurnUpChartView.despike(snapshots)
+        XCTAssertEqual(result.count, 2, "Transient 0% spike should be removed")
+        XCTAssertEqual(result[0].percentage, 50.0)
+        XCTAssertEqual(result[1].percentage, 51.0)
+    }
+
+    func testDespikeRemovesChainedSpikes() {
+        // 38→0→39→0→39 pattern (real data from sonnet)
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-120), percentage: 38.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-4), percentage: 0.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-2), percentage: 39.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-1), percentage: 0.0),
+            UsageSnapshot(date: Date(), percentage: 39.0),
+        ]
+        let result = BurnUpChartView.despike(snapshots)
+        XCTAssertEqual(result.count, 3, "Both transient 0% spikes should be removed")
+        XCTAssertTrue(result.allSatisfy { $0.percentage > 0 }, "No zero-spikes should remain")
+    }
+
+    func testDespikeKeepsSpikeExceedingRevertWindow() {
+        // Spike that takes longer than 5 minutes to revert — kept as real data
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-600), percentage: 50.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-400), percentage: 0.0),
+            UsageSnapshot(date: Date(), percentage: 51.0), // 400s between spike and revert > 300s
+        ]
+        let result = BurnUpChartView.despike(snapshots)
+        XCTAssertEqual(result.count, 3, "Slow revert should be kept")
+    }
+
+    func testDespikeKeepsSmallFluctuations() {
+        // Below threshold — 10-point jump is not a spike
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-60), percentage: 50.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-2), percentage: 40.0),
+            UsageSnapshot(date: Date(), percentage: 51.0),
+        ]
+        let result = BurnUpChartView.despike(snapshots)
+        XCTAssertEqual(result.count, 3, "Small fluctuation should be preserved")
+    }
+
+    func testDespikeEmptyInput() {
+        XCTAssertEqual(BurnUpChartView.despike([]).count, 0)
+    }
+
+    func testDespikeSinglePoint() {
+        let snap = [UsageSnapshot(date: Date(), percentage: 50.0)]
+        XCTAssertEqual(BurnUpChartView.despike(snap).count, 1)
+    }
+
+    func testDespikeTwoPoints() {
+        let snaps = [
+            UsageSnapshot(date: Date().addingTimeInterval(-1), percentage: 50.0),
+            UsageSnapshot(date: Date(), percentage: 0.0),
+        ]
+        XCTAssertEqual(BurnUpChartView.despike(snaps).count, 2, "Two points can't form a spike")
+    }
+
+    // MARK: - Reset Detection
+
+    func testLastResetIndexDetectsRealReset() {
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-300), percentage: 98.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-200), percentage: 0.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-100), percentage: 2.0),
+            UsageSnapshot(date: Date(), percentage: 4.0),
+        ]
+        let idx = BurnUpChartView.lastResetIndex(in: snapshots)
+        XCTAssertEqual(idx, 1, "Should find reset at the 0% point")
+    }
+
+    func testLastResetIndexIgnoresTransient() {
+        // 50→0→51: looks like a reset but reverts immediately (doesn't stay low)
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-60), percentage: 50.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-2), percentage: 0.0),
+            UsageSnapshot(date: Date(), percentage: 51.0),
+        ]
+        let idx = BurnUpChartView.lastResetIndex(in: snapshots)
+        XCTAssertNil(idx, "Transient drop should not be detected as reset")
+    }
+
+    func testLastResetIndexFindsLastReset() {
+        // Two resets — should return the later one
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-500), percentage: 90.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-400), percentage: 0.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-300), percentage: 5.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-200), percentage: 60.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-100), percentage: 0.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-50), percentage: 3.0),
+            UsageSnapshot(date: Date(), percentage: 5.0),
+        ]
+        let idx = BurnUpChartView.lastResetIndex(in: snapshots)
+        XCTAssertEqual(idx, 4, "Should return the later reset")
+    }
+
+    func testLastResetIndexNoResetInCleanData() {
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-120), percentage: 10.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-60), percentage: 20.0),
+            UsageSnapshot(date: Date(), percentage: 30.0),
+        ]
+        XCTAssertNil(BurnUpChartView.lastResetIndex(in: snapshots))
+    }
+
+    func testLastResetIndexSmallDrop() {
+        // 25-point drop is below the 30-point threshold
+        let snapshots = [
+            UsageSnapshot(date: Date().addingTimeInterval(-60), percentage: 50.0),
+            UsageSnapshot(date: Date().addingTimeInterval(-30), percentage: 25.0),
+            UsageSnapshot(date: Date(), percentage: 26.0),
+        ]
+        XCTAssertNil(BurnUpChartView.lastResetIndex(in: snapshots))
+    }
+
+    // MARK: - Anchor Logic (chartDisplaySnapshots)
+
+    func testAnchorCarriedForwardWhenNoReset() {
+        let windowStart = Date().addingTimeInterval(-3600)
+        let windowEnd = Date()
+        // Pre-window value is 50%, first in-window is 52% — no reset
+        let snapshots = [
+            UsageSnapshot(date: windowStart.addingTimeInterval(-60), percentage: 50.0),
+            UsageSnapshot(date: windowStart.addingTimeInterval(60), percentage: 52.0),
+        ]
+        let result = BurnUpChartView.chartDisplaySnapshots(
+            from: snapshots, windowStart: windowStart, windowEnd: windowEnd, now: Date()
+        )
+        // Origin should carry forward 50%
+        XCTAssertEqual(result.first?.percentage, 50.0, "Anchor should carry forward pre-window value")
+    }
+
+    func testAnchorDroppedAfterReset() {
+        let windowStart = Date().addingTimeInterval(-3600)
+        let windowEnd = Date()
+        // Pre-window value is 90%, in-window starts at 0% (reset) then ramps
+        let snapshots = [
+            UsageSnapshot(date: windowStart.addingTimeInterval(-60), percentage: 90.0),
+            UsageSnapshot(date: windowStart.addingTimeInterval(60), percentage: 0.0),
+            UsageSnapshot(date: windowStart.addingTimeInterval(120), percentage: 2.0),
+            UsageSnapshot(date: windowStart.addingTimeInterval(180), percentage: 4.0),
+        ]
+        let result = BurnUpChartView.chartDisplaySnapshots(
+            from: snapshots, windowStart: windowStart, windowEnd: windowEnd, now: Date()
+        )
+        // Origin should be 0% (not 90%) because a reset occurred
+        XCTAssertEqual(result.first?.percentage, 0.0, "Anchor should be 0% after reset")
+    }
+
+    func testAnchorDefaultsToZeroWithNoPreWindowData() {
+        let windowStart = Date().addingTimeInterval(-3600)
+        let windowEnd = Date()
+        let snapshots = [
+            UsageSnapshot(date: windowStart.addingTimeInterval(60), percentage: 5.0),
+        ]
+        let result = BurnUpChartView.chartDisplaySnapshots(
+            from: snapshots, windowStart: windowStart, windowEnd: windowEnd, now: Date()
+        )
+        XCTAssertEqual(result.first?.percentage, 0.0, "No pre-window data should default to 0%")
+    }
+
     // MARK: - UsageZone Codable
 
     func testUsageZoneEncodeDecode() throws {

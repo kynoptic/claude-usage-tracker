@@ -24,6 +24,18 @@ struct BurnUpChartView: View {
     /// Downsample to at most this many points for rendering performance
     private static let maxPoints = 200
 
+    // MARK: - Filter Thresholds
+
+    /// Minimum percentage-point drop to qualify as a spike or reset.
+    static let glitchThreshold: Double = 30.0
+
+    /// Maximum seconds between a spike and its revert to be considered transient.
+    static let spikeRevertWindow: TimeInterval = 300
+
+    /// How far below the pre-drop level post-reset values must stay to confirm
+    /// the drop is a real reset (not a transient). Applied as: `< preDrop - margin`.
+    static let resetConfirmationMargin: Double = 20.0
+
     /// Chart data with a synthetic origin at windowStart.
     /// Carries forward the last pre-window percentage (anchor) so graphs
     /// don't drop to zero after app updates or data gaps.
@@ -55,16 +67,22 @@ struct BurnUpChartView: View {
 
         var windowSnapshots = despike(snapshots.filter { $0.date >= windowStart })
 
-        // Detect the last major reset (drop ≥50% that persists) within the
-        // window. Everything before it is stale previous-period data.
+        // Detect the last major reset (drop ≥30 points that persists) within
+        // the window. Everything before it is stale previous-period data.
         if let resetIndex = lastResetIndex(in: windowSnapshots) {
             windowSnapshots = Array(windowSnapshots[resetIndex...])
         }
 
         // Only carry forward the anchor if no reset occurred — a reset means
         // the period started fresh at 0%.
-        let originPercentage = windowSnapshots.isEmpty ? anchorPercentage :
-            (windowSnapshots.first!.percentage < anchorPercentage - 30 ? 0.0 : anchorPercentage)
+        let originPercentage: Double
+        if windowSnapshots.isEmpty {
+            originPercentage = anchorPercentage
+        } else if windowSnapshots.first!.percentage < anchorPercentage - Self.glitchThreshold {
+            originPercentage = 0.0
+        } else {
+            originPercentage = anchorPercentage
+        }
 
         let origin = UsageSnapshot(date: windowStart, percentage: originPercentage)
         var points = [origin] + windowSnapshots
@@ -94,10 +112,10 @@ struct BurnUpChartView: View {
         for i in 1..<snapshots.count {
             let drop = snapshots[i - 1].percentage - snapshots[i].percentage
             // A real reset: big drop AND value stays below the pre-drop level
-            if drop >= 30 {
+            if drop >= glitchThreshold {
                 // Check it's not a transient — value should stay low
                 let postValues = snapshots[i...].prefix(3)
-                let staysLow = postValues.allSatisfy { $0.percentage < snapshots[i - 1].percentage - 20 }
+                let staysLow = postValues.allSatisfy { $0.percentage < snapshots[i - 1].percentage - resetConfirmationMargin }
                 if staysLow {
                     lastReset = i
                 }
@@ -112,8 +130,8 @@ struct BurnUpChartView: View {
     /// from its neighbours and reverts within 5 minutes is dropped.
     /// Runs iteratively to handle chained glitches (e.g. 38→0→39→0→39).
     static func despike(_ snapshots: [UsageSnapshot]) -> [UsageSnapshot] {
-        let spikeThreshold: Double = 30.0
-        let revertWindow: TimeInterval = 300 // 5 minutes
+        let spikeThreshold = glitchThreshold
+        let revertWindow = spikeRevertWindow
 
         var current = snapshots
         while current.count >= 3 {
