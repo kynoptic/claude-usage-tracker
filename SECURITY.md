@@ -48,8 +48,8 @@ We'll keep you informed throughout the process and credit you in the security ad
 
 ### Session Key Storage
 
-- Per-profile credentials are being migrated from `UserDefaults` to dedicated macOS Keychain items (see [ADR-008](docs/decisions/ADR-008-keychain-per-profile-credentials.md), which supersedes [ADR-003](docs/decisions/ADR-003-credentials-embedded-in-profile.md))
-- Keychain items use `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, limiting access to the current user session
+- Per-profile credentials are stored in dedicated macOS Keychain items (see [ADR-008](docs/decisions/ADR-008-keychain-per-profile-credentials.md), which supersedes [ADR-003](docs/decisions/ADR-003-credentials-embedded-in-profile.md))
+- Keychain items use `kSecAttrAccessibleWhenUnlocked`, limiting access to the current user session
 - Keys are never transmitted except to `claude.ai` via HTTPS
 - No cloud sync or external storage
 
@@ -70,7 +70,7 @@ We'll keep you informed throughout the process and credit you in the security ad
 ### Code Execution
 
 - Claude Code integration scripts are installed to `~/.claude/`
-- Script permissions are set to `755` (read/execute for all, write for owner)
+- The credential-containing Swift script (`fetch-claude-usage.swift`) uses `600` (owner-only read/write); the launcher bash script uses `755`
 - The statusline script (`~/.claude/fetch-claude-usage.swift`) contains the session key in plaintext, injected at install time (see [ADR-004](docs/decisions/ADR-004-statusline-session-key-injection.md))
 - No arbitrary code execution from external sources
 

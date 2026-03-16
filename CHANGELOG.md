@@ -429,6 +429,8 @@ Initial release.
 [2.4.4]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.3...v2.4.4
 [2.4.3]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.1...v2.4.2
+[Unreleased]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.5.0...v2.6.0
 [2.4.1]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.2.3...v2.3.0

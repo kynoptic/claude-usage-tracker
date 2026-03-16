@@ -162,8 +162,11 @@ enum Constants {
     }
 
     // HTTP headers
-    /// User-Agent string sent with CLI OAuth requests
-    static let claudeCodeUserAgent = "claude-code/2.1.5"
+    /// User-Agent string sent with CLI OAuth requests — derived from bundle version to avoid drift
+    static let claudeCodeUserAgent: String = {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+        return "claude-code/\(version)"
+    }()
     /// Model used for auto-start initialization conversations in ClaudeAPIService
     static let autoStartModel = "claude-haiku-4-5-20251001"
 

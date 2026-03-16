@@ -146,7 +146,7 @@ final class DataStore: StorageProvider {
             let data = try encoder.encode(usage)
             defaults.set(data, forKey: Constants.UserDefaultsKeys.apiUsageData)
         } catch {
-            // Silently handle encoding errors
+            LoggingService.shared.logStorageError("saveAPIUsage", error: error)
         }
     }
 
@@ -159,7 +159,7 @@ final class DataStore: StorageProvider {
         do {
             return try decoder.decode(APIUsage.self, from: data)
         } catch {
-            // Silently handle decoding errors
+            LoggingService.shared.logStorageError("loadAPIUsage", error: error)
             return nil
         }
     }
