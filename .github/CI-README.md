@@ -97,20 +97,7 @@ CODE_SIGNING_ALLOWED=NO
 
 ## Release Process
 
-```bash
-# 1. Bump MARKETING_VERSION in project.pbxproj
-# 2. Update CHANGELOG.md
-# 3. Commit
-git commit -am "chore: bump version to X.Y.Z"
-
-# 4. Tag and push
-git tag vX.Y.Z
-git push github main --tags
-
-# 5. Workflow runs (~3-5 min)
-# 6. Review draft release at github.com/.../releases
-# 7. Edit notes if needed, click Publish
-```
+See [docs/procedures/DEPLOY.md](../docs/procedures/DEPLOY.md) for the complete release procedure.
 
 ---
 
@@ -127,7 +114,7 @@ git push github main --tags
 
 ## Issue Templates
 
-- `bug_report.yml` — Structured bug reports with version/OS fields
-- `feature_request.yml` — Feature suggestions with problem/solution format
+- `bug.md` — Structured bug reports with acceptance criteria and testing strategy
+- `feature.md` — Feature proposals with problem/solution format and testing strategy
 - `documentation.yml` — Documentation improvements
 - `config.yml` — Links to Discussions for questions
