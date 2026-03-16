@@ -19,6 +19,9 @@ final class SmartUsageDashboardViewModel: ObservableObject {
     /// Threshold (0.1...0.8) below which usage is shown in grey.
     @Published private(set) var greyThreshold: Double = Constants.greyThresholdDefault
 
+    /// Chart color mode: uniform (single color) or historical (per-segment).
+    @Published private(set) var chartColorMode: ChartColorMode = .uniform
+
     // MARK: - Initialization
 
     init() {
@@ -32,6 +35,7 @@ final class SmartUsageDashboardViewModel: ObservableObject {
         isAPITrackingEnabled = DataStore.shared.loadAPITrackingEnabled()
         showGreyZone = AppearanceStore.shared.loadShowGreyZone()
         greyThreshold = AppearanceStore.shared.loadGreyThreshold()
+        chartColorMode = AppearanceStore.shared.loadChartColorMode()
     }
 
     // MARK: - Display String Derivations

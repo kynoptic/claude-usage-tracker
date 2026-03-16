@@ -13,6 +13,7 @@ struct AppearanceSettingsView: View {
     @State private var configuration: MenuBarIconConfiguration = .default
     @State private var showGreyZone: Bool = AppearanceStore.shared.loadShowGreyZone()
     @State private var greyThreshold: Double = AppearanceStore.shared.loadGreyThreshold()
+    @State private var chartColorMode: ChartColorMode = AppearanceStore.shared.loadChartColorMode()
     @State private var saveDebounceTimer: Timer?
 
     private var isMultiProfileMode: Bool {
@@ -132,6 +133,19 @@ struct AppearanceSettingsView: View {
                             }
                             .padding(.leading, 16)
                         }
+
+                        SettingToggle(
+                            title: "appearance.historical_color_title".localized,
+                            description: "appearance.historical_color_description".localized,
+                            isOn: Binding(
+                                get: { chartColorMode == .historical },
+                                set: { newValue in
+                                    chartColorMode = newValue ? .historical : .uniform
+                                    AppearanceStore.shared.saveChartColorMode(chartColorMode)
+                                    NotificationCenter.default.post(name: .menuBarIconConfigChanged, object: nil)
+                                }
+                            )
+                        )
                     }
                 }
                 .disabled(isMultiProfileMode)

@@ -66,7 +66,7 @@ nonisolated struct ClaudeUsage: Codable, Equatable, Sendable {
 // MARK: - Pacing Types
 
 /// Five-zone status indicator driven by projected end-of-session utilisation.
-nonisolated enum UsageZone: Equatable, Sendable {
+nonisolated enum UsageZone: String, Codable, Equatable, Sendable {
     case grey    // Underutilized — projected < 50% (opt-in via Settings)
     case green   // On track — projected 50–90%
     case yellow  // Maximizing — projected 90–110%

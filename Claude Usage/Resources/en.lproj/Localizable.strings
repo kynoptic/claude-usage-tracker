@@ -432,6 +432,8 @@
 "appearance.show_grey_description" = "When enabled, the icon turns grey when your projected usage is below the configured threshold.";
 "appearance.grey_threshold_title" = "Grey zone threshold";
 "appearance.grey_threshold_description" = "Usage projected below this percentage is considered underutilized.";
+"appearance.historical_color_title" = "Historical chart colors";
+"appearance.historical_color_description" = "Color each chart segment based on the usage level at that point, showing green/yellow/orange/red transitions over time.";
 "appearance.multiprofile_locked_title" = "Appearance Settings Locked";
 "appearance.multiprofile_locked_description" = "These settings are disabled while Multi-Profile Display is active. Each profile uses its own appearance in multi-profile mode.";
 "appearance.disable_multiprofile" = "Turn Off Multi-Profile Display";

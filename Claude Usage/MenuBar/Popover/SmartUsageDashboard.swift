@@ -90,7 +90,8 @@ struct SmartUsageDashboard: View {
                 isStale: isStale,
                 context: sessionContext,
                 showGreyZone: viewModel.showGreyZone,
-                greyThreshold: viewModel.greyThreshold
+                greyThreshold: viewModel.greyThreshold,
+                chartColorMode: viewModel.chartColorMode
             )
 
             // Secondary Usage Cards
@@ -107,7 +108,8 @@ struct SmartUsageDashboard: View {
                     metric: .weekly,
                     isStale: isStale,
                     showGreyZone: viewModel.showGreyZone,
-                    greyThreshold: viewModel.greyThreshold
+                    greyThreshold: viewModel.greyThreshold,
+                    chartColorMode: viewModel.chartColorMode
                 )
 
                 if usage.opusWeeklyTokensUsed > 0 {
@@ -123,7 +125,8 @@ struct SmartUsageDashboard: View {
                         metric: .opus,
                         isStale: isStale,
                         showGreyZone: viewModel.showGreyZone,
-                        greyThreshold: viewModel.greyThreshold
+                        greyThreshold: viewModel.greyThreshold,
+                        chartColorMode: viewModel.chartColorMode
                     )
                 }
 
@@ -140,7 +143,8 @@ struct SmartUsageDashboard: View {
                         metric: .sonnet,
                         isStale: isStale,
                         showGreyZone: viewModel.showGreyZone,
-                        greyThreshold: viewModel.greyThreshold
+                        greyThreshold: viewModel.greyThreshold,
+                        chartColorMode: viewModel.chartColorMode
                     )
                 }
             }
@@ -158,7 +162,8 @@ struct SmartUsageDashboard: View {
                     periodDuration: nil,
                     isStale: isStale,
                     showGreyZone: viewModel.showGreyZone,
-                    greyThreshold: viewModel.greyThreshold
+                    greyThreshold: viewModel.greyThreshold,
+                    chartColorMode: viewModel.chartColorMode
                 )
             }
 
@@ -190,6 +195,7 @@ struct SmartUsageCard: View {
     var context: PacingContext = .none
     var showGreyZone: Bool = false
     var greyThreshold: Double = Constants.greyThresholdDefault
+    var chartColorMode: ChartColorMode = .uniform
 
     @State private var isFlipped = false
 
@@ -363,7 +369,8 @@ struct SmartUsageCard: View {
                     windowStart: chartWindowStart,
                     windowEnd: chartWindowEnd,
                     statusColor: statusColor,
-                    isStale: isStale
+                    isStale: isStale,
+                    chartColorMode: chartColorMode
                 )
             }
         }
