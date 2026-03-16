@@ -8,7 +8,7 @@ Full clean deploy — every step matters. Skipping any step risks shipping a sta
 
 ```bash
 # 1. Pull latest
-git pull origin main
+git pull github main
 
 # 2. Quit the running app
 kill $(pgrep -f "Claude Usage") 2>/dev/null; sleep 1
@@ -94,8 +94,8 @@ EOF
 git tag -a -s v2.5.0 -m "Release v2.5.0"
 
 # Push to fork
-git push origin main
-git push origin v2.5.0
+git push github main
+git push github v2.5.0
 ```
 
 ### Step 4: GitHub Actions Workflow

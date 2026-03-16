@@ -69,46 +69,7 @@ Before you begin, ensure you have the following installed:
 
 ### Project Structure
 
-```
-Claude Usage/
-├── App/
-│   ├── AppDelegate.swift           # App lifecycle, notifications setup
-│   └── ClaudeUsageTrackerApp.swift # SwiftUI app entry point
-│
-├── MenuBar/
-│   ├── IconRendering/              # Menu bar icon renderers
-│   ├── Popover/                    # Popover UI components
-│   ├── MenuBarManager.swift        # Status item, popover management
-│   └── (supporting files)
-│
-├── Views/
-│   ├── Settings/
-│   │   ├── App/                    # App-level settings views
-│   │   ├── Components/             # Shared settings UI components
-│   │   ├── Credentials/            # API key / credential views
-│   │   ├── DesignSystem/           # Settings design tokens
-│   │   └── Profile/                # Profile management views
-│   ├── SetupWizard/                # First-run wizard steps
-│   ├── SettingsView.swift          # Settings window with tabs
-│   └── SetupWizardView.swift       # First-run configuration entry
-│
-├── Shared/
-│   ├── Components/                 # Reusable SwiftUI components
-│   ├── ErrorHandling/              # Error types and presentation
-│   ├── Extensions/                 # Date, UserDefaults, etc.
-│   ├── Localization/               # Language manager, strings
-│   ├── Models/                     # Pure Swift data structs
-│   ├── Patterns/                   # Singleton base pattern
-│   ├── Protocols/                  # Service and storage protocols
-│   ├── Services/                   # API, notifications, sync
-│   ├── Storage/                    # UserDefaults wrappers
-│   └── Utilities/                  # Constants, formatters, helpers
-│
-├── Assets.xcassets/                # Images, colors, icons
-└── Resources/
-    ├── Info.plist                  # App configuration
-    └── (*.lproj)                   # Localization string files
-```
+See the architecture section in [`CLAUDE.md`](CLAUDE.md) for the current directory layout.
 
 ## How to Contribute
 
@@ -147,8 +108,8 @@ We love feature suggestions! Please:
 
 1. **Keep your branch up to date**
    ```bash
-   git fetch origin
-   git rebase origin/main
+   git fetch github
+   git rebase github/main
    ```
 
 2. **Open a Pull Request**

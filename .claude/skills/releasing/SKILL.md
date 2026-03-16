@@ -38,7 +38,7 @@ Invoke this skill when the user says things like "prepare a release", "cut a rel
 
 6. **Push**
    ```bash
-   git push origin main --tags
+   git push github main --tags
    ```
 
 7. **Tell the user**
@@ -49,4 +49,4 @@ Invoke this skill when the user says things like "prepare a release", "cut a rel
 
 - CI trigger: `.github/workflows/release.yml` — fires on tags matching `vX.Y.Z`.
 - Draft release is created automatically; publishing is a manual step.
-- Remote: `origin` → `https://github.com/kynoptic/Claude-Usage-Tracker.git`
+- Remote: `github` → `https://github.com/kynoptic/Claude-Usage-Tracker.git`
