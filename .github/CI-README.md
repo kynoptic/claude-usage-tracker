@@ -57,7 +57,7 @@ git commit -am "chore: bump version to X.Y.Z"
 
 # 4. Tag and push
 git tag vX.Y.Z
-git push origin main --tags
+git push github main --tags
 
 # 5. Workflow runs (~3-5 min)
 # 6. Review draft release at github.com/.../releases
