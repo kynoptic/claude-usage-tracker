@@ -22,8 +22,8 @@ Keychain migration, storage decomposition, and ViewModel extraction.
 
 Architecture decomposition, thread safety hardening, and tooling additions.
 
-- `ClaudeAPIService` split into `+AuthBuilder` and `+ResponseParser` extensions — auth and parsing logic was coupled inside one 900-line class, making both untestable in isolation
-- `SetupWizardView`, `PopoverContentView`, and `MenuBarIconRenderer` each decomposed into focused subdirectory components — the monolithic files were 750–1 300 lines and could not be reviewed or tested without reading the whole class
+- `ClaudeAPIService` split into `+AuthBuilder` and `+ResponseParser` extensions — auth and parsing logic was coupled inside one class, making both untestable in isolation
+- `SetupWizardView`, `PopoverContentView`, and `MenuBarIconRenderer` each decomposed into focused subdirectory components — the monolithic files could not be reviewed or tested without reading the whole class
 - `ProfileManager` update mutation extracted to a dedicated helper — reduces repetition across the three update call sites
 - `@MainActor` enforced on all singleton services per ADR-007; redundant `DispatchQueue.main.async` calls removed from `@MainActor` contexts where they were no-ops
 - `NSLock` replaces `bool` flag for profile-switching guard — eliminates a race window when two async paths enter `switchProfile` concurrently
