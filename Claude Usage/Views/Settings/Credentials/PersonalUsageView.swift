@@ -10,6 +10,7 @@ import SwiftUI
 /// Claude.ai personal usage tracking (free tier)
 struct PersonalUsageView: View {
     @ObservedObject var profileManager = ProfileManager.shared
+    @StateObject private var viewModel = PersonalUsageViewModel()
     @State private var wizardState = WizardState()
     @State private var currentCredentials: ProfileCredentials?
     private let apiService = ClaudeAPIService()
@@ -90,7 +91,8 @@ struct PersonalUsageView: View {
                         ConfirmStep(
                             wizardState: $wizardState,
                             apiService: apiService,
-                            onSave: { loadCurrentCredentials() }
+                            onSave: { loadCurrentCredentials() },
+                            viewModel: viewModel
                         )
                     }
                 }
@@ -114,48 +116,20 @@ struct PersonalUsageView: View {
     }
 
     private func loadExistingConfiguration() {
-        guard let profile = profileManager.activeProfile else { return }
-
-        // Load existing credentials for comparison
-        if let creds = try? ProfileStore.shared.loadProfileCredentials(profile.id) {
-            wizardState.originalOrgId = creds.organizationId
-            wizardState.originalSessionKey = creds.claudeSessionKey
-        }
+        viewModel.loadOriginalCredentials(into: &wizardState)
     }
 
     private func loadCurrentCredentials() {
-        guard let profile = profileManager.activeProfile else { return }
-        currentCredentials = try? ProfileStore.shared.loadProfileCredentials(profile.id)
+        currentCredentials = viewModel.loadCurrentCredentials()
     }
 
     private func removeCredentials() {
-        guard let profileId = profileManager.activeProfile?.id else {
-            LoggingService.shared.logError("PersonalUsageView: No active profile for removal")
-            return
-        }
-
-        LoggingService.shared.log("PersonalUsageView: Starting credential removal for profile \(profileId)")
-
         do {
-            // Use ProfileManager's shared removal method
-            try profileManager.removeClaudeAICredentials(for: profileId)
-
-            // Update statusline scripts if installed
-            try? StatuslineService.shared.updateScriptsIfInstalled()
-
-            // Reload UI to update the view
+            try viewModel.removeCredentials()
             loadCurrentCredentials()
-
-            // Reset wizard
             wizardState = WizardState()
-
-            LoggingService.shared.log("PersonalUsageView: Successfully removed Claude.ai credentials")
-
         } catch {
-            let appError = AppError.wrap(error)
-            ErrorLogger.shared.log(appError, severity: .error)
-            ErrorPresenter.shared.showAlert(for: appError)
-            LoggingService.shared.logError("PersonalUsageView: Failed to remove credentials - \(appError.message)")
+            // Error already handled by ViewModel (logged + presented)
         }
     }
 }
@@ -305,6 +279,7 @@ struct ConfirmStep: View {
     @Binding var wizardState: WizardState
     let apiService: ClaudeAPIService
     let onSave: () -> Void
+    @ObservedObject var viewModel: PersonalUsageViewModel
     @State private var isSaving = false
 
     var body: some View {
@@ -426,46 +401,19 @@ struct ConfirmStep: View {
     }
 
     private func saveConfiguration() {
-        guard let profileId = ProfileManager.shared.activeProfile?.id else { return }
-
         isSaving = true
 
         Task {
             do {
-                // Save to profile-specific Keychain
-                var creds = try ProfileStore.shared.loadProfileCredentials(profileId)
-                creds.claudeSessionKey = wizardState.sessionKey
-                creds.organizationId = wizardState.selectedOrgId
-                try ProfileStore.shared.saveProfileCredentials(profileId, credentials: creds)
-
-                // Also update the Profile model with the new credentials
-                if var profile = ProfileManager.shared.activeProfile {
-                    profile.claudeSessionKey = wizardState.sessionKey
-                    profile.organizationId = wizardState.selectedOrgId
-                    ProfileManager.shared.updateProfile(profile)
-                    LoggingService.shared.log("PersonalUsageView: Updated profile model with new credentials")
-                }
-
-                // Update statusline scripts if key or org changed (only if already installed)
-                let keyChanged = keyHasChanged()
-                let orgChanged = wizardState.selectedOrgId != wizardState.originalOrgId
-                if keyChanged || orgChanged {
-                    try? StatuslineService.shared.updateScriptsIfInstalled()
-                }
+                try await viewModel.saveCredentials(
+                    sessionKey: wizardState.sessionKey,
+                    organizationId: wizardState.selectedOrgId,
+                    originalSessionKey: wizardState.originalSessionKey,
+                    originalOrgId: wizardState.originalOrgId
+                )
 
                 await MainActor.run {
-                    // Reset circuit breaker on successful credential save
-                    ErrorRecovery.shared.recordSuccess(for: .api)
-
-                    // Post single notification for credential change
-                    if keyChanged || orgChanged {
-                        NotificationCenter.default.post(name: .credentialsChanged, object: nil)
-                    }
-
-                    // Reload credentials display
                     onSave()
-
-                    // Reset wizard to start
                     withAnimation {
                         wizardState = WizardState()
                     }
@@ -474,8 +422,6 @@ struct ConfirmStep: View {
 
             } catch {
                 let appError = AppError.wrap(error)
-                ErrorLogger.shared.log(appError, severity: .error)
-
                 await MainActor.run {
                     wizardState.validationState = .error("\(appError.message)\n\nError Code: \(appError.code.rawValue)")
                     isSaving = false

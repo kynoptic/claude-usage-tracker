@@ -9,17 +9,7 @@ import SwiftUI
 
 /// Claude Code statusline integration settings
 struct ClaudeCodeView: View {
-    // Component visibility settings
-    @State private var showDirectory: Bool = DataStore.shared.loadStatuslineShowDirectory()
-    @State private var showBranch: Bool = DataStore.shared.loadStatuslineShowBranch()
-    @State private var showUsage: Bool = DataStore.shared.loadStatuslineShowUsage()
-    @State private var showProgressBar: Bool = DataStore.shared.loadStatuslineShowProgressBar()
-    @State private var showResetTime: Bool = DataStore.shared.loadStatuslineShowResetTime()
-    @State private var showTimeMarker: Bool = DataStore.shared.loadStatuslineShowTimeMarker()
-
-    // Status feedback
-    @State private var statusMessage: String?
-    @State private var isSuccess: Bool = true
+    @StateObject private var viewModel = ClaudeCodeViewModel()
 
     var body: some View {
         ScrollView {
@@ -76,34 +66,34 @@ struct ClaudeCodeView: View {
                     .font(DesignTokens.Typography.sectionTitle)
 
                 VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
-                    Toggle("claudecode.component_directory".localized, isOn: $showDirectory)
+                    Toggle("claudecode.component_directory".localized, isOn: $viewModel.showDirectory)
                         .font(DesignTokens.Typography.body)
 
-                    Toggle("claudecode.component_branch".localized, isOn: $showBranch)
+                    Toggle("claudecode.component_branch".localized, isOn: $viewModel.showBranch)
                         .font(DesignTokens.Typography.body)
 
-                    Toggle("claudecode.component_usage".localized, isOn: $showUsage)
+                    Toggle("claudecode.component_usage".localized, isOn: $viewModel.showUsage)
                         .font(DesignTokens.Typography.body)
 
-                    if showUsage {
+                    if viewModel.showUsage {
                         HStack(spacing: 0) {
                             Spacer().frame(width: 20)
-                            Toggle("claudecode.component_progressbar".localized, isOn: $showProgressBar)
+                            Toggle("claudecode.component_progressbar".localized, isOn: $viewModel.showProgressBar)
                                 .font(DesignTokens.Typography.caption)
                                 .foregroundColor(.secondary)
                         }
 
                         HStack(spacing: 0) {
                             Spacer().frame(width: 20)
-                            Toggle("claudecode.component_resettime".localized, isOn: $showResetTime)
+                            Toggle("claudecode.component_resettime".localized, isOn: $viewModel.showResetTime)
                                 .font(DesignTokens.Typography.caption)
                                 .foregroundColor(.secondary)
                         }
 
-                        if showProgressBar {
+                        if viewModel.showProgressBar {
                             HStack(spacing: 0) {
                                 Spacer().frame(width: 20)
-                                Toggle("claudecode.component_timemarker".localized, isOn: $showTimeMarker)
+                                Toggle("claudecode.component_timemarker".localized, isOn: $viewModel.showTimeMarker)
                                     .font(DesignTokens.Typography.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -114,14 +104,14 @@ struct ClaudeCodeView: View {
 
             // Action buttons - compact
             HStack(spacing: DesignTokens.Spacing.iconText) {
-                Button(action: applyConfiguration) {
+                Button(action: { viewModel.applyConfiguration() }) {
                     Text("claudecode.button_apply".localized)
                         .font(DesignTokens.Typography.body)
                         .frame(minWidth: 70)
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button(action: resetConfiguration) {
+                Button(action: { viewModel.resetConfiguration() }) {
                     Text("claudecode.button_reset".localized)
                         .font(DesignTokens.Typography.body)
                         .frame(minWidth: 70)
@@ -130,17 +120,17 @@ struct ClaudeCodeView: View {
             }
 
             // Status message
-            if let message = statusMessage {
+            if let message = viewModel.statusMessage {
                 HStack(spacing: DesignTokens.Spacing.iconText) {
-                    Image(systemName: isSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundColor(isSuccess ? .green : .red)
+                    Image(systemName: viewModel.isSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(viewModel.isSuccess ? .green : .red)
 
                     Text(message)
                         .font(DesignTokens.Typography.body)
 
                     Spacer()
 
-                    Button(action: { statusMessage = nil }) {
+                    Button(action: { viewModel.clearStatus() }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.secondary)
                     }
@@ -149,7 +139,7 @@ struct ClaudeCodeView: View {
                 .padding(DesignTokens.Spacing.medium)
                 .background(
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.small)
-                        .fill((isSuccess ? Color.green : Color.red).opacity(0.1))
+                        .fill((viewModel.isSuccess ? Color.green : Color.red).opacity(0.1))
                 )
             }
 
@@ -173,93 +163,30 @@ struct ClaudeCodeView: View {
         }
     }
 
-    // MARK: - Actions
-
-    /// Applies the current configuration to Claude Code statusline.
-    /// Installs scripts, updates config file, and enables statusline in settings.json.
-    private func applyConfiguration() {
-        // Validate: at least one component must be selected
-        guard showDirectory || showBranch || showUsage else {
-            statusMessage = "claudecode.error_no_components".localized
-            isSuccess = false
-            return
-        }
-
-        // Validate: session key must be configured
-        guard StatuslineService.shared.hasValidSessionKey() else {
-            statusMessage = "claudecode.error_no_sessionkey".localized
-            isSuccess = false
-            return
-        }
-
-        // Save user preferences
-        DataStore.shared.saveStatuslineShowDirectory(showDirectory)
-        DataStore.shared.saveStatuslineShowBranch(showBranch)
-        DataStore.shared.saveStatuslineShowUsage(showUsage)
-        DataStore.shared.saveStatuslineShowProgressBar(showProgressBar)
-        DataStore.shared.saveStatuslineShowResetTime(showResetTime)
-        DataStore.shared.saveStatuslineShowTimeMarker(showTimeMarker)
-
-        do {
-            // Install scripts to ~/.claude/
-            try StatuslineService.shared.installScripts()
-
-            // Write configuration file
-            try StatuslineService.shared.updateConfiguration(
-                showDirectory: showDirectory,
-                showBranch: showBranch,
-                showUsage: showUsage,
-                showProgressBar: showProgressBar,
-                showResetTime: showResetTime,
-                showTimeMarker: showTimeMarker,
-                showGreyZone: DataStore.shared.loadShowGreyZone()
-            )
-
-            // Update Claude CLI settings.json
-            try StatuslineService.shared.updateClaudeCodeSettings(enabled: true)
-
-            statusMessage = "claudecode.success_applied".localized
-            isSuccess = true
-        } catch {
-            statusMessage = "error.generic".localized(with: error.localizedDescription)
-            isSuccess = false
-        }
-    }
-
-    /// Disables the statusline by removing it from Claude CLI settings.json.
-    private func resetConfiguration() {
-        do {
-            try StatuslineService.shared.updateClaudeCodeSettings(enabled: false)
-            statusMessage = "claudecode.success_disabled".localized
-            isSuccess = true
-        } catch {
-            statusMessage = "error.generic".localized(with: error.localizedDescription)
-            isSuccess = false
-        }
-    }
+    // MARK: - Preview
 
     /// Generates a preview of what the statusline will look like based on current selections.
     private func generatePreview() -> String {
         var parts: [String] = []
 
-        if showDirectory {
+        if viewModel.showDirectory {
             parts.append("claude-usage")
         }
 
-        if showBranch {
+        if viewModel.showBranch {
             parts.append("⎇ main")
         }
 
-        if showUsage {
+        if viewModel.showUsage {
             var usageText = "Usage: 29%"
-            if showProgressBar {
-                if showTimeMarker {
+            if viewModel.showProgressBar {
+                if viewModel.showTimeMarker {
                     usageText += " ▓▓▓░░░│░░░"
                 } else {
                     usageText += " ▓▓▓░░░░░░░"
                 }
             }
-            if showResetTime {
+            if viewModel.showResetTime {
                 usageText += " → Reset: 14:30"
             }
             parts.append(usageText)

@@ -5,7 +5,7 @@ struct ConfirmStepSetup: View {
     @Binding var wizardState: WizardState
     let apiService: ClaudeAPIService
     let dismiss: DismissAction
-    @State private var isSaving = false
+    @StateObject private var viewModel = SetupWizardViewModel()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -91,12 +91,12 @@ struct ConfirmStepSetup: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                .disabled(isSaving)
+                .disabled(viewModel.isSaving)
 
                 Spacer()
 
                 Button(action: saveConfiguration) {
-                    if isSaving {
+                    if viewModel.isSaving {
                         ProgressView()
                             .scaleEffect(0.6)
                             .frame(width: 100)
@@ -106,52 +106,27 @@ struct ConfirmStepSetup: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isSaving)
+                .disabled(viewModel.isSaving)
             }
             .padding(20)
         }
     }
 
     private func saveConfiguration() {
-        isSaving = true
-
         Task {
-            do {
-                guard var profile = ProfileManager.shared.activeProfile else {
-                    throw NSError(domain: "SetupWizard", code: 1, userInfo: [
-                        NSLocalizedDescriptionKey: "No active profile found"
-                    ])
+            let errorMessage = await viewModel.saveConfiguration(
+                sessionKey: wizardState.sessionKey,
+                organizationId: wizardState.selectedOrgId,
+                autoStartEnabled: wizardState.autoStartSessionEnabled
+            )
+
+            if let errorMessage {
+                wizardState.validationState = .error(errorMessage)
+                withAnimation {
+                    wizardState.currentStep = .enterKey
                 }
-
-                profile.claudeSessionKey = wizardState.sessionKey
-                profile.organizationId = wizardState.selectedOrgId
-                profile.autoStartSessionEnabled = wizardState.autoStartSessionEnabled
-                ProfileManager.shared.updateProfile(profile)
-                LoggingService.shared.log("SetupWizard: Saved credentials through ProfileManager")
-
-                try? StatuslineService.shared.updateScriptsIfInstalled()
-                DataStore.shared.saveHasCompletedSetup(true)
-
-                await MainActor.run {
-                    ErrorRecovery.shared.recordSuccess(for: .api)
-                    NotificationCenter.default.post(name: .credentialsChanged, object: nil)
-                    isSaving = false
-                    dismiss()
-                }
-
-            } catch {
-                let appError = AppError.wrap(error)
-                ErrorLogger.shared.log(appError, severity: .error)
-
-                await MainActor.run {
-                    let errorMessage = "\(appError.message)\n\nError Code: \(appError.code.rawValue)"
-                    wizardState.validationState = .error(errorMessage)
-                    isSaving = false
-
-                    withAnimation {
-                        wizardState.currentStep = .enterKey
-                    }
-                }
+            } else {
+                dismiss()
             }
         }
     }
