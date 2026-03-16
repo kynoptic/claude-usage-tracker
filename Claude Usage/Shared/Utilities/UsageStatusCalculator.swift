@@ -86,9 +86,9 @@ final class UsageStatusCalculator {
     static func color(for status: UsageStatus) -> NSColor {
         switch status.zone {
         case .grey:   return .systemGray
-        case .green:  return .systemGreen
-        case .yellow: return .systemYellow
-        case .orange: return .systemOrange
+        case .green:  return NSColor(named: "UsageGreen")  ?? .systemGreen
+        case .yellow: return NSColor(named: "UsageYellow") ?? .systemYellow
+        case .orange: return NSColor(named: "UsageOrange") ?? .systemOrange
         case .red:    return .systemRed
         }
     }

@@ -238,6 +238,18 @@ struct SmartUsageCard: View {
 
     private var statusColor: Color { .usageStatus(usageStatus) }
 
+    /// Vibrant (unadjusted system) color for non-text elements — icon, progress bar.
+    /// Always uses the original system colors so icons and bars stay vivid.
+    private var vibrantStatusColor: Color {
+        switch usageStatus.zone {
+        case .grey:   return Color(nsColor: .systemGray)
+        case .green:  return Color(nsColor: .systemGreen)
+        case .yellow: return Color(nsColor: .systemYellow)
+        case .orange: return Color(nsColor: .systemOrange)
+        case .red:    return Color(nsColor: .systemRed)
+        }
+    }
+
     private var statusIcon: String {
         switch usageStatus.zone {
         case .grey:   return "moon.zzz.fill"
@@ -262,7 +274,7 @@ struct SmartUsageCard: View {
         .padding(isPrimary ? 16 : 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.4))
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.72))
         )
         .contentShape(Rectangle())
         .animation(.easeInOut(duration: 0.3), value: isFlipped)
@@ -293,7 +305,7 @@ struct SmartUsageCard: View {
                 HStack(spacing: 4) {
                     Image(systemName: statusIcon)
                         .font(.system(size: isPrimary ? 12 : 10, weight: .medium))
-                        .foregroundColor(statusColor)
+                        .foregroundColor(vibrantStatusColor)
 
                     Text("\(Int(displayPercentage))%")
                         .font(.system(size: isPrimary ? 16 : 14, weight: .bold, design: .monospaced))
@@ -312,7 +324,7 @@ struct SmartUsageCard: View {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(
                                 LinearGradient(
-                                    colors: [statusColor, statusColor.opacity(0.8)],
+                                    colors: [vibrantStatusColor, vibrantStatusColor.opacity(0.8)],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )

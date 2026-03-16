@@ -287,6 +287,39 @@ final class UsageStatusCalculatorTests: XCTestCase {
         XCTAssertNil(fraction)
     }
 
+    // MARK: - Color asset
+
+    func testYellowZone_UsesNamedColorAsset() {
+        let status = UsageStatusCalculator.calculateStatus(
+            usedPercentage: 95, showRemaining: false, elapsedFraction: nil
+        )
+        let color = UsageStatusCalculator.color(for: status)
+        // Should resolve the "UsageYellow" asset, not raw systemYellow
+        XCTAssertNotEqual(color, .systemYellow,
+                          "Yellow zone should use the UsageYellow asset, not raw systemYellow")
+    }
+
+    func testGreenAndOrangeZones_UseNamedColorAssets() {
+        let green = UsageStatusCalculator.calculateStatus(
+            usedPercentage: 70, showRemaining: false, elapsedFraction: nil
+        )
+        XCTAssertNotEqual(UsageStatusCalculator.color(for: green), .systemGreen,
+                          "Green zone should use the UsageGreen asset, not raw systemGreen")
+
+        let orange = UsageStatusCalculator.calculateStatus(
+            usedPercentage: 130, showRemaining: false, elapsedFraction: nil
+        )
+        XCTAssertNotEqual(UsageStatusCalculator.color(for: orange), .systemOrange,
+                          "Orange zone should use the UsageOrange asset, not raw systemOrange")
+    }
+
+    func testGreyAndRedZones_StillUseSystemColors() {
+        let red = UsageStatusCalculator.calculateStatus(
+            usedPercentage: 160, showRemaining: false, elapsedFraction: nil
+        )
+        XCTAssertEqual(UsageStatusCalculator.color(for: red), .systemRed)
+    }
+
     func testElapsedFraction_HalfwayThrough() {
         let resetTime = Date().addingTimeInterval(Constants.sessionWindow / 2)
         let fraction = UsageStatusCalculator.elapsedFraction(

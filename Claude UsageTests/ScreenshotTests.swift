@@ -228,13 +228,210 @@ final class ScreenshotTests: XCTestCase {
         try renderToPNG(view, size: CGSize(width: 320, height: 400), name: "composite_dashboard")
     }
 
+    func testAccessibleColors_darkMode() throws {
+        let zones: [(String, Double)] = [
+            ("Green (on track)", 70),
+            ("Yellow (maximizing)", 95),
+            ("Orange (overshooting)", 120),
+        ]
+        let view = VStack(spacing: 10) {
+            ForEach(zones, id: \.0) { label, pct in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(label)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(Color(nsColor: .secondaryLabelColor))
+                        .padding(.leading, 4)
+                    SmartUsageCard(
+                        title: "All models",
+                        subtitle: "Weekly",
+                        usedPercentage: pct,
+                        showRemaining: false,
+                        resetTime: Self.weeklyResetTime,
+                        isPrimary: false,
+                        periodDuration: Constants.weeklyWindow,
+                        showTimeMarker: false,
+                        metric: nil,
+                        isStale: false
+                    )
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(nsColor: .windowBackgroundColor))
+        try renderToPNG(view, size: CGSize(width: 260, height: 420), name: "accessible_colors_dark", colorScheme: .dark)
+    }
+
+    func testAccessibleColors_lightMode() throws {
+        let zones: [(String, Double)] = [
+            ("Green (on track)", 70),
+            ("Yellow (maximizing)", 95),
+            ("Orange (overshooting)", 120),
+        ]
+        let view = VStack(spacing: 10) {
+            ForEach(zones, id: \.0) { label, pct in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(label)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(Color(nsColor: .secondaryLabelColor))
+                        .padding(.leading, 4)
+                    SmartUsageCard(
+                        title: "All models",
+                        subtitle: "Weekly",
+                        usedPercentage: pct,
+                        showRemaining: false,
+                        resetTime: Self.weeklyResetTime,
+                        isPrimary: false,
+                        periodDuration: Constants.weeklyWindow,
+                        showTimeMarker: false,
+                        metric: nil,
+                        isStale: false
+                    )
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(nsColor: .windowBackgroundColor))
+        try renderToPNG(view, size: CGSize(width: 260, height: 420), name: "accessible_colors_light", colorScheme: .light)
+    }
+
+    func testSessionCard_yellow_lightMode() throws {
+        let view = SmartUsageCard(
+            title: "All models",
+            subtitle: "Weekly",
+            usedPercentage: 95,
+            showRemaining: false,
+            resetTime: Self.weeklyResetTime,
+            isPrimary: false,
+            periodDuration: Constants.weeklyWindow,
+            showTimeMarker: true,
+            metric: nil,
+            isStale: false
+        )
+        try renderToPNG(view, size: CGSize(width: 200, height: 110), name: "yellow_light_mode", colorScheme: .light)
+    }
+
+    // MARK: - Yellow Contrast Prototypes (temporary — remove after decision)
+
+    /// Renders all yellow contrast techniques side by side in light mode for comparison.
+    func testYellowContrast_allVariants() throws {
+        let yellow = Color(nsColor: .systemYellow)
+        let resetLabel = "Resets Mar 18, 5:59PM"
+
+        let cards = VStack(spacing: 10) {
+
+            // A: Baseline — original yellow, no treatment
+            YellowPrototypeCard(
+                title: "All models", subtitle: "Weekly",
+                percentage: 66, resetLabel: resetLabel,
+                statusColor: yellow,
+                cardBackground: Color(nsColor: .controlBackgroundColor).opacity(0.4),
+                label: "A: Original yellow (baseline — hard to read)"
+            ) { icon, pct in
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill").foregroundColor(yellow)
+                    Text(pct).foregroundColor(yellow)
+                }
+            }
+
+            // B: Text shadow — tight dark shadow, no hue change
+            YellowPrototypeCard(
+                title: "All models", subtitle: "Weekly",
+                percentage: 66, resetLabel: resetLabel,
+                statusColor: yellow,
+                cardBackground: Color(nsColor: .controlBackgroundColor).opacity(0.4),
+                label: "B: Text shadow (0.5px + 1.5px, black 40%/20%)"
+            ) { icon, pct in
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill").foregroundColor(yellow)
+                        .shadow(color: .black.opacity(0.4), radius: 0.5, x: 0, y: 0)
+                        .shadow(color: .black.opacity(0.2), radius: 1.5, x: 0, y: 0)
+                    Text(pct).foregroundColor(yellow)
+                        .shadow(color: .black.opacity(0.4), radius: 0.5, x: 0, y: 0)
+                        .shadow(color: .black.opacity(0.2), radius: 1.5, x: 0, y: 0)
+                }
+            }
+
+            // C: Blur halo — blurred dark underlay + sharp yellow
+            YellowPrototypeCard(
+                title: "All models", subtitle: "Weekly",
+                percentage: 66, resetLabel: resetLabel,
+                statusColor: yellow,
+                cardBackground: Color(nsColor: .controlBackgroundColor).opacity(0.4),
+                label: "C: Blur halo (ZStack dark blur + yellow)"
+            ) { icon, pct in
+                HStack(spacing: 4) {
+                    ZStack {
+                        Image(systemName: "flame.fill").foregroundColor(.black.opacity(0.4)).blur(radius: 2)
+                        Image(systemName: "flame.fill").foregroundColor(yellow)
+                    }
+                    ZStack {
+                        Text(pct).foregroundColor(.black.opacity(0.4)).blur(radius: 2)
+                        Text(pct).foregroundColor(yellow)
+                    }
+                }
+            }
+
+            // D: Local scrim — translucent dark backing behind indicator only
+            YellowPrototypeCard(
+                title: "All models", subtitle: "Weekly",
+                percentage: 66, resetLabel: resetLabel,
+                statusColor: yellow,
+                cardBackground: Color(nsColor: .controlBackgroundColor).opacity(0.4),
+                label: "D: Local scrim (black 8% behind indicator)"
+            ) { icon, pct in
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill").foregroundColor(yellow)
+                    Text(pct).foregroundColor(yellow)
+                }
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(Color.black.opacity(0.08).cornerRadius(5))
+            }
+
+            // E: Darker card background — card darkens in yellow zone
+            YellowPrototypeCard(
+                title: "All models", subtitle: "Weekly",
+                percentage: 66, resetLabel: resetLabel,
+                statusColor: yellow,
+                cardBackground: Color(white: 0.78).opacity(0.65),
+                label: "E: Darker card background (white 78%, 65%)"
+            ) { icon, pct in
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill").foregroundColor(yellow)
+                    Text(pct).foregroundColor(yellow)
+                }
+            }
+
+            // F: Dark card (HUD style) — dark background, full yellow
+            YellowPrototypeCard(
+                title: "All models", subtitle: "Weekly",
+                percentage: 66, resetLabel: resetLabel,
+                statusColor: yellow,
+                cardBackground: Color(white: 0.18),
+                label: "F: Dark card / HUD style",
+                invertText: true
+            ) { icon, pct in
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill").foregroundColor(yellow)
+                    Text(pct).foregroundColor(yellow)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(nsColor: .windowBackgroundColor))
+
+        try renderToPNG(cards,
+                        size: CGSize(width: 340, height: 580),
+                        name: "yellow_contrast_prototypes",
+                        colorScheme: .light)
+    }
+
     // MARK: - Helpers
 
     /// Render a SwiftUI view to a PNG file in `.screenshots/`
-    private func renderToPNG<V: View>(_ view: V, size: CGSize, name: String) throws {
+    private func renderToPNG<V: View>(_ view: V, size: CGSize, name: String, colorScheme: ColorScheme = .dark) throws {
         let hosted = view
             .frame(width: size.width, height: size.height)
-            .environment(\.colorScheme, .dark)
+            .environment(\.colorScheme, colorScheme)
 
         let renderer = ImageRenderer(content: hosted)
         renderer.scale = 2.0 // Retina
@@ -275,6 +472,76 @@ final class ScreenshotTests: XCTestCase {
             // Gentle curve: percentage rises with slight acceleration
             let pct = maxPct * (fraction * fraction * 0.3 + fraction * 0.7)
             return UsageSnapshot(date: date, percentage: pct)
+        }
+    }
+}
+
+// MARK: - Yellow Prototype Card (temporary helper — remove with yellow contrast tests)
+
+/// Standalone card that reproduces the SmartUsageCard layout with a swappable indicator slot,
+/// used for side-by-side yellow contrast prototype screenshots.
+private struct YellowPrototypeCard<Indicator: View>: View {
+    let title: String
+    let subtitle: String
+    let percentage: Int
+    let resetLabel: String
+    let statusColor: Color
+    let cardBackground: Color
+    let label: String
+    var invertText: Bool = false
+    @ViewBuilder let indicator: (String, String) -> Indicator
+
+    private var textColor: Color { invertText ? Color(white: 0.85) : .primary }
+    private var secondaryTextColor: Color { invertText ? Color(white: 0.55) : .secondary }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Caption above card
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(Color(nsColor: .secondaryLabelColor))
+                .padding(.leading, 4)
+
+            // Card
+            VStack(spacing: 8) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(textColor)
+                        Text(subtitle)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(secondaryTextColor)
+                    }
+                    Spacer()
+                    indicator("flame.fill", "\(percentage)%")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                }
+
+                // Progress bar
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.secondary.opacity(0.15))
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(LinearGradient(
+                                colors: [statusColor, statusColor.opacity(0.8)],
+                                startPoint: .leading, endPoint: .trailing))
+                            .frame(width: geo.size.width * min(Double(percentage) / 100.0, 1.0))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+                }
+                .frame(height: 8)
+
+                HStack {
+                    Spacer()
+                    Text(resetLabel)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundColor(secondaryTextColor)
+                }
+            }
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 12).fill(cardBackground))
         }
     }
 }

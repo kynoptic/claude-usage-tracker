@@ -24,8 +24,8 @@ enum SettingsColors {
     /// Informational state (blue)
     static let info = Color.blue
 
-    /// Caution state (yellow)
-    static let caution = Color.yellow
+    /// Caution state (yellow — accessible on light backgrounds)
+    static let caution = Color("UsageYellow")
 
     // MARK: - Semantic UI Colors
 
@@ -61,7 +61,7 @@ enum SettingsColors {
     static let usageLow = Color.green
 
     /// Medium usage (50-75%)
-    static let usageMedium = Color.yellow
+    static let usageMedium = Color("UsageYellow")
 
     /// High usage (75-90%)
     static let usageHigh = Color.orange
