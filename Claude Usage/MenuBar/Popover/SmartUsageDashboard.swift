@@ -361,16 +361,22 @@ struct SmartUsageCard: View {
     // MARK: - Back Content (Burn-Up Chart)
 
     private var backContent: some View {
-        VStack(spacing: isPrimary ? 8 : 4) {
+        VStack(spacing: isPrimary ? 12 : 8) {
             HStack {
-                Text(title)
-                    .font(.system(size: isPrimary ? 11 : 9, weight: .semibold))
-                    .foregroundColor(.primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: isPrimary ? 13 : 11, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    Text(subtitle)
+                        .font(.system(size: isPrimary ? 10 : 9, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
 
                 Spacer()
 
                 Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: isPrimary ? 10 : 8, weight: .medium))
+                    .font(.system(size: isPrimary ? 12 : 10, weight: .medium))
                     .foregroundColor(.secondary)
             }
 
