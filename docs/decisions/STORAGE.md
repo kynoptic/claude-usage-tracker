@@ -1,93 +1,103 @@
 # Storage Strategy
 
-This document explains when to use each of the two storage mechanisms in the app.
+This document explains when to use each storage mechanism in the app.
 
-## Two Storage Layers
+## Storage Layers
 
-### 1. DataStore (App-Wide Settings)
+### 1. Keychain (Credentials)
 
-**Use for:** User preferences, UI configuration, cached data that applies across all profiles — including statusline configuration, wizard state, and language selection.
+**Use for:** All sensitive credentials — session keys, OAuth tokens, organization IDs tied to authentication.
 
-**Implementation:** `DataStore.shared` wraps `UserDefaults.standard` (app container).
+**Implementation:** `KeychainService.shared` wraps the Security framework. Per-profile credentials are keyed by profile UUID (see [ADR-008](ADR-008-keychain-per-profile-credentials.md)).
 
 **Examples:**
 
-- Menu bar icon style preference (battery, progress bar, percentage)
-- Notification settings (enabled/disabled)
-- Color mode preference
-- Debug logging toggles
-- Last opened settings tab
-- Statusline feature toggles (show directory, show branch, show usage, show progress bar)
-- Language/localization selection
-- Setup wizard completion state
-- GitHub star prompt tracking
+- Claude.ai session key
+- Claude.ai organization ID
+- API Console session key
+- API Console organization ID
+- CLI OAuth JSON blob
 
-**Key trait:** Shared across all profiles. Changing a setting affects every profile immediately.
+**Key trait:** Credentials are never serialized to `UserDefaults`. `Profile.encode(to:)` explicitly excludes credential fields.
 
-**How to use:**
+### 2. ProfileStore (Per-Profile Configuration & Cached Data)
 
-```swift
-// Save
-DataStore.shared.saveNotificationsEnabled(true)
-DataStore.shared.saveMenuBarIconStyle(.battery)
-
-// Load
-let style = DataStore.shared.loadMenuBarIconStyle()
-```
-
----
-
-### 2. ProfileStore (Per-Profile Credentials & Data)
-
-**Use for:** Data that belongs to a specific profile, including credentials, profile-specific settings, and cached usage.
+**Use for:** Non-credential data that belongs to a specific profile — display settings, cached usage, metadata.
 
 **Implementation:** All profiles are persisted together via `ProfileStore` using the `profiles_v3` key in `UserDefaults.standard`.
 
 **Examples:**
 
-- Claude.ai session key (credentials)
-- CLI OAuth token blob (credentials)
-- Organization ID
 - Profile display name
-- Per-profile icon style override
+- Per-profile icon style override (`iconConfig`)
 - Per-profile refresh interval
-- Cached usage data
+- Cached usage data (`claudeUsage`, `apiUsage`)
+- Notification settings
+- CLI account sync metadata
 
-**Key trait:** Isolated per profile. Each profile has its own credentials, settings, and cached data.
-
-**Access pattern:** Never read `ProfileStore` directly. Instead:
-
-1. `ProfileManager.profiles` (list of all profiles)
-2. `ProfileManager.activeProfile` (current profile)
-3. Access fields on the `Profile` struct
-
-**How to use:**
+**Access pattern:** Never read `ProfileStore` directly. Use `ProfileManager.shared`:
 
 ```swift
-// Add a new profile
-let newProfile = Profile(name: "Work Account", ...)
-ProfileManager.shared.createProfile(newProfile)
-
-// Switch profiles
+ProfileManager.shared.activeProfile      // current profile
+ProfileManager.shared.profiles           // all profiles
 try await ProfileManager.shared.activateProfile(id: profileId)
-
-// Access active profile's data
-let sessionKey = ProfileManager.shared.activeProfile?.claudeSessionKey
-let usage = ProfileManager.shared.activeProfile?.claudeUsage
 ```
 
-> **Note:** Per-profile credentials are being migrated from `UserDefaults` to dedicated Keychain items per [ADR-008](ADR-008-keychain-per-profile-credentials.md) (accepted). Migration runs automatically on launch.
+### 3. DataStore (Global Preferences)
+
+**Use for:** User preferences and cached data that applies across all profiles.
+
+**Implementation:** `DataStore.shared` wraps `UserDefaults.standard`.
+
+**Examples:**
+
+- Notification enabled/disabled
+- Debug logging toggle
+- Language/localization selection
+- Global refresh interval
+- API tracking enabled/disabled
+
+### 4. AppearanceStore (Icon & Display Settings)
+
+**Use for:** Menu bar icon style, grey zone thresholds, monochrome mode, and icon configuration.
+
+**Implementation:** `AppearanceStore.shared` wraps `UserDefaults.standard`.
+
+```swift
+AppearanceStore.shared.saveMenuBarIconStyle(.battery)
+let style = AppearanceStore.shared.loadMenuBarIconStyle()
+```
+
+### 5. StatuslineConfigStore (Statusline Feature Toggles)
+
+**Use for:** Statusline feature toggles — show directory, show branch, show usage, show progress bar.
+
+### 6. SetupPromptStore (Onboarding State)
+
+**Use for:** Setup wizard completion, GitHub star prompt tracking, first-launch state.
+
+### 7. SessionHistoryStore / UsageHistoryStore (Historical Data)
+
+**Use for:** Session history snapshots and usage history data for trend analysis.
 
 ---
 
 ## Decision Matrix
 
-Use this flowchart to choose the right storage for new data:
-
 ```text
-Is this setting specific to a profile?
-├─ YES → Use ProfileStore (access via ProfileManager.activeProfile)
-└─ NO  → Use DataStore
+Is this a credential (session key, OAuth token, org ID for auth)?
+├─ YES → Keychain (via KeychainService)
+└─ NO
+   ├─ Is it specific to a profile?
+   │  ├─ YES → ProfileStore (access via ProfileManager)
+   │  └─ NO
+   │     ├─ Is it appearance/icon related?
+   │     │  ├─ YES → AppearanceStore
+   │     │  └─ NO
+   │     │     ├─ Is it statusline config? → StatuslineConfigStore
+   │     │     ├─ Is it onboarding/prompt state? → SetupPromptStore
+   │     │     ├─ Is it historical data? → SessionHistoryStore / UsageHistoryStore
+   │     │     └─ Otherwise → DataStore
 ```
 
 ---
@@ -96,20 +106,20 @@ Is this setting specific to a profile?
 
 | Data | Storage | Reason |
 | --- | --- | --- |
-| "Use battery icon style" | DataStore | Applies to all profiles; global UI preference |
+| "Work profile's session key" | Keychain | Per-profile credential (ADR-008) |
+| "CLI token JSON" | Keychain | Per-profile credential |
 | "Profile name is 'Work'" | ProfileStore | Per-profile identity |
-| "Active profile is Work" | ProfileStore | Stored in `activeProfileId` on ProfileManager |
-| "Show usage in statusline" | DataStore | Global feature toggle; not profile-specific |
-| "Work profile's session key" | ProfileStore | Per-profile credential |
-| "CLI token expires at 2026-03-20" | ProfileStore | Per-profile credential metadata |
+| "Active profile is Work" | ProfileStore | Stored in `activeProfileId` |
+| "Use battery icon style" | AppearanceStore | Global icon preference |
+| "Show usage in statusline" | StatuslineConfigStore | Statusline feature toggle |
+| "Setup wizard completed" | SetupPromptStore | One-time app state |
+| "Debug logging enabled" | DataStore | Global preference |
 | "Last menubar icon refresh" | DataStore | Transient cache; global to app |
-| "Setup wizard completed" | DataStore | One-time app state; not profile-specific |
 
 ---
 
 ## Related Docs
 
 - [Multi-profile system](../explanations/multi-profile.md) — how profiles are organized
-- [ADR-003](ADR-003-credentials-embedded-in-profile.md) — why credentials live in Profile, not separate Keychain entries
-- [ADR-008](ADR-008-keychain-per-profile-credentials.md) — planned migration of per-profile credentials to Keychain (supersedes ADR-003)
+- [ADR-008](ADR-008-keychain-per-profile-credentials.md) — per-profile Keychain credential storage (supersedes ADR-003)
 - [ADR-001](ADR-001-mvvm-profile-manager.md) — why ProfileManager is the single source of truth

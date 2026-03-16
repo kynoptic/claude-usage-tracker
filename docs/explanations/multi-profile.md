@@ -4,7 +4,7 @@ The app supports any number of named profiles. Each profile is isolated: separat
 
 ## Data model
 
-`Profile` is a `Codable` struct. Credentials are stored directly as fields rather than in a separate Keychain entry per profile (see [ADR-003](../decisions/ADR-003-credentials-embedded-in-profile.md)).
+`Profile` is a `Codable` struct. Credentials are stored in the macOS Keychain as dedicated per-profile items, keyed by profile UUID (see [ADR-008](../decisions/ADR-008-keychain-per-profile-credentials.md)). `Profile` retains credential fields for in-memory use but `encode(to:)` excludes them — they are never serialized to `UserDefaults`.
 
 Key fields:
 
@@ -61,14 +61,14 @@ In multi mode, clicking any profile icon opens the popover scoped to that profil
 `Profile` exposes computed properties so callers don't need to reach into services:
 
 ```swift
-var hasClaudeAI: Bool        // session key + org ID both present
-var hasValidCLIOAuth: Bool   // cliCredentialsJSON present and not expired
-var hasValidSystemCLIOAuth: Bool  // system Keychain CLI token present and not expired
-var hasUsageCredentials: Bool    // any of the above is true
+var hasClaudeAI: Bool              // session key + org ID both present
+var hasAPIConsole: Bool            // API session key + API org ID both present
+var hasValidOAuthCredentials: Bool // cached CLI OAuth validation result (stored Bool)
+var hasUsageCredentials: Bool      // any of the above is true
 ```
 
 ## Related docs
 
 - [Authentication chain](auth-chain.md) — per-profile credential selection
 - [ADR-001](../decisions/ADR-001-mvvm-profile-manager.md) — why ProfileManager is a singleton
-- [ADR-003](../decisions/ADR-003-credentials-embedded-in-profile.md) — why credentials live in Profile
+- [ADR-008](../decisions/ADR-008-keychain-per-profile-credentials.md) — per-profile Keychain credential storage
