@@ -228,6 +228,58 @@ final class ScreenshotTests: XCTestCase {
         try renderToPNG(view, size: CGSize(width: 320, height: 400), name: "composite_dashboard")
     }
 
+    func testCompositeDashboard_lightMode() throws {
+        _ = makeSnapshots(count: 15, maxPct: 50)
+        _ = makeSnapshots(count: 30, maxPct: 35)
+
+        let view = VStack(spacing: 16) {
+            SmartUsageCard(
+                title: "Session Usage",
+                subtitle: "5-hour window",
+                usedPercentage: 19,
+                showRemaining: false,
+                resetTime: Self.sessionResetTime,
+                isPrimary: true,
+                periodDuration: Constants.sessionWindow,
+                showTimeMarker: true,
+                metric: nil,
+                isStale: false
+            )
+
+            HStack(spacing: 12) {
+                SmartUsageCard(
+                    title: "All Models",
+                    subtitle: "Weekly",
+                    usedPercentage: 67,
+                    showRemaining: false,
+                    resetTime: Self.weeklyResetTime,
+                    isPrimary: false,
+                    periodDuration: Constants.weeklyWindow,
+                    showTimeMarker: true,
+                    metric: nil,
+                    isStale: false
+                )
+
+                SmartUsageCard(
+                    title: "Sonnet",
+                    subtitle: "Weekly",
+                    usedPercentage: 39,
+                    showRemaining: false,
+                    resetTime: Self.weeklyResetTime,
+                    isPrimary: false,
+                    periodDuration: Constants.weeklyWindow,
+                    showTimeMarker: false,
+                    metric: nil,
+                    isStale: false
+                )
+            }
+        }
+        .padding(16)
+        .background(.regularMaterial)
+
+        try renderToPNG(view, size: CGSize(width: 320, height: 400), name: "composite_dashboard_light", colorScheme: .light)
+    }
+
     func testAccessibleColors_darkMode() throws {
         let zones: [(String, Double)] = [
             ("Green (on track)", 70),
