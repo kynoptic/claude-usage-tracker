@@ -1,6 +1,12 @@
 import Foundation
 
-/// Service for fetching usage data directly from Claude's API
+/// Service for fetching usage data directly from Claude's API.
+///
+/// Explicitly `@MainActor`-isolated to document the concurrency contract:
+/// all property access and method calls happen on the main actor. This was
+/// previously inherited implicitly from `APIServiceProtocol`; the explicit
+/// annotation prevents accidental isolation changes if the protocol evolves.
+@MainActor
 final class ClaudeAPIService: APIServiceProtocol {
     // MARK: - Types
 
