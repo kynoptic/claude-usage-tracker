@@ -56,6 +56,9 @@ jobs:
             -configuration Debug \
             -derivedDataPath build \
             -destination "platform=macOS" \
+            -skip-testing:"Claude UsageTests/KeychainServiceTests" \
+            -skip-testing:"Claude UsageTests/KeychainServicePerProfileTests" \
+            -skip-testing:"Claude UsageTests/KeychainPerProfileMigrationServiceTests" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO

@@ -4,6 +4,20 @@ User-facing changes — new capabilities, behavior changes, fixes that affected 
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-03-16
+
+Keychain credential migration and security hardening.
+
+### Security
+
+- Credentials migrated from UserDefaults to per-profile Keychain items — automatic, transparent migration on first launch with no user action required
+- API endpoint paths redacted in system diagnostic logs, preventing credential exposure in Console.app
+
+### Fixed
+
+- Profile deletion could race with concurrent async operations, potentially leaving stale credential data
+- Statusline script generation no longer crashes if a bundle resource is missing — falls back gracefully instead of terminating
+
 ## [2.4.4] - 2026-03-15
 
 Wizard credential-save fix and internal architecture cleanup.
@@ -388,6 +402,8 @@ Initial release.
 - Detailed usage dashboard with countdown timers
 - macOS 14.0+ (Sonoma) support
 
+[2.5.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.4...v2.5.0
+[2.4.4]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.3...v2.4.4
 [2.4.3]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.0...v2.4.1

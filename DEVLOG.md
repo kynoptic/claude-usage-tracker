@@ -4,6 +4,20 @@ Engineering record — refactors, internal tooling, build changes, ADRs, depende
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-03-16
+
+Keychain migration, storage decomposition, and ViewModel extraction.
+
+- ADR-008: Per-profile Keychain credentials — credentials moved from UserDefaults to Keychain with idempotent migration that retries on partial failure — see docs/decisions/ADR-008-keychain-per-profile-credentials.md
+- `DataStore` decomposed into `AppearanceStore`, `SetupPromptStore`, `StatuslineConfigStore`, and `UsageHistoryStore` — the monolithic store mixed credentials, UI preferences, and chart data in one class, making changes risky
+- `SharedDataStore` removed — its responsibilities redistributed to the focused stores above
+- View-layer notification handling routed through dedicated ViewModels — views no longer subscribe to NotificationCenter directly, aligning with the MVVM pattern
+- `RefreshStateMachine` extracted as a value type — refresh state transitions were embedded in `MenuBarManager`, making them untestable
+- `KeychainMigrationService` replaced by `KeychainPerProfileMigrationService` — the old service handled the v1→v2 migration path which no longer exists
+- Statusline scripts extracted from embedded string literals to bundle resources — the 200-line bash script was a string constant inside a Swift file, defeating syntax highlighting and lint tooling
+- `StorageProvider` and `APIServiceProtocol` annotated with `@MainActor` — enforces thread safety at the protocol level rather than relying on each conformance to remember
+- CI: Keychain test suites added to skip list — they require code signing and prompt for password on GitHub Actions runners
+
 ## [2.4.4] - 2026-03-15
 
 Architecture decomposition, thread safety hardening, and tooling additions.
@@ -177,6 +191,8 @@ Foreground notification delivery for menu bar apps.
 
 No engineering-only changes.
 
+[2.5.0]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.4...v2.5.0
+[2.4.4]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.3...v2.4.4
 [2.4.3]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/kynoptic/claude-usage-tracker/compare/v2.4.0...v2.4.1
