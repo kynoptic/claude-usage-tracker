@@ -14,26 +14,48 @@ struct BurnUpChartView: View {
     /// Downsample to at most this many points for rendering performance
     private static let maxPoints = 200
 
-    /// Chart data with a synthetic origin at windowStart so even a single
-    /// real data point produces a visible area fill.
+    /// Chart data with a synthetic origin at windowStart.
+    /// Carries forward the last pre-window percentage (anchor) so graphs
+    /// don't drop to zero after app updates or data gaps.
     /// Appends a synthetic "now" point so the line extends to the current time
     /// even when the percentage hasn't changed between polls.
     private var displaySnapshots: [UsageSnapshot] {
-        let origin = UsageSnapshot(date: windowStart, percentage: 0.0)
+        Self.chartDisplaySnapshots(
+            from: snapshots,
+            windowStart: windowStart,
+            windowEnd: windowEnd,
+            maxPoints: Self.maxPoints,
+            now: now
+        )
+    }
+
+    /// Testable computation of display snapshots for the chart.
+    /// Separated from the view property so unit tests can verify the logic.
+    static func chartDisplaySnapshots(
+        from snapshots: [UsageSnapshot],
+        windowStart: Date,
+        windowEnd: Date,
+        maxPoints: Int = 200,
+        now: Date = Date()
+    ) -> [UsageSnapshot] {
+        // Find the last snapshot before windowStart to use as the carry-forward
+        // anchor. This prevents artificial zero-drops after app updates.
+        let preWindowSnapshots = snapshots.filter { $0.date < windowStart }
+        let anchorPercentage = preWindowSnapshots.last?.percentage ?? 0.0
+
+        let origin = UsageSnapshot(date: windowStart, percentage: anchorPercentage)
         let windowSnapshots = snapshots.filter { $0.date >= windowStart }
         var points = [origin] + windowSnapshots
 
         // Downsample if needed (skip origin when counting)
-        if points.count > Self.maxPoints {
-            let stride = max(points.count / Self.maxPoints, 1)
+        if points.count > maxPoints {
+            let stride = max(points.count / maxPoints, 1)
             points = Swift.stride(from: 0, to: points.count, by: stride).map { points[$0] }
         }
 
         // Extend the line to "now" — appended after downsampling so it's never dropped.
-        // Captures `now` once so both comparisons use the same timestamp.
-        let currentTime = now
-        if let last = windowSnapshots.last, currentTime < windowEnd {
-            points.append(UsageSnapshot(date: currentTime, percentage: last.percentage))
+        if let last = windowSnapshots.last, now < windowEnd {
+            points.append(UsageSnapshot(date: now, percentage: last.percentage))
         }
 
         return points
