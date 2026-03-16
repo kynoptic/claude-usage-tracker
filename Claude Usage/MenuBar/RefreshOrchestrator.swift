@@ -154,32 +154,10 @@ final class RefreshOrchestrator {
     // MARK: - Per-Profile Fetch
 
     /// Fetches usage data for a specific profile using its credentials.
-    /// Tries CLI OAuth first, then falls back to cookie-based session.
+    /// Delegates to the canonical `ClaudeAPIService.fetchUsage(for:)` which handles
+    /// CLI OAuth → cookie session fallback.
     func fetchUsageForProfile(_ profile: Profile) async throws -> ClaudeUsage {
-        // Try CLI OAuth first (auto-refreshing, most reliable)
-        if let cliJSON = profile.cliCredentialsJSON,
-           !ClaudeCodeSyncService.shared.isTokenExpired(cliJSON),
-           let accessToken = ClaudeCodeSyncService.shared.extractAccessToken(from: cliJSON) {
-            LoggingService.shared.log("Profile '\(profile.name)': Fetching via CLI OAuth")
-            do {
-                return try await apiService.fetchUsageData(oauthAccessToken: accessToken)
-            } catch {
-                LoggingService.shared.logError("Profile '\(profile.name)': CLI OAuth fetch failed, trying cookie fallback: \(error.localizedDescription)")
-            }
-        }
-
-        // Fall back to cookie-based claude.ai session
-        if let sessionKey = profile.claudeSessionKey,
-           let orgId = profile.organizationId {
-            LoggingService.shared.log("Profile '\(profile.name)': Fetching via cookie session")
-            return try await apiService.fetchUsageData(sessionKey: sessionKey, organizationId: orgId)
-        }
-
-        throw AppError(
-            code: .sessionKeyNotFound,
-            message: "Missing credentials for profile '\(profile.name)'",
-            isRecoverable: false
-        )
+        return try await apiService.fetchUsage(for: profile)
     }
 
     // MARK: - Authentication Resolution
