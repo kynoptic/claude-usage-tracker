@@ -120,7 +120,8 @@ final class MenuBarManager: NSObject, ObservableObject {
     // MARK: - Popover Toggle
 
     @objc private func togglePopover(_ sender: Any?) {
-        let clickedButton = (sender as? NSStatusBarButton) ?? statusBarUIManager?.primaryButton
+        let iconConfig = profileManager.activeProfile?.iconConfig ?? .default
+        let clickedButton = (sender as? NSStatusBarButton) ?? statusBarUIManager?.primaryButton(for: iconConfig)
         guard let button = clickedButton else { return }
 
         if statusBarUIManager?.isInMultiProfileMode == true,
@@ -190,9 +191,23 @@ final class MenuBarManager: NSObject, ObservableObject {
     /// (single-profile icon update or multi-profile button set).
     func updateAllStatusBarIcons() {
         if profileManager.displayMode == .multi {
-            statusBarUIManager?.updateMultiProfileButtons(profiles: profileManager.profiles, config: profileManager.multiProfileConfig)
+            let showGrey = AppearanceStore.shared.loadShowGreyZone()
+            let greyThreshold = AppearanceStore.shared.loadGreyThreshold()
+            statusBarUIManager?.updateMultiProfileButtons(
+                profiles: profileManager.profiles,
+                config: profileManager.multiProfileConfig,
+                showGrey: showGrey,
+                greyThreshold: greyThreshold
+            )
         } else {
-            statusBarUIManager?.updateAllButtons(usage: usage, apiUsage: apiUsage)
+            let iconConfig = profileManager.activeProfile?.iconConfig ?? .default
+            let hasCredentials = profileManager.activeProfile?.hasUsageCredentials ?? false
+            statusBarUIManager?.updateAllButtons(
+                usage: usage,
+                apiUsage: apiUsage,
+                iconConfig: iconConfig,
+                hasUsageCredentials: hasCredentials
+            )
         }
     }
 
@@ -239,7 +254,14 @@ final class MenuBarManager: NSObject, ObservableObject {
     func setupMultiProfileMode() {
         let selectedProfiles = profileManager.getSelectedProfiles()
         statusBarUIManager?.setupMultiProfile(profiles: selectedProfiles, target: self, action: #selector(togglePopover))
-        statusBarUIManager?.updateMultiProfileButtons(profiles: profileManager.profiles, config: profileManager.multiProfileConfig)
+        let showGrey = AppearanceStore.shared.loadShowGreyZone()
+        let greyThreshold = AppearanceStore.shared.loadGreyThreshold()
+        statusBarUIManager?.updateMultiProfileButtons(
+            profiles: profileManager.profiles,
+            config: profileManager.multiProfileConfig,
+            showGrey: showGrey,
+            greyThreshold: greyThreshold
+        )
         LoggingService.shared.log("MenuBarManager: Multi-profile mode enabled with \(selectedProfiles.count) profiles")
         refreshAllSelectedProfiles()
     }
@@ -320,7 +342,14 @@ final class MenuBarManager: NSObject, ObservableObject {
                 usage = u; lastSuccessfulFetch = Date(); pacingContext = Self.buildPacingContext(for: u)
             }
         }
-        statusBarUIManager?.updateMultiProfileButtons(profiles: profileManager.profiles, config: profileManager.multiProfileConfig)
+        let showGrey = AppearanceStore.shared.loadShowGreyZone()
+        let greyThreshold = AppearanceStore.shared.loadGreyThreshold()
+        statusBarUIManager?.updateMultiProfileButtons(
+            profiles: profileManager.profiles,
+            config: profileManager.multiProfileConfig,
+            showGrey: showGrey,
+            greyThreshold: greyThreshold
+        )
 
         if let activeUsage = profileManager.activeProfile.flatMap({ result.profileUsage[$0.id] }) {
             recordRefreshSuccess(usage: activeUsage)
