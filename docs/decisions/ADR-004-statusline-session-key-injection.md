@@ -30,7 +30,7 @@ Credentials are refreshed in the script whenever:
 - No sandboxing complexity: the script does not call back into the app
 
 **Negative:**
-- The session key sits in plaintext in a file on disk. The file is `755` (readable by anyone who can read the filesystem), which is weaker than Keychain storage.
+- The session key sits in plaintext in a file on disk. The file is `0600` (owner-only read/write), which is weaker than Keychain storage but limits exposure to the current user.
 - Credentials go stale when the session key rotates. The app mitigates this by re-injecting on profile switch, but a user who updates their session key in settings without re-enabling the statusline will have stale credentials until the next update trigger.
 - CLI OAuth cannot be used for the statusline for the same reason: OAuth tokens expire and rotate, and the standalone script has no mechanism to refresh them. A manually-configured session key is always required for this feature.
 
