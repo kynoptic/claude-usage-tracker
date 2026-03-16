@@ -26,6 +26,8 @@ final class MenuBarManager: NSObject, ObservableObject {
     @Published private(set) var nextRetryDate: Date?
     /// The scheduled date of the next automatic refresh when no error is pending.
     @Published private(set) var nextRefreshAt: Date?
+    /// The underlying state machine driving refresh/retry/staleness transitions.
+    private(set) var refreshState = RefreshStateMachine()
     /// Burn-up pacing context derived from the active profile's elapsed session fraction.
     @Published private(set) var pacingContext: PacingContext = .none
     /// The ID of the profile whose status-bar button was most recently clicked.
@@ -37,7 +39,6 @@ final class MenuBarManager: NSObject, ObservableObject {
 
     private var statusBarUIManager: StatusBarUIManager?
     private var refreshTimer: Timer?
-    private var pollingScheduler = PollingScheduler()
     private var lastRefreshTriggerTime: Date = .distantPast
     private let windowCoordinator = WindowCoordinator()
     private let refreshOrchestrator = RefreshOrchestrator()
@@ -166,7 +167,7 @@ final class MenuBarManager: NSObject, ObservableObject {
         self.usage = profile.claudeUsage ?? .empty
         self.apiUsage = profile.apiUsage
 
-        pollingScheduler = PollingScheduler(baseInterval: profile.refreshInterval)
+        refreshState.resetPollingScheduler(baseInterval: profile.refreshInterval)
         startAutoRefresh()
 
         if profileManager.displayMode == .multi {
@@ -213,7 +214,7 @@ final class MenuBarManager: NSObject, ObservableObject {
         refreshTimer?.invalidate()
         refreshTimer = nil
 
-        let interval = pollingScheduler.currentInterval
+        let interval = refreshState.currentInterval
         nextRefreshAt = Date().addingTimeInterval(interval)
         refreshTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
             self?.refreshUsage()
@@ -260,7 +261,8 @@ final class MenuBarManager: NSObject, ObservableObject {
         guard let profile = profileManager.activeProfile, profile.hasUsageCredentials else { updateAllStatusBarIcons(); return }
 
         Task {
-            self.isRefreshing = true
+            self.refreshState.beginRefresh()
+            self.syncPublishedState()
             let result = await refreshOrchestrator.refreshSingleProfile(profile: profile, apiSessionKey: profile.apiSessionKey, apiOrganizationId: profile.apiOrganizationId)
             await applySingleProfileResult(result)
         }
@@ -302,7 +304,8 @@ final class MenuBarManager: NSObject, ObservableObject {
         guard !selected.isEmpty else { updateAllStatusBarIcons(); return }
 
         Task {
-            self.isRefreshing = true
+            self.refreshState.beginRefresh()
+            self.syncPublishedState()
             let result = await refreshOrchestrator.refreshMultipleProfiles(selected)
             await applyMultiProfileResult(result)
         }
@@ -322,9 +325,9 @@ final class MenuBarManager: NSObject, ObservableObject {
         if let activeUsage = profileManager.activeProfile.flatMap({ result.profileUsage[$0.id] }) {
             recordRefreshSuccess(usage: activeUsage)
         } else if result.encounteredRateLimit {
-            pollingScheduler.recordRateLimitError(retryAfter: result.rateLimitRetryAfter)
-            lastRefreshError = AppError(code: .apiRateLimited, message: "Rate limited by Claude API", isRecoverable: true, retryAfter: result.rateLimitRetryAfter)
-            nextRetryDate = Date().addingTimeInterval(result.rateLimitRetryAfter ?? pollingScheduler.currentInterval)
+            let err = AppError(code: .apiRateLimited, message: "Rate limited by Claude API", isRecoverable: true, retryAfter: result.rateLimitRetryAfter)
+            refreshState.recordError(err)
+            syncPublishedState()
         }
         finalizeRefresh(userTriggeredSuccess: profileManager.activeProfile.flatMap({ result.profileUsage[$0.id] }) != nil)
     }
@@ -332,28 +335,19 @@ final class MenuBarManager: NSObject, ObservableObject {
     // MARK: - Refresh Helpers
 
     @MainActor private func recordRefreshSuccess(usage: ClaudeUsage) {
-        pollingScheduler.recordSuccess(usage: usage)
-        lastSuccessfulFetch = Date()
-        lastRefreshError = nil
-        nextRetryDate = nil
+        refreshState.recordSuccess(usage: usage)
+        syncPublishedState()
     }
 
     @MainActor private func recordRefreshError(_ appError: AppError) {
-        if appError.code == .apiRateLimited {
-            pollingScheduler.recordRateLimitError(retryAfter: appError.retryAfter)
-            nextRetryDate = Date().addingTimeInterval(appError.retryAfter ?? pollingScheduler.currentInterval)
-        } else {
-            pollingScheduler.recordOtherError()
-            let requiresAction = appError.code == .apiUnauthorized || appError.code == .sessionKeyNotFound
-            nextRetryDate = requiresAction ? nil : Date().addingTimeInterval(pollingScheduler.currentInterval)
-        }
-        lastRefreshError = appError
+        refreshState.recordError(appError)
+        syncPublishedState()
     }
 
     @MainActor private func finalizeRefresh(userTriggeredSuccess: Bool) {
-        updateStaleness()
-        isRefreshing = false
-        if userTriggeredSuccess && abs(lastRefreshTriggerTime.timeIntervalSinceNow) < 5 {
+        refreshState.endRefresh()
+        syncPublishedState()
+        if userTriggeredSuccess && refreshState.shouldNotifySuccess(lastTriggerTime: lastRefreshTriggerTime) {
             NotificationManager.shared.sendSuccessNotification()
         }
         startAutoRefresh()
@@ -429,15 +423,17 @@ final class MenuBarManager: NSObject, ObservableObject {
     /// Recomputes `isStale` based on the time since the last successful fetch and whether
     /// the polling scheduler is currently in back-off. Only writes the property when the value changes.
     func updateStaleness() {
-        let stale: Bool
-        if pollingScheduler.isBackingOff {
-            stale = true
-        } else if let lastFetch = lastSuccessfulFetch {
-            stale = Date().timeIntervalSince(lastFetch) > Constants.RefreshIntervals.stalenessThreshold
-        } else {
-            stale = false
-        }
-        if isStale != stale { isStale = stale }
+        refreshState.updateStaleness()
+        syncPublishedState()
+    }
+
+    /// Copies state machine values to `@Published` properties so SwiftUI bindings update.
+    private func syncPublishedState() {
+        isRefreshing = refreshState.isRefreshing
+        lastSuccessfulFetch = refreshState.lastSuccessfulFetch
+        isStale = refreshState.isStale
+        lastRefreshError = refreshState.lastRefreshError
+        nextRetryDate = refreshState.nextRetryDate
     }
 
     private func loadSavedProfileData() {
