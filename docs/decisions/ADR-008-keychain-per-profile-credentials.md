@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-03-15
-**Supersedes:** ADR-003 (when implemented)
+**Supersedes:** ADR-003
 
 ## Context
 

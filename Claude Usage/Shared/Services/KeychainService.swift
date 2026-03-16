@@ -211,22 +211,12 @@ final class KeychainService {
         }
 
         if updateStatus == errSecItemNotFound {
-            var accessControlError: Unmanaged<CFError>?
-            guard let accessControl = SecAccessControlCreateWithFlags(
-                kCFAllocatorDefault,
-                kSecAttrAccessibleWhenUnlocked,
-                [],
-                &accessControlError
-            ) else {
-                throw KeychainError.saveFailed(status: errSecParam)
-            }
-
             let addQuery: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
                 kSecAttrAccount as String: account,
                 kSecValueData as String: data,
-                kSecAttrAccessControl as String: accessControl,
+                kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
                 kSecAttrSynchronizable as String: false
             ]
 

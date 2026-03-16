@@ -290,6 +290,7 @@ struct APIConfirmStep: View {
     let onSave: () -> Void
     @ObservedObject var viewModel: APIBillingViewModel
     @State private var isSaving = false
+    @State private var saveError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -401,6 +402,17 @@ struct APIConfirmStep: View {
                 .controlSize(.regular)
                 .disabled(isSaving)
             }
+
+            if let error = saveError {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.red)
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundColor(.red)
+                }
+            }
         }
     }
 
@@ -431,7 +443,7 @@ struct APIConfirmStep: View {
 
             } catch {
                 await MainActor.run {
-                    wizardState.validationState = .error("Failed to save: \(error.localizedDescription)")
+                    saveError = "Failed to save: \(error.localizedDescription)"
                     isSaving = false
                 }
             }
