@@ -96,4 +96,113 @@ final class SmartUsageDashboardViewModelTests: XCTestCase {
 
         XCTAssertEqual(sut.greyThreshold, 0.1, accuracy: 0.001)
     }
+
+    // MARK: - stalenessLabel(lastSuccessfulFetch:at:)
+
+    func testStalenessLabel_NilFetch_ReturnsNoDataYet() {
+        let result = SmartUsageDashboardViewModel.stalenessLabel(lastSuccessfulFetch: nil, at: Date())
+        XCTAssertEqual(result, "No data yet")
+    }
+
+    func testStalenessLabel_Under60Seconds_ReturnsJustNow() {
+        let now = Date()
+        let fetch = now.addingTimeInterval(-30)
+        let result = SmartUsageDashboardViewModel.stalenessLabel(lastSuccessfulFetch: fetch, at: now)
+        XCTAssertEqual(result, "Updated just now")
+    }
+
+    func testStalenessLabel_FiveMinutesAgo_ReturnsMinutes() {
+        let now = Date()
+        let fetch = now.addingTimeInterval(-300)
+        let result = SmartUsageDashboardViewModel.stalenessLabel(lastSuccessfulFetch: fetch, at: now)
+        XCTAssertEqual(result, "Updated 5m ago")
+    }
+
+    func testStalenessLabel_TwoHoursAgo_ReturnsHours() {
+        let now = Date()
+        let fetch = now.addingTimeInterval(-7200)
+        let result = SmartUsageDashboardViewModel.stalenessLabel(lastSuccessfulFetch: fetch, at: now)
+        XCTAssertEqual(result, "Updated 2h ago")
+    }
+
+    func testStalenessLabel_ExactlyOneMinute_ReturnsMinutes() {
+        let now = Date()
+        let fetch = now.addingTimeInterval(-60)
+        let result = SmartUsageDashboardViewModel.stalenessLabel(lastSuccessfulFetch: fetch, at: now)
+        XCTAssertEqual(result, "Updated 1m ago")
+    }
+
+    func testStalenessLabel_ExactlyOneHour_ReturnsHours() {
+        let now = Date()
+        let fetch = now.addingTimeInterval(-3600)
+        let result = SmartUsageDashboardViewModel.stalenessLabel(lastSuccessfulFetch: fetch, at: now)
+        XCTAssertEqual(result, "Updated 1h ago")
+    }
+
+    // MARK: - errorBannerText(for:)
+
+    func testErrorBannerText_NilError_ReturnsNil() {
+        let result = SmartUsageDashboardViewModel.errorBannerText(for: nil)
+        XCTAssertNil(result)
+    }
+
+    func testErrorBannerText_RateLimited_ReturnsNil() {
+        let error = AppError(code: .apiRateLimited, message: "Rate limited")
+        let result = SmartUsageDashboardViewModel.errorBannerText(for: error)
+        XCTAssertNil(result)
+    }
+
+    func testErrorBannerText_Unauthorized_ReturnsAuthExpired() {
+        let error = AppError(code: .apiUnauthorized, message: "Unauthorized")
+        let result = SmartUsageDashboardViewModel.errorBannerText(for: error)
+        XCTAssertEqual(result, "Auth expired — re-sync in Settings")
+    }
+
+    func testErrorBannerText_SessionKeyNotFound_ReturnsNoCredentials() {
+        let error = AppError(code: .sessionKeyNotFound, message: "Not found")
+        let result = SmartUsageDashboardViewModel.errorBannerText(for: error)
+        XCTAssertEqual(result, "No credentials — configure in Settings")
+    }
+
+    func testErrorBannerText_GenericError_ReturnsMessage() {
+        let error = AppError(code: .networkUnavailable, message: "Network down")
+        let result = SmartUsageDashboardViewModel.errorBannerText(for: error)
+        XCTAssertEqual(result, "Network down")
+    }
+
+    // MARK: - countdownText(until:now:)
+
+    func testCountdownText_ZeroRemaining_ReturnsRetryingNow() {
+        let now = Date()
+        let result = SmartUsageDashboardViewModel.countdownText(until: now, now: now)
+        XCTAssertEqual(result, "Rate limited — retrying now…")
+    }
+
+    func testCountdownText_PastDate_ReturnsRetryingNow() {
+        let now = Date()
+        let past = now.addingTimeInterval(-10)
+        let result = SmartUsageDashboardViewModel.countdownText(until: past, now: now)
+        XCTAssertEqual(result, "Rate limited — retrying now…")
+    }
+
+    func testCountdownText_30Seconds_ReturnsSeconds() {
+        let now = Date()
+        let future = now.addingTimeInterval(30)
+        let result = SmartUsageDashboardViewModel.countdownText(until: future, now: now)
+        XCTAssertEqual(result, "Rate limited — retrying in 30s")
+    }
+
+    func testCountdownText_90Seconds_ReturnsMinutesAndSeconds() {
+        let now = Date()
+        let future = now.addingTimeInterval(90)
+        let result = SmartUsageDashboardViewModel.countdownText(until: future, now: now)
+        XCTAssertEqual(result, "Rate limited — retrying in 1m 30s")
+    }
+
+    func testCountdownText_ExactlyOneMinute_ReturnsMinutesAndZeroSeconds() {
+        let now = Date()
+        let future = now.addingTimeInterval(60)
+        let result = SmartUsageDashboardViewModel.countdownText(until: future, now: now)
+        XCTAssertEqual(result, "Rate limited — retrying in 1m 0s")
+    }
 }

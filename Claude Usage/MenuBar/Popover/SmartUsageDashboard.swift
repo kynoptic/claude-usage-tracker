@@ -21,48 +21,6 @@ struct SmartUsageDashboard: View {
         profileManager.activeProfile?.iconConfig.showTimeMarker ?? true
     }
 
-    /// Formatted staleness label: explains why data is outdated (no error active).
-    /// Only called from the `isStale && lastRefreshError == nil` branch — nextRetryDate is always nil here.
-    private func stalenessLabel(at now: Date) -> String {
-        guard let lastFetch = lastSuccessfulFetch else { return "No data yet" }
-        let elapsed = now.timeIntervalSince(lastFetch)
-        if elapsed < 60 {
-            return "Updated just now"
-        } else if elapsed < 3600 {
-            return "Updated \(Int(elapsed / 60))m ago"
-        } else {
-            return "Updated \(Int(elapsed / 3600))h ago"
-        }
-    }
-
-    /// Actionable error message for non-rate-limit errors
-    private var errorBannerText: String? {
-        guard let error = lastRefreshError else { return nil }
-        switch error.code {
-        case .apiRateLimited:
-            return nil  // Handled by countdown banner
-        case .apiUnauthorized:
-            return "Auth expired — re-sync in Settings"
-        case .sessionKeyNotFound:
-            return "No credentials — configure in Settings"
-        default:
-            return error.message
-        }
-    }
-
-    /// Formats remaining seconds as a compact countdown string.
-    /// Internal (not private) to allow unit testing via @testable import.
-    nonisolated static func countdownText(until date: Date, now: Date) -> String {
-        let remaining = max(0, Int(date.timeIntervalSince(now)))
-        if remaining == 0 {
-            return "Rate limited — retrying now…"
-        }
-        if remaining >= 60 {
-            return "Rate limited — retrying in \(remaining / 60)m \(remaining % 60)s"
-        }
-        return "Rate limited — retrying in \(remaining)s"
-    }
-
     var body: some View {
         VStack(spacing: 16) {
             // Staleness / error indicator
@@ -75,7 +33,7 @@ struct SmartUsageDashboard: View {
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundColor(.orange)
 
-                            Text(Self.countdownText(until: retryDate, now: context.date))
+                            Text(SmartUsageDashboardViewModel.countdownText(until: retryDate, now: context.date))
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundColor(.orange)
 
@@ -90,7 +48,7 @@ struct SmartUsageDashboard: View {
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(.orange)
 
-                        Text(errorBannerText ?? "Refresh failed")
+                        Text(SmartUsageDashboardViewModel.errorBannerText(for: lastRefreshError) ?? "Refresh failed")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(.orange)
                             .lineLimit(1)
@@ -108,7 +66,7 @@ struct SmartUsageDashboard: View {
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(.secondary)
 
-                        Text(stalenessLabel(at: context.date))
+                        Text(SmartUsageDashboardViewModel.stalenessLabel(lastSuccessfulFetch: lastSuccessfulFetch, at: context.date))
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(.secondary)
 

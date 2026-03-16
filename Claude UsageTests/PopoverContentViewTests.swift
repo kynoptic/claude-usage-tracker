@@ -9,7 +9,7 @@ final class PopoverContentViewTests: XCTestCase {
         let now = Date()
         let date = now.addingTimeInterval(150) // 2m 30s
         XCTAssertEqual(
-            SmartUsageDashboard.countdownText(until: date, now: now),
+            SmartUsageDashboardViewModel.countdownText(until: date, now: now),
             "Rate limited — retrying in 2m 30s"
         )
     }
@@ -18,7 +18,7 @@ final class PopoverContentViewTests: XCTestCase {
         let now = Date()
         let date = now.addingTimeInterval(60)
         XCTAssertEqual(
-            SmartUsageDashboard.countdownText(until: date, now: now),
+            SmartUsageDashboardViewModel.countdownText(until: date, now: now),
             "Rate limited — retrying in 1m 0s"
         )
     }
@@ -27,7 +27,7 @@ final class PopoverContentViewTests: XCTestCase {
         let now = Date()
         let date = now.addingTimeInterval(59)
         XCTAssertEqual(
-            SmartUsageDashboard.countdownText(until: date, now: now),
+            SmartUsageDashboardViewModel.countdownText(until: date, now: now),
             "Rate limited — retrying in 59s"
         )
     }
@@ -35,7 +35,7 @@ final class PopoverContentViewTests: XCTestCase {
     func testCountdownText_ZeroRemaining_ReturnsRetryingNow() {
         let now = Date()
         XCTAssertEqual(
-            SmartUsageDashboard.countdownText(until: now, now: now),
+            SmartUsageDashboardViewModel.countdownText(until: now, now: now),
             "Rate limited — retrying now…"
         )
     }
@@ -44,7 +44,7 @@ final class PopoverContentViewTests: XCTestCase {
         let now = Date()
         let past = now.addingTimeInterval(-5)
         XCTAssertEqual(
-            SmartUsageDashboard.countdownText(until: past, now: now),
+            SmartUsageDashboardViewModel.countdownText(until: past, now: now),
             "Rate limited — retrying now…"
         )
     }
