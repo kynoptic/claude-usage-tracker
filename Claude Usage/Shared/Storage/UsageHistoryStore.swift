@@ -102,7 +102,23 @@ final class UsageHistoryStore {
 
     private func prune(metric: UsageMetric) {
         let cutoff = Date().addingTimeInterval(-windowDuration(for: metric))
-        cache[metric]?.removeAll { $0.date < cutoff }
+        guard var snapshots = cache[metric], !snapshots.isEmpty else { return }
+
+        // Find the most recent snapshot before the cutoff (anchor point).
+        // Keep it so the chart can carry forward the last known percentage
+        // instead of dropping to zero at the window start.
+        let preWindowSnapshots = snapshots.filter { $0.date < cutoff }
+        let anchor = preWindowSnapshots.last
+
+        // Remove all pre-cutoff snapshots
+        snapshots.removeAll { $0.date < cutoff }
+
+        // Re-insert the anchor at the front if one existed
+        if let anchor = anchor {
+            snapshots.insert(anchor, at: 0)
+        }
+
+        cache[metric] = snapshots
     }
 
     private func fileURL(for metric: UsageMetric) -> URL {
