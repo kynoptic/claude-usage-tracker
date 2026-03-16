@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ManageProfilesView: View {
     @ObservedObject var profileManager = ProfileManager.shared
+    @StateObject private var viewModel = ManageProfilesViewModel()
     @State private var showingCreateProfile = false
     @State private var newProfileName = ""
     @State private var errorMessage: String?
@@ -58,9 +59,7 @@ struct ManageProfilesView: View {
                             isOn: Binding(
                                 get: { profileManager.displayMode == .multi },
                                 set: { enabled in
-                                    profileManager.updateDisplayMode(enabled ? .multi : .single)
-                                    // Post notification for menu bar to update
-                                    NotificationCenter.default.post(name: .displayModeChanged, object: nil)
+                                    viewModel.updateDisplayMode(enabled: enabled)
                                 }
                             )
                         )
@@ -86,9 +85,7 @@ struct ManageProfilesView: View {
                                                 // Can't deselect the last one
                                                 return
                                             }
-                                            profileManager.toggleProfileSelection(profile.id)
-                                            // Post notification for menu bar to update
-                                            NotificationCenter.default.post(name: .displayModeChanged, object: nil)
+                                            viewModel.toggleProfileSelection(profile.id)
                                         }
                                     )
                                 }
@@ -121,8 +118,7 @@ struct ManageProfilesView: View {
                                     set: { newStyle in
                                         var config = profileManager.multiProfileConfig
                                         config.iconStyle = newStyle
-                                        profileManager.updateMultiProfileConfig(config)
-                                        NotificationCenter.default.post(name: .displayModeChanged, object: nil)
+                                        viewModel.updateMultiProfileConfig(config)
                                     }
                                 )) {
                                     ForEach(MultiProfileIconStyle.allCases, id: \.self) { style in
@@ -143,8 +139,7 @@ struct ManageProfilesView: View {
                                     set: { showWeek in
                                         var config = profileManager.multiProfileConfig
                                         config.showWeek = showWeek
-                                        profileManager.updateMultiProfileConfig(config)
-                                        NotificationCenter.default.post(name: .displayModeChanged, object: nil)
+                                        viewModel.updateMultiProfileConfig(config)
                                     }
                                 )
                             )
@@ -158,8 +153,7 @@ struct ManageProfilesView: View {
                                     set: { showLabel in
                                         var config = profileManager.multiProfileConfig
                                         config.showProfileLabel = showLabel
-                                        profileManager.updateMultiProfileConfig(config)
-                                        NotificationCenter.default.post(name: .displayModeChanged, object: nil)
+                                        viewModel.updateMultiProfileConfig(config)
                                     }
                                 )
                             )
@@ -173,8 +167,7 @@ struct ManageProfilesView: View {
                                     set: { useSystemColor in
                                         var config = profileManager.multiProfileConfig
                                         config.useSystemColor = useSystemColor
-                                        profileManager.updateMultiProfileConfig(config)
-                                        NotificationCenter.default.post(name: .displayModeChanged, object: nil)
+                                        viewModel.updateMultiProfileConfig(config)
                                     }
                                 )
                             )
@@ -246,7 +239,7 @@ struct ManageProfilesView: View {
 
     private func createNewProfile() {
         let name = newProfileName.isEmpty ? nil : newProfileName
-        _ = profileManager.createProfile(name: name)
+        viewModel.createProfile(name: name)
         showingCreateProfile = false
         newProfileName = ""
     }

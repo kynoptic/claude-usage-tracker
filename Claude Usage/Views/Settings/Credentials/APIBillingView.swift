@@ -32,6 +32,7 @@ struct APIWizardState {
 /// API Console billing and credits tracking
 struct APIBillingView: View {
     @ObservedObject var profileManager = ProfileManager.shared
+    @StateObject private var viewModel = APIBillingViewModel()
     @State private var wizardState = APIWizardState()
     @State private var currentCredentials: ProfileCredentials?
 
@@ -113,7 +114,8 @@ struct APIBillingView: View {
                         APIConfirmStep(
                             wizardState: $wizardState,
                             apiService: apiService,
-                            onSave: { loadCurrentCredentials() }
+                            onSave: { loadCurrentCredentials() },
+                            viewModel: viewModel
                         )
                     }
                 }
@@ -137,45 +139,20 @@ struct APIBillingView: View {
     }
 
     private func loadExistingConfiguration() {
-        guard let profile = profileManager.activeProfile else { return }
-
-        // Load existing credentials for comparison
-        if let creds = try? ProfileStore.shared.loadProfileCredentials(profile.id) {
-            wizardState.originalOrgId = creds.apiOrganizationId
-            wizardState.originalApiSessionKey = creds.apiSessionKey
-        }
+        viewModel.loadOriginalCredentials(into: &wizardState)
     }
 
     private func loadCurrentCredentials() {
-        guard let profile = profileManager.activeProfile else { return }
-        currentCredentials = try? ProfileStore.shared.loadProfileCredentials(profile.id)
+        currentCredentials = viewModel.loadCurrentCredentials()
     }
 
     private func removeCredentials() {
-        guard let profileId = profileManager.activeProfile?.id else {
-            LoggingService.shared.logError("APIBillingView: No active profile for removal")
-            return
-        }
-
-        LoggingService.shared.log("APIBillingView: Starting credential removal for profile \(profileId)")
-
         do {
-            // Use ProfileManager's shared removal method
-            try profileManager.removeAPICredentials(for: profileId)
-
-            // Reload UI to update the view
+            try viewModel.removeCredentials()
             loadCurrentCredentials()
-
-            // Reset wizard
             wizardState = APIWizardState()
-
-            LoggingService.shared.log("APIBillingView: Successfully removed API Console credentials")
-
         } catch {
-            let appError = AppError.wrap(error)
-            ErrorLogger.shared.log(appError, severity: .error)
-            ErrorPresenter.shared.showAlert(for: appError)
-            LoggingService.shared.logError("APIBillingView: Failed to remove credentials - \(appError.message)")
+            // Error already handled by ViewModel (logged + presented)
         }
     }
 }
@@ -311,6 +288,7 @@ struct APIConfirmStep: View {
     @Binding var wizardState: APIWizardState
     let apiService: ClaudeAPIService
     let onSave: () -> Void
+    @ObservedObject var viewModel: APIBillingViewModel
     @State private var isSaving = false
 
     var body: some View {
@@ -432,42 +410,19 @@ struct APIConfirmStep: View {
     }
 
     private func saveConfiguration() {
-        guard let profileId = ProfileManager.shared.activeProfile?.id else { return }
-
         isSaving = true
 
         Task {
             do {
-                // Save to profile-specific Keychain
-                var creds = try ProfileStore.shared.loadProfileCredentials(profileId)
-                creds.apiSessionKey = wizardState.apiSessionKey
-                creds.apiOrganizationId = wizardState.selectedOrgId
-                try ProfileStore.shared.saveProfileCredentials(profileId, credentials: creds)
-
-                // Also update the Profile model with the new credentials
-                if var profile = ProfileManager.shared.activeProfile {
-                    profile.apiSessionKey = wizardState.apiSessionKey
-                    profile.apiOrganizationId = wizardState.selectedOrgId
-                    ProfileManager.shared.updateProfile(profile)
-                    LoggingService.shared.log("APIBillingView: Updated profile model with new credentials")
-                }
+                try await viewModel.saveCredentials(
+                    apiSessionKey: wizardState.apiSessionKey,
+                    organizationId: wizardState.selectedOrgId,
+                    originalApiSessionKey: wizardState.originalApiSessionKey,
+                    originalOrgId: wizardState.originalOrgId
+                )
 
                 await MainActor.run {
-                    // Reset circuit breaker on successful credential save
-                    ErrorRecovery.shared.recordSuccess(for: .api)
-
-                    // Determine which notification to send
-                    let keyChanged = apiKeyHasChanged()
-                    let orgChanged = wizardState.selectedOrgId != wizardState.originalOrgId
-                    if keyChanged || orgChanged {
-                        // Post notification to trigger refresh only if credentials actually changed
-                        NotificationCenter.default.post(name: .credentialsChanged, object: nil)
-                    }
-
-                    // Reload credentials display
                     onSave()
-
-                    // Reset wizard to start
                     withAnimation {
                         wizardState = APIWizardState()
                     }
