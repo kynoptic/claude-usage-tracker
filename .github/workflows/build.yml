@@ -37,6 +37,14 @@ jobs:
           swift --version
           echo "macOS: $(sw_vers -productVersion)"
 
+      - name: Install SwiftLint
+        # Baseline captures violations by rule ID + location, so new SwiftLint versions
+        # only affect enforcement if rules change behavior (not if new rules are added).
+        run: brew install swiftlint
+
+      - name: SwiftLint (new violations only)
+        run: swiftlint lint --baseline .swiftlint.baseline --strict
+
       - name: Build Debug (for tests)
         run: |
           xcodebuild build \

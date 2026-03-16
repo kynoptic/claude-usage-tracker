@@ -1,4 +1,4 @@
-.PHONY: help init build build-release test deploy clean
+.PHONY: help init build build-release test lint deploy clean
 
 # Build configuration (matches CLAUDE.md requirements)
 PROJECT = Claude Usage.xcodeproj
@@ -16,6 +16,7 @@ help:
 	@echo "  make build          Debug build (code signing disabled)"
 	@echo "  make build-release  Release build"
 	@echo "  make test           Run unit tests"
+	@echo "  make lint           Run SwiftLint (new violations only via baseline)"
 	@echo "  make deploy         Deploy to /Applications (clean full deploy)"
 	@echo "  make clean          Clean build artifacts and DerivedData"
 	@echo ""
@@ -46,6 +47,19 @@ init:
 	@echo ""
 	@echo "Installing pre-commit hooks..."
 	@pre-commit install --hook-type commit-msg > /dev/null 2>&1 && echo "✓ pre-commit hooks installed" || echo "⚠ pre-commit not found — run: pip install pre-commit"
+	@echo ""
+	@echo "Installing SwiftLint pre-commit hook..."
+	@if [ -f .git/hooks/pre-commit ] && ! grep -q 'swiftlint' .git/hooks/pre-commit; then \
+		cat scripts/swiftlint-precommit.sh >> .git/hooks/pre-commit; \
+		echo "✓ SwiftLint pre-commit hook appended"; \
+	elif ! [ -f .git/hooks/pre-commit ]; then \
+		echo "#!/usr/bin/env bash" > .git/hooks/pre-commit; \
+		cat scripts/swiftlint-precommit.sh >> .git/hooks/pre-commit; \
+		chmod +x .git/hooks/pre-commit; \
+		echo "✓ SwiftLint pre-commit hook created"; \
+	else \
+		echo "✓ SwiftLint pre-commit hook already present"; \
+	fi
 	@echo ""
 	@echo "✓ Init checks passed"
 
@@ -81,6 +95,12 @@ test:
 		-skip-testing:"Claude UsageTests/KeychainServicePerProfileTests" \
 		-skip-testing:"Claude UsageTests/KeychainPerProfileMigrationServiceTests"
 	@echo "✓ Tests passed"
+
+# Run SwiftLint with baseline (reports only new violations)
+lint:
+	@echo "Running SwiftLint..."
+	swiftlint lint --baseline .swiftlint.baseline --strict
+	@echo "✓ No new SwiftLint violations"
 
 # Deploy to /Applications (full clean deploy per docs/procedures/DEPLOY.md)
 # Each step is critical — skipping any risks shipping a stale binary.
