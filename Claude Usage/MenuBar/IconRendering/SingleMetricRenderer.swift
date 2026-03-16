@@ -44,8 +44,8 @@ struct SingleMetricRenderer {
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
                 elapsedFraction: sessionElapsed,
-                showGrey: DataStore.shared.loadShowGreyZone(),
-                greyThreshold: DataStore.shared.loadGreyThreshold()
+                showGrey: AppearanceStore.shared.loadShowGreyZone(),
+                greyThreshold: AppearanceStore.shared.loadGreyThreshold()
             )
 
             return MetricData(
@@ -70,8 +70,8 @@ struct SingleMetricRenderer {
                 usedPercentage: usedPercentage,
                 showRemaining: showRemaining,
                 elapsedFraction: weekElapsed,
-                showGrey: DataStore.shared.loadShowGreyZone(),
-                greyThreshold: DataStore.shared.loadGreyThreshold()
+                showGrey: AppearanceStore.shared.loadShowGreyZone(),
+                greyThreshold: AppearanceStore.shared.loadGreyThreshold()
             )
 
             let displayText: String

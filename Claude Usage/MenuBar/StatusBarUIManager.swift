@@ -238,8 +238,8 @@ final class StatusBarUIManager {
                 duration: Constants.weeklyWindow,
                 showRemaining: false
             )
-            let showGrey = DataStore.shared.loadShowGreyZone()
-            let greyThreshold = DataStore.shared.loadGreyThreshold()
+            let showGrey = AppearanceStore.shared.loadShowGreyZone()
+            let greyThreshold = AppearanceStore.shared.loadGreyThreshold()
             let sessionStatus = UsageStatusCalculator.calculateStatus(
                 usedPercentage: sessionUsed,
                 showRemaining: showRemaining,
@@ -439,7 +439,7 @@ final class StatusBarUIManager {
 
     /// Get the first enabled metric's button (for backwards compatibility)
     var primaryButton: NSStatusBarButton? {
-        let config = DataStore.shared.loadMenuBarIconConfiguration()
+        let config = AppearanceStore.shared.loadMenuBarIconConfiguration()
         guard let firstMetric = config.enabledMetrics.first else {
             return nil
         }

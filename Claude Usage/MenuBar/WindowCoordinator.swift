@@ -22,7 +22,7 @@ final class WindowCoordinator: NSObject {
     /// The status bar button currently anchoring the popover (multi-profile aware).
     private weak var currentPopoverButton: NSStatusBarButton?
 
-    private let dataStore = DataStore.shared
+    private let setupPromptStore = SetupPromptStore.shared
 
     // MARK: - Popover Management
 
@@ -195,7 +195,7 @@ final class WindowCoordinator: NSObject {
 
         githubPromptWindow = window
 
-        dataStore.saveLastGitHubStarPromptDate(Date())
+        setupPromptStore.saveLastGitHubStarPromptDate(Date())
 
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

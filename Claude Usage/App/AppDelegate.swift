@@ -50,19 +50,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             } else {
                 showSetupWizardManually()
                 // Mark that wizard has been shown once
-                DataStore.shared.markWizardShown()
+                SetupPromptStore.shared.markWizardShown()
             }
         }
 
         // Track first launch date for GitHub star prompt
-        if DataStore.shared.loadFirstLaunchDate() == nil {
-            DataStore.shared.saveFirstLaunchDate(Date())
+        if SetupPromptStore.shared.loadFirstLaunchDate() == nil {
+            SetupPromptStore.shared.saveFirstLaunchDate(Date())
         }
 
         // TESTING: Check for launch argument to force GitHub star prompt
         if CommandLine.arguments.contains("--show-github-prompt") {
-            DataStore.shared.resetGitHubStarPromptForTesting()
-            DataStore.shared.saveFirstLaunchDate(Date().addingTimeInterval(-2 * 24 * 60 * 60))
+            SetupPromptStore.shared.resetGitHubStarPromptForTesting()
+            SetupPromptStore.shared.saveFirstLaunchDate(Date().addingTimeInterval(-2 * 24 * 60 * 60))
         }
 
         // Check if we should show GitHub star prompt (with a slight delay to not interrupt app startup)
@@ -88,7 +88,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func shouldShowSetupWizard() async -> Bool {
         // FORCE SHOW wizard on very first app launch (one-time)
         // This ensures users see the migration option if they have old data
-        if !DataStore.shared.hasShownWizardOnce() {
+        if !SetupPromptStore.shared.hasShownWizardOnce() {
             LoggingService.shared.log("AppDelegate: First launch - forcing wizard to show migration option")
             return true
         }

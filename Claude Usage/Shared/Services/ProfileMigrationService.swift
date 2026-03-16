@@ -48,12 +48,13 @@ final class ProfileMigrationService {
 
     private func createFirstProfileFromLegacy() -> Profile {
         let dataStore = DataStore.shared
+        let appearanceStore = AppearanceStore.shared
 
         // Generate a funny name for the first profile
         let profileName = FunnyNameGenerator.getRandomName(excluding: [])
 
         // Load existing settings
-        let iconConfig = dataStore.loadMenuBarIconConfiguration()
+        let iconConfig = appearanceStore.loadMenuBarIconConfiguration()
         let refreshInterval = dataStore.loadRefreshInterval()
         let notificationsEnabled = dataStore.loadNotificationsEnabled()
         let autoStartSessionEnabled = dataStore.loadAutoStartSessionEnabled()

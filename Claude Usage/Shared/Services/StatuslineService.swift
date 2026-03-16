@@ -272,7 +272,7 @@ GREY_THRESHOLD=\(Int(greyThreshold * 100))
     func updateScriptsIfInstalled() throws {
         guard isInstalled else { return }
         try installScripts(injectSessionKey: true)
-        let store = DataStore.shared
+        let store = StatuslineConfigStore.shared
         try updateConfiguration(
             showDirectory: store.loadStatuslineShowDirectory(),
             showBranch: store.loadStatuslineShowBranch(),
@@ -280,8 +280,8 @@ GREY_THRESHOLD=\(Int(greyThreshold * 100))
             showProgressBar: store.loadStatuslineShowProgressBar(),
             showResetTime: store.loadStatuslineShowResetTime(),
             showTimeMarker: store.loadStatuslineShowTimeMarker(),
-            showGreyZone: DataStore.shared.loadShowGreyZone(),
-            greyThreshold: DataStore.shared.loadGreyThreshold()
+            showGreyZone: AppearanceStore.shared.loadShowGreyZone(),
+            greyThreshold: AppearanceStore.shared.loadGreyThreshold()
         )
     }
 
@@ -289,7 +289,7 @@ GREY_THRESHOLD=\(Int(greyThreshold * 100))
     /// Reads all other statusline settings from DataStore to preserve them.
     func updateGreyZoneIfInstalled(_ show: Bool) throws {
         guard isInstalled else { return }
-        let store = DataStore.shared
+        let store = StatuslineConfigStore.shared
         try updateConfiguration(
             showDirectory: store.loadStatuslineShowDirectory(),
             showBranch: store.loadStatuslineShowBranch(),
@@ -298,7 +298,7 @@ GREY_THRESHOLD=\(Int(greyThreshold * 100))
             showResetTime: store.loadStatuslineShowResetTime(),
             showTimeMarker: store.loadStatuslineShowTimeMarker(),
             showGreyZone: show,
-            greyThreshold: DataStore.shared.loadGreyThreshold()
+            greyThreshold: AppearanceStore.shared.loadGreyThreshold()
         )
     }
 

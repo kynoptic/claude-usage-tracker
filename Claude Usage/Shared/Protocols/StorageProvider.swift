@@ -45,42 +45,4 @@ protocol StorageProvider {
     // MARK: - Language & Localization
     func saveLanguageCode(_ code: String)
     func loadLanguageCode() -> String?
-
-    // MARK: - Statusline Configuration
-    func saveStatuslineShowDirectory(_ show: Bool)
-    func loadStatuslineShowDirectory() -> Bool
-
-    func saveStatuslineShowBranch(_ show: Bool)
-    func loadStatuslineShowBranch() -> Bool
-
-    func saveStatuslineShowUsage(_ show: Bool)
-    func loadStatuslineShowUsage() -> Bool
-
-    func saveStatuslineShowProgressBar(_ show: Bool)
-    func loadStatuslineShowProgressBar() -> Bool
-
-    func saveStatuslineShowResetTime(_ show: Bool)
-    func loadStatuslineShowResetTime() -> Bool
-
-    func saveStatuslineShowTimeMarker(_ show: Bool)
-    func loadStatuslineShowTimeMarker() -> Bool
-
-    // MARK: - Setup State
-    func saveHasCompletedSetup(_ completed: Bool)
-    func hasCompletedSetup() -> Bool
-    func hasShownWizardOnce() -> Bool
-    func markWizardShown()
-
-    // MARK: - GitHub Star Prompt
-    func saveFirstLaunchDate(_ date: Date)
-    func loadFirstLaunchDate() -> Date?
-
-    func saveLastGitHubStarPromptDate(_ date: Date)
-    func loadLastGitHubStarPromptDate() -> Date?
-
-    func saveHasStarredGitHub(_ starred: Bool)
-    func loadHasStarredGitHub() -> Bool
-
-    func saveNeverShowGitHubPrompt(_ neverShow: Bool)
-    func loadNeverShowGitHubPrompt() -> Bool
 }

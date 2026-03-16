@@ -5,10 +5,14 @@ import XCTest
 final class SharedDataStoreTests: XCTestCase {
 
     var dataStore: DataStore!
+    var statuslineConfigStore: StatuslineConfigStore!
+    var setupPromptStore: SetupPromptStore!
 
     override func setUp() {
         super.setUp()
         dataStore = DataStore.shared
+        statuslineConfigStore = StatuslineConfigStore.shared
+        setupPromptStore = SetupPromptStore.shared
     }
 
     override func tearDown() {
@@ -40,62 +44,62 @@ final class SharedDataStoreTests: XCTestCase {
     // MARK: - Statusline Configuration Tests
 
     func testStatuslineShowDirectory() {
-        dataStore.saveStatuslineShowDirectory(false)
-        XCTAssertFalse(dataStore.loadStatuslineShowDirectory())
+        statuslineConfigStore.saveStatuslineShowDirectory(false)
+        XCTAssertFalse(statuslineConfigStore.loadStatuslineShowDirectory())
 
-        dataStore.saveStatuslineShowDirectory(true)
-        XCTAssertTrue(dataStore.loadStatuslineShowDirectory())
+        statuslineConfigStore.saveStatuslineShowDirectory(true)
+        XCTAssertTrue(statuslineConfigStore.loadStatuslineShowDirectory())
     }
 
     func testStatuslineShowBranch() {
-        dataStore.saveStatuslineShowBranch(false)
-        XCTAssertFalse(dataStore.loadStatuslineShowBranch())
+        statuslineConfigStore.saveStatuslineShowBranch(false)
+        XCTAssertFalse(statuslineConfigStore.loadStatuslineShowBranch())
 
-        dataStore.saveStatuslineShowBranch(true)
-        XCTAssertTrue(dataStore.loadStatuslineShowBranch())
+        statuslineConfigStore.saveStatuslineShowBranch(true)
+        XCTAssertTrue(statuslineConfigStore.loadStatuslineShowBranch())
     }
 
     func testStatuslineShowUsage() {
-        dataStore.saveStatuslineShowUsage(false)
-        XCTAssertFalse(dataStore.loadStatuslineShowUsage())
+        statuslineConfigStore.saveStatuslineShowUsage(false)
+        XCTAssertFalse(statuslineConfigStore.loadStatuslineShowUsage())
 
-        dataStore.saveStatuslineShowUsage(true)
-        XCTAssertTrue(dataStore.loadStatuslineShowUsage())
+        statuslineConfigStore.saveStatuslineShowUsage(true)
+        XCTAssertTrue(statuslineConfigStore.loadStatuslineShowUsage())
     }
 
     func testStatuslineShowProgressBar() {
-        dataStore.saveStatuslineShowProgressBar(false)
-        XCTAssertFalse(dataStore.loadStatuslineShowProgressBar())
+        statuslineConfigStore.saveStatuslineShowProgressBar(false)
+        XCTAssertFalse(statuslineConfigStore.loadStatuslineShowProgressBar())
 
-        dataStore.saveStatuslineShowProgressBar(true)
-        XCTAssertTrue(dataStore.loadStatuslineShowProgressBar())
+        statuslineConfigStore.saveStatuslineShowProgressBar(true)
+        XCTAssertTrue(statuslineConfigStore.loadStatuslineShowProgressBar())
     }
 
     func testStatuslineShowResetTime() {
-        dataStore.saveStatuslineShowResetTime(false)
-        XCTAssertFalse(dataStore.loadStatuslineShowResetTime())
+        statuslineConfigStore.saveStatuslineShowResetTime(false)
+        XCTAssertFalse(statuslineConfigStore.loadStatuslineShowResetTime())
 
-        dataStore.saveStatuslineShowResetTime(true)
-        XCTAssertTrue(dataStore.loadStatuslineShowResetTime())
+        statuslineConfigStore.saveStatuslineShowResetTime(true)
+        XCTAssertTrue(statuslineConfigStore.loadStatuslineShowResetTime())
     }
 
     // MARK: - Setup Status Tests
 
     func testHasCompletedSetup() {
-        dataStore.saveHasCompletedSetup(false)
-        XCTAssertFalse(dataStore.hasCompletedSetup())
+        setupPromptStore.saveHasCompletedSetup(false)
+        XCTAssertFalse(setupPromptStore.hasCompletedSetup())
 
-        dataStore.saveHasCompletedSetup(true)
-        XCTAssertTrue(dataStore.hasCompletedSetup())
+        setupPromptStore.saveHasCompletedSetup(true)
+        XCTAssertTrue(setupPromptStore.hasCompletedSetup())
     }
 
     // MARK: - GitHub Star Prompt Tests
 
     func testFirstLaunchDate() {
         let testDate = Date()
-        dataStore.saveFirstLaunchDate(testDate)
+        setupPromptStore.saveFirstLaunchDate(testDate)
 
-        let loaded = dataStore.loadFirstLaunchDate()
+        let loaded = setupPromptStore.loadFirstLaunchDate()
         XCTAssertNotNil(loaded)
 
         // Compare timestamps (allow 1 second difference for encoding/decoding)
@@ -106,9 +110,9 @@ final class SharedDataStoreTests: XCTestCase {
 
     func testLastGitHubStarPromptDate() {
         let testDate = Date()
-        dataStore.saveLastGitHubStarPromptDate(testDate)
+        setupPromptStore.saveLastGitHubStarPromptDate(testDate)
 
-        let loaded = dataStore.loadLastGitHubStarPromptDate()
+        let loaded = setupPromptStore.loadLastGitHubStarPromptDate()
         XCTAssertNotNil(loaded)
 
         if let loaded = loaded {
@@ -117,69 +121,69 @@ final class SharedDataStoreTests: XCTestCase {
     }
 
     func testHasStarredGitHub() {
-        dataStore.saveHasStarredGitHub(false)
-        XCTAssertFalse(dataStore.loadHasStarredGitHub())
+        setupPromptStore.saveHasStarredGitHub(false)
+        XCTAssertFalse(setupPromptStore.loadHasStarredGitHub())
 
-        dataStore.saveHasStarredGitHub(true)
-        XCTAssertTrue(dataStore.loadHasStarredGitHub())
+        setupPromptStore.saveHasStarredGitHub(true)
+        XCTAssertTrue(setupPromptStore.loadHasStarredGitHub())
     }
 
     func testNeverShowGitHubPrompt() {
-        dataStore.saveNeverShowGitHubPrompt(false)
-        XCTAssertFalse(dataStore.loadNeverShowGitHubPrompt())
+        setupPromptStore.saveNeverShowGitHubPrompt(false)
+        XCTAssertFalse(setupPromptStore.loadNeverShowGitHubPrompt())
 
-        dataStore.saveNeverShowGitHubPrompt(true)
-        XCTAssertTrue(dataStore.loadNeverShowGitHubPrompt())
+        setupPromptStore.saveNeverShowGitHubPrompt(true)
+        XCTAssertTrue(setupPromptStore.loadNeverShowGitHubPrompt())
     }
 
     func testShouldShowGitHubStarPrompt() {
         // Reset state
-        dataStore.saveHasStarredGitHub(false)
-        dataStore.saveNeverShowGitHubPrompt(false)
+        setupPromptStore.saveHasStarredGitHub(false)
+        setupPromptStore.saveNeverShowGitHubPrompt(false)
 
         // Set first launch to 3 days ago
         let threeDaysAgo = Date().addingTimeInterval(-3 * 24 * 60 * 60)
-        dataStore.saveFirstLaunchDate(threeDaysAgo)
+        setupPromptStore.saveFirstLaunchDate(threeDaysAgo)
 
-        // GitHubStarPromptManager.shared uses DataStore.shared (same instance as dataStore)
+        // GitHubStarPromptManager.shared uses SetupPromptStore.shared (same instance as setupPromptStore)
         // so state set above is visible to the manager
         XCTAssertTrue(GitHubStarPromptManager.shared.shouldShowGitHubStarPrompt())
 
         // Mark as starred - should no longer show
-        dataStore.saveHasStarredGitHub(true)
+        setupPromptStore.saveHasStarredGitHub(true)
         XCTAssertFalse(GitHubStarPromptManager.shared.shouldShowGitHubStarPrompt())
 
         // Reset starred, set never show - should not show
-        dataStore.saveHasStarredGitHub(false)
-        dataStore.saveNeverShowGitHubPrompt(true)
+        setupPromptStore.saveHasStarredGitHub(false)
+        setupPromptStore.saveNeverShowGitHubPrompt(true)
         XCTAssertFalse(GitHubStarPromptManager.shared.shouldShowGitHubStarPrompt())
     }
 
     func testShouldNotShowGitHubPromptWhenTooEarly() {
         // Reset state
-        dataStore.saveHasStarredGitHub(false)
-        dataStore.saveNeverShowGitHubPrompt(false)
+        setupPromptStore.saveHasStarredGitHub(false)
+        setupPromptStore.saveNeverShowGitHubPrompt(false)
 
         // Set first launch to 12 hours ago (less than 1 day threshold)
         let twelveHoursAgo = Date().addingTimeInterval(-12 * 60 * 60)
-        dataStore.saveFirstLaunchDate(twelveHoursAgo)
+        setupPromptStore.saveFirstLaunchDate(twelveHoursAgo)
 
-        // GitHubStarPromptManager.shared uses DataStore.shared (same instance as dataStore)
+        // GitHubStarPromptManager.shared uses SetupPromptStore.shared (same instance as setupPromptStore)
         XCTAssertFalse(GitHubStarPromptManager.shared.shouldShowGitHubStarPrompt())
     }
 
     func testResetGitHubStarPromptForTesting() {
         // Set some state
-        dataStore.saveHasStarredGitHub(true)
-        dataStore.saveNeverShowGitHubPrompt(true)
-        dataStore.saveLastGitHubStarPromptDate(Date())
+        setupPromptStore.saveHasStarredGitHub(true)
+        setupPromptStore.saveNeverShowGitHubPrompt(true)
+        setupPromptStore.saveLastGitHubStarPromptDate(Date())
 
         // Reset for testing
-        dataStore.resetGitHubStarPromptForTesting()
+        setupPromptStore.resetGitHubStarPromptForTesting()
 
         // Should be reset
-        XCTAssertFalse(dataStore.loadHasStarredGitHub())
-        XCTAssertFalse(dataStore.loadNeverShowGitHubPrompt())
-        XCTAssertNil(dataStore.loadLastGitHubStarPromptDate())
+        XCTAssertFalse(setupPromptStore.loadHasStarredGitHub())
+        XCTAssertFalse(setupPromptStore.loadNeverShowGitHubPrompt())
+        XCTAssertNil(setupPromptStore.loadLastGitHubStarPromptDate())
     }
 }
