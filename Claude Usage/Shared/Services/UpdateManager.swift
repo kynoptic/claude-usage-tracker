@@ -78,7 +78,7 @@ final class UpdateManager: ObservableObject {
     func setAutomaticChecksEnabled(_ enabled: Bool) {
         updaterController.updater.automaticallyChecksForUpdates = enabled
         automaticChecksEnabled = enabled
-        DataStore.shared.userDefaults.set(enabled, forKey: "SUEnableAutomaticChecks")
+        UserDefaults.standard.set(enabled, forKey: "SUEnableAutomaticChecks")
         LoggingService.shared.logInfo("Automatic updates: \(enabled)")
     }
 

@@ -4,11 +4,11 @@ import Foundation
 /// Determines whether the prompt should be shown based on timing rules and user preferences.
 @MainActor
 final class GitHubStarPromptManager {
-    static let shared = GitHubStarPromptManager(storage: DataStore.shared)
+    static let shared = GitHubStarPromptManager(storage: SetupPromptStore.shared)
 
-    private let storage: StorageProvider
+    private let storage: SetupPromptStore
 
-    init(storage: StorageProvider) {
+    init(storage: SetupPromptStore) {
         self.storage = storage
     }
 

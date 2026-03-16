@@ -14,8 +14,8 @@ final class SmartUsageDashboardViewModelTests: XCTestCase {
         super.setUp()
         // Reset DataStore to known defaults before each test
         DataStore.shared.saveAPITrackingEnabled(false)
-        DataStore.shared.saveShowGreyZone(false)
-        DataStore.shared.saveGreyThreshold(Constants.greyThresholdDefault)
+        AppearanceStore.shared.saveShowGreyZone(false)
+        AppearanceStore.shared.saveGreyThreshold(Constants.greyThresholdDefault)
         sut = SmartUsageDashboardViewModel()
     }
 
@@ -64,18 +64,18 @@ final class SmartUsageDashboardViewModelTests: XCTestCase {
     func testReload_UpdatesShowGreyZone_ToTrue() {
         XCTAssertFalse(sut.showGreyZone, "precondition: starts false")
 
-        DataStore.shared.saveShowGreyZone(true)
+        AppearanceStore.shared.saveShowGreyZone(true)
         sut.reload()
 
         XCTAssertTrue(sut.showGreyZone)
     }
 
     func testReload_UpdatesShowGreyZone_ToFalse() {
-        DataStore.shared.saveShowGreyZone(true)
+        AppearanceStore.shared.saveShowGreyZone(true)
         sut.reload()
         XCTAssertTrue(sut.showGreyZone, "precondition: starts true")
 
-        DataStore.shared.saveShowGreyZone(false)
+        AppearanceStore.shared.saveShowGreyZone(false)
         sut.reload()
 
         XCTAssertFalse(sut.showGreyZone)
@@ -84,14 +84,14 @@ final class SmartUsageDashboardViewModelTests: XCTestCase {
     func testReload_UpdatesGreyThreshold() {
         XCTAssertEqual(sut.greyThreshold, Constants.greyThresholdDefault, accuracy: 0.001)
 
-        DataStore.shared.saveGreyThreshold(0.6)
+        AppearanceStore.shared.saveGreyThreshold(0.6)
         sut.reload()
 
         XCTAssertEqual(sut.greyThreshold, 0.6, accuracy: 0.001)
     }
 
     func testReload_ClampsGreyThreshold_ToMinimum() {
-        DataStore.shared.saveGreyThreshold(0.1)
+        AppearanceStore.shared.saveGreyThreshold(0.1)
         sut.reload()
 
         XCTAssertEqual(sut.greyThreshold, 0.1, accuracy: 0.001)

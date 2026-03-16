@@ -30,7 +30,7 @@ final class SmartUsageDashboardViewModel: ObservableObject {
     /// Refreshes all settings from DataStore.
     func reload() {
         isAPITrackingEnabled = DataStore.shared.loadAPITrackingEnabled()
-        showGreyZone = DataStore.shared.loadShowGreyZone()
-        greyThreshold = DataStore.shared.loadGreyThreshold()
+        showGreyZone = AppearanceStore.shared.loadShowGreyZone()
+        greyThreshold = AppearanceStore.shared.loadGreyThreshold()
     }
 }

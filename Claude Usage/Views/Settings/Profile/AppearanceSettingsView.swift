@@ -11,8 +11,8 @@ import SwiftUI
 struct AppearanceSettingsView: View {
     @ObservedObject private var profileManager = ProfileManager.shared
     @State private var configuration: MenuBarIconConfiguration = .default
-    @State private var showGreyZone: Bool = DataStore.shared.loadShowGreyZone()
-    @State private var greyThreshold: Double = DataStore.shared.loadGreyThreshold()
+    @State private var showGreyZone: Bool = AppearanceStore.shared.loadShowGreyZone()
+    @State private var greyThreshold: Double = AppearanceStore.shared.loadGreyThreshold()
     @State private var saveDebounceTimer: Timer?
 
     private var isMultiProfileMode: Bool {
@@ -99,7 +99,7 @@ struct AppearanceSettingsView: View {
                                 get: { showGreyZone },
                                 set: { newValue in
                                     showGreyZone = newValue
-                                    DataStore.shared.saveShowGreyZone(newValue)
+                                    AppearanceStore.shared.saveShowGreyZone(newValue)
                                     try? StatuslineService.shared.updateGreyZoneIfInstalled(newValue)
                                     NotificationCenter.default.post(name: .menuBarIconConfigChanged, object: nil)
                                 }
@@ -121,7 +121,7 @@ struct AppearanceSettingsView: View {
                                     get: { greyThreshold },
                                     set: { newValue in
                                         greyThreshold = newValue
-                                        DataStore.shared.saveGreyThreshold(newValue)
+                                        AppearanceStore.shared.saveGreyThreshold(newValue)
                                         try? StatuslineService.shared.updateGreyZoneIfInstalled(showGreyZone)
                                         NotificationCenter.default.post(name: .menuBarIconConfigChanged, object: nil)
                                     }

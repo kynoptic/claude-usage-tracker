@@ -42,7 +42,7 @@ final class SetupWizardViewModel: ObservableObject {
             LoggingService.shared.log("SetupWizard: Saved credentials through ProfileManager")
 
             try? StatuslineService.shared.updateScriptsIfInstalled()
-            DataStore.shared.saveHasCompletedSetup(true)
+            SetupPromptStore.shared.saveHasCompletedSetup(true)
 
             ErrorRecovery.shared.recordSuccess(for: .api)
             NotificationCenter.default.post(name: .credentialsChanged, object: nil)

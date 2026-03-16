@@ -17,18 +17,18 @@ final class ClaudeCodeViewModel: ObservableObject {
     @Published var statusMessage: String?
     @Published var isSuccess: Bool = true
 
-    private let dataStore = DataStore.shared
+    private let statuslineConfigStore = StatuslineConfigStore.shared
     private let statuslineService = StatuslineService.shared
 
     // MARK: - Initialization
 
     init() {
-        showDirectory = DataStore.shared.loadStatuslineShowDirectory()
-        showBranch = DataStore.shared.loadStatuslineShowBranch()
-        showUsage = DataStore.shared.loadStatuslineShowUsage()
-        showProgressBar = DataStore.shared.loadStatuslineShowProgressBar()
-        showResetTime = DataStore.shared.loadStatuslineShowResetTime()
-        showTimeMarker = DataStore.shared.loadStatuslineShowTimeMarker()
+        showDirectory = StatuslineConfigStore.shared.loadStatuslineShowDirectory()
+        showBranch = StatuslineConfigStore.shared.loadStatuslineShowBranch()
+        showUsage = StatuslineConfigStore.shared.loadStatuslineShowUsage()
+        showProgressBar = StatuslineConfigStore.shared.loadStatuslineShowProgressBar()
+        showResetTime = StatuslineConfigStore.shared.loadStatuslineShowResetTime()
+        showTimeMarker = StatuslineConfigStore.shared.loadStatuslineShowTimeMarker()
     }
 
     // MARK: - Public Methods
@@ -48,12 +48,12 @@ final class ClaudeCodeViewModel: ObservableObject {
             return
         }
 
-        dataStore.saveStatuslineShowDirectory(showDirectory)
-        dataStore.saveStatuslineShowBranch(showBranch)
-        dataStore.saveStatuslineShowUsage(showUsage)
-        dataStore.saveStatuslineShowProgressBar(showProgressBar)
-        dataStore.saveStatuslineShowResetTime(showResetTime)
-        dataStore.saveStatuslineShowTimeMarker(showTimeMarker)
+        statuslineConfigStore.saveStatuslineShowDirectory(showDirectory)
+        statuslineConfigStore.saveStatuslineShowBranch(showBranch)
+        statuslineConfigStore.saveStatuslineShowUsage(showUsage)
+        statuslineConfigStore.saveStatuslineShowProgressBar(showProgressBar)
+        statuslineConfigStore.saveStatuslineShowResetTime(showResetTime)
+        statuslineConfigStore.saveStatuslineShowTimeMarker(showTimeMarker)
 
         do {
             try statuslineService.installScripts()
@@ -64,7 +64,7 @@ final class ClaudeCodeViewModel: ObservableObject {
                 showProgressBar: showProgressBar,
                 showResetTime: showResetTime,
                 showTimeMarker: showTimeMarker,
-                showGreyZone: dataStore.loadShowGreyZone()
+                showGreyZone: AppearanceStore.shared.loadShowGreyZone()
             )
             try statuslineService.updateClaudeCodeSettings(enabled: true)
 

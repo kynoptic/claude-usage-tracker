@@ -42,7 +42,7 @@ final class MenuBarManager: NSObject, ObservableObject {
     private var lastRefreshTriggerTime: Date = .distantPast
     private let windowCoordinator = WindowCoordinator()
     private let refreshOrchestrator = RefreshOrchestrator()
-    private let dataStore = DataStore.shared
+    private let setupPromptStore = SetupPromptStore.shared
     private let networkMonitor = NetworkMonitor.shared
     let profileManager = ProfileManager.shared
     private let autoStartService = AutoStartSessionService.shared
@@ -370,10 +370,10 @@ final class MenuBarManager: NSObject, ObservableObject {
         windowCoordinator.showGitHubStarPrompt(
             onStar: { [weak self] in
                 if let url = URL(string: Constants.GitHub.repoURL) { NSWorkspace.shared.open(url) }
-                self?.dataStore.saveHasStarredGitHub(true)
+                self?.setupPromptStore.saveHasStarredGitHub(true)
             },
             onMaybeLater: {},
-            onDontAskAgain: { [weak self] in self?.dataStore.saveNeverShowGitHubPrompt(true) }
+            onDontAskAgain: { [weak self] in self?.setupPromptStore.saveNeverShowGitHubPrompt(true) }
         )
     }
 
