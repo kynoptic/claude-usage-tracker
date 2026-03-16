@@ -176,18 +176,8 @@ final class AutoStartSessionService {
     }
 
     private func fetchUsageForProfile(_ profile: Profile) async throws -> ClaudeUsage {
-        // Get credentials from the specific profile
-        guard let sessionKey = profile.claudeSessionKey,
-              let orgId = profile.organizationId else {
-            throw AppError(
-                code: .sessionKeyNotFound,
-                message: "Missing credentials for profile '\(profile.name)'",
-                isRecoverable: false
-            )
-        }
-
-        // Delegate to ClaudeAPIService's parameter-based fetch
-        let usage = try await apiService.fetchUsageData(sessionKey: sessionKey, organizationId: orgId)
+        // Delegate to the canonical fetch path (CLI OAuth → cookie fallback)
+        let usage = try await apiService.fetchUsage(for: profile)
 
         // Save usage to profile
         profileManager.saveClaudeUsage(usage, for: profile.id)
