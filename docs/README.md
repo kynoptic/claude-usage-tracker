@@ -40,7 +40,7 @@ Records of key design decisions and their rationale.
 |-----|---------|
 | [ADR-001](decisions/ADR-001-mvvm-profile-manager.md) | MVVM with centralised ProfileManager singleton |
 | [ADR-002](decisions/ADR-002-auth-priority-oauth-first.md) | CLI OAuth preferred over session key |
-| [ADR-003](decisions/ADR-003-credentials-embedded-in-profile.md) | Credentials stored directly in Profile struct |
+| [ADR-003](decisions/ADR-003-credentials-embedded-in-profile.md) | Credentials stored directly in Profile struct *(superseded by ADR-008)* |
 | [ADR-004](decisions/ADR-004-statusline-session-key-injection.md) | Session key injected into statusline script at install time |
 | [ADR-005](decisions/ADR-005-hard-fork-independent-development.md) | Declare hard fork and develop independently |
 | [ADR-006](decisions/ADR-006-codeql-removed.md) | Remove CodeQL workflow |
