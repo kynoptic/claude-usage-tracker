@@ -175,21 +175,9 @@ struct Profile: Codable, Identifiable, Equatable {
 
     /// Pure validation: checks whether a CLI credentials JSON string contains a valid, non-expired OAuth token.
     /// Safe to call from any context — no subprocess, no I/O.
+    /// Delegates to `CLICredentials` for canonical parsing.
     static func isValidOAuthJSON(_ jsonData: String) -> Bool {
-        guard let data = jsonData.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any],
-              let _ = oauth["accessToken"] as? String else {
-            return false
-        }
-        // Check expiry if present
-        if let expiresAt = oauth["expiresAt"] as? TimeInterval {
-            let epoch = expiresAt > 1e12 ? expiresAt / 1000.0 : expiresAt
-            let expiryDate = Date(timeIntervalSince1970: epoch)
-            return Date() < expiryDate
-        }
-        // No expiry info = assume valid
-        return true
+        CLICredentials(jsonString: jsonData)?.isValid ?? false
     }
 
     var hasAnyCredentials: Bool {
