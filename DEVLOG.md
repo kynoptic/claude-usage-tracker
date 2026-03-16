@@ -4,6 +4,18 @@ Engineering record — refactors, internal tooling, build changes, ADRs, depende
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-03-16
+
+OAuth consolidation, dependency injection, and chart-filter extraction.
+
+- `CLICredentials` value type consolidates duplicate OAuth JSON parsing that lived in both `ClaudeCodeSyncService` and `Profile` — divergence risk eliminated
+- `ClaudeAPIService` annotated with explicit `@MainActor` — was inherited implicitly from protocol; explicit annotation prevents accidental isolation changes if the protocol evolves
+- `StatusBarUIManager` accepts configuration and credentials as parameters instead of reading singletons — enables isolated testing without global state
+- Display-string formatting extracted from `SmartUsageDashboard` into `SmartUsageDashboardViewModel` — view was computing text inline, violating MVVM
+- Chart spike-removal and reset-detection extracted as static methods with named constants — inline logic was untestable and magic numbers obscured intent
+- Keychain test suites added to Makefile skip list — matches CI skip configuration
+- Documentation: ADR-003 marked superseded, CI remote names corrected, ADR-004 permissions corrected, SECURITY.md version bumped, appcast and homebrew CI workflows documented, CURRENT_PROJECT_VERSION added to release steps
+
 ## [2.5.0] - 2026-03-16
 
 Keychain migration, storage decomposition, and ViewModel extraction.

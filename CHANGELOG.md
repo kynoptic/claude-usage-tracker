@@ -4,6 +4,29 @@ User-facing changes — new capabilities, behavior changes, fixes that affected 
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-03-16
+
+Pacing-aware chart colors and accessible text for light mode.
+
+### Added
+
+- Historical color-coded burn-up charts paint each time segment in its pacing zone color, making usage pace transitions visible at a glance
+- Accessible text colors in usage cards — dedicated color assets replace system colors that lost contrast on light backgrounds
+
+### Changed
+
+- Default grey-zone threshold lowered to 25% — the previous default flagged too many sessions as underutilised
+- Keychain access dialogs describe which credential is being requested and what it's used for
+
+### Fixed
+
+- Card text washed out when macOS vibrancy was active
+- Card front and back headers misaligned during flip animation
+- Burn-up charts could drop to zero after app restart when pre-window data wasn't carried forward
+- Notifications from one profile could suppress alerts for other profiles sharing the same threshold
+- Settings sidebar status dot required view reload instead of updating live
+- Popover didn't activate the app window, requiring an extra click to interact
+
 ## [2.5.0] - 2026-03-16
 
 Keychain credential migration and security hardening.

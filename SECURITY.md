@@ -6,8 +6,8 @@ We release security updates for the latest stable version only. Please ensure yo
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.5.x   | :white_check_mark: |
-| < 2.5   | :x:                |
+| 2.6.x   | :white_check_mark: |
+| < 2.6   | :x:                |
 
 [Download the latest version](https://github.com/kynoptic/claude-usage-tracker/releases/latest)
 
