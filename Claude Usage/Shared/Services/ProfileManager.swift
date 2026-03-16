@@ -8,6 +8,8 @@
 import Foundation
 import Combine
 
+/// Single source of truth for the profile list and active profile.
+/// Views and services read profiles through this manager, never via `ProfileStore` directly.
 @MainActor
 final class ProfileManager: ObservableObject {
     static let shared = ProfileManager()
