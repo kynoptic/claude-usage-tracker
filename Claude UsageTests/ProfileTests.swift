@@ -122,4 +122,74 @@ final class ProfileTests: XCTestCase {
         XCTAssertEqual(decoded.hasValidOAuthCredentials, true)
         XCTAssertEqual(decoded.name, "Codable")
     }
+
+    // MARK: - Credential exclusion from Codable
+
+    func testEncode_ExcludesCredentialFields() throws {
+        let profile = Profile(
+            name: "Secrets",
+            claudeSessionKey: "sk-ant-sid01-secret",
+            organizationId: "org-uuid-123",
+            apiSessionKey: "sk-api-secret",
+            apiOrganizationId: "org-api-456",
+            cliCredentialsJSON: "{\"token\":\"secret\"}"
+        )
+
+        let data = try JSONEncoder().encode(profile)
+        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        // Credential fields must NOT appear in encoded output
+        XCTAssertNil(json["claudeSessionKey"], "claudeSessionKey must not be serialized")
+        XCTAssertNil(json["organizationId"], "organizationId must not be serialized")
+        XCTAssertNil(json["apiSessionKey"], "apiSessionKey must not be serialized")
+        XCTAssertNil(json["apiOrganizationId"], "apiOrganizationId must not be serialized")
+        XCTAssertNil(json["cliCredentialsJSON"], "cliCredentialsJSON must not be serialized")
+
+        // Non-credential fields must still be present
+        XCTAssertEqual(json["name"] as? String, "Secrets")
+        XCTAssertNotNil(json["id"])
+    }
+
+    func testDecode_StillReadsLegacyCredentialFields() throws {
+        // Simulate data written by older versions that included credentials
+        let json: [String: Any] = [
+            "id": UUID().uuidString,
+            "name": "Legacy",
+            "claudeSessionKey": "sk-legacy-key",
+            "organizationId": "org-legacy",
+            "hasCliAccount": false,
+            "hasValidOAuthCredentials": false,
+            "refreshInterval": 30.0,
+            "autoStartSessionEnabled": false,
+            "checkOverageLimitEnabled": true,
+            "isSelectedForDisplay": true,
+            "createdAt": Date().timeIntervalSince1970,
+            "lastUsedAt": Date().timeIntervalSince1970
+        ]
+
+        let data = try JSONSerialization.data(withJSONObject: json)
+        let decoded = try JSONDecoder().decode(Profile.self, from: data)
+
+        // Legacy credentials must still be readable for migration
+        XCTAssertEqual(decoded.claudeSessionKey, "sk-legacy-key")
+        XCTAssertEqual(decoded.organizationId, "org-legacy")
+        XCTAssertEqual(decoded.name, "Legacy")
+    }
+
+    func testRoundTrip_CredentialsNotPersisted() throws {
+        let original = Profile(
+            name: "RoundTrip",
+            claudeSessionKey: "sk-secret",
+            organizationId: "org-123"
+        )
+
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(Profile.self, from: data)
+
+        // Credentials should be nil after round-trip (excluded from encoding)
+        XCTAssertNil(decoded.claudeSessionKey)
+        XCTAssertNil(decoded.organizationId)
+        // Non-credential fields preserved
+        XCTAssertEqual(decoded.name, "RoundTrip")
+    }
 }

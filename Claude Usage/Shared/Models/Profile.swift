@@ -96,6 +96,19 @@ struct Profile: Codable, Identifiable, Equatable {
 
     // MARK: - Codable
 
+    private enum CodingKeys: String, CodingKey {
+        case id, name
+        case claudeSessionKey, organizationId, apiSessionKey, apiOrganizationId, cliCredentialsJSON
+        case hasCliAccount, cliAccountSyncedAt, hasValidOAuthCredentials
+        case claudeUsage, apiUsage
+        case iconConfig, refreshInterval, autoStartSessionEnabled, checkOverageLimitEnabled
+        case notificationSettings, isSelectedForDisplay
+        case createdAt, lastUsedAt
+    }
+
+    /// Decodes all fields including legacy credential fields for backward compatibility.
+    /// Older versions stored credentials in UserDefaults; the decoder still reads them
+    /// so that KeychainPerProfileMigrationService can migrate them on launch.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
@@ -118,6 +131,30 @@ struct Profile: Codable, Identifiable, Equatable {
         isSelectedForDisplay = try container.decodeIfPresent(Bool.self, forKey: .isSelectedForDisplay) ?? true
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         lastUsedAt = try container.decodeIfPresent(Date.self, forKey: .lastUsedAt) ?? Date()
+    }
+
+    /// Encodes only non-credential fields. Credential fields (claudeSessionKey,
+    /// organizationId, apiSessionKey, apiOrganizationId, cliCredentialsJSON) are
+    /// stored in the macOS Keychain per ADR-008 and must never be serialized to
+    /// UserDefaults or any other unprotected storage.
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        // Credential fields intentionally excluded — stored in Keychain (ADR-008)
+        try container.encode(hasCliAccount, forKey: .hasCliAccount)
+        try container.encodeIfPresent(cliAccountSyncedAt, forKey: .cliAccountSyncedAt)
+        try container.encode(hasValidOAuthCredentials, forKey: .hasValidOAuthCredentials)
+        try container.encodeIfPresent(claudeUsage, forKey: .claudeUsage)
+        try container.encodeIfPresent(apiUsage, forKey: .apiUsage)
+        try container.encode(iconConfig, forKey: .iconConfig)
+        try container.encode(refreshInterval, forKey: .refreshInterval)
+        try container.encode(autoStartSessionEnabled, forKey: .autoStartSessionEnabled)
+        try container.encode(checkOverageLimitEnabled, forKey: .checkOverageLimitEnabled)
+        try container.encode(notificationSettings, forKey: .notificationSettings)
+        try container.encode(isSelectedForDisplay, forKey: .isSelectedForDisplay)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(lastUsedAt, forKey: .lastUsedAt)
     }
 
     // MARK: - Computed Properties
