@@ -79,6 +79,8 @@ final class WindowCoordinator: NSObject {
                 stopMonitoringForOutsideClicks()
                 popover.contentViewController = contentProvider()
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+                popover.contentViewController?.view.window?.makeKey()
+                NSApp.activate(ignoringOtherApps: true)
                 currentPopoverButton = button
                 startMonitoringForOutsideClicks()
             }
@@ -86,6 +88,8 @@ final class WindowCoordinator: NSObject {
             stopMonitoringForOutsideClicks()
             popover.contentViewController = contentProvider()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
+            NSApp.activate(ignoringOtherApps: true)
             currentPopoverButton = button
             startMonitoringForOutsideClicks()
         }
