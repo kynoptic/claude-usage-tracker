@@ -274,8 +274,9 @@ struct SmartUsageCard: View {
         .padding(isPrimary ? 16 : 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.72))
+                .fill(Color(nsColor: .controlBackgroundColor))
         )
+        .drawingGroup()
         .contentShape(Rectangle())
         .animation(.easeInOut(duration: 0.3), value: isFlipped)
         .opacity(isStale ? 0.7 : 1.0)
@@ -361,22 +362,16 @@ struct SmartUsageCard: View {
     // MARK: - Back Content (Burn-Up Chart)
 
     private var backContent: some View {
-        VStack(spacing: isPrimary ? 12 : 8) {
+        VStack(spacing: isPrimary ? 8 : 4) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: isPrimary ? 13 : 11, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    Text(subtitle)
-                        .font(.system(size: isPrimary ? 10 : 9, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
+                Text(title)
+                    .font(.system(size: isPrimary ? 11 : 9, weight: .semibold))
+                    .foregroundColor(.primary)
 
                 Spacer()
 
                 Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: isPrimary ? 12 : 10, weight: .medium))
+                    .font(.system(size: isPrimary ? 10 : 8, weight: .medium))
                     .foregroundColor(.secondary)
             }
 
