@@ -104,25 +104,22 @@ final class ProfileManager: ObservableObject {
         }
     }
 
-    func deleteProfile(_ id: UUID) throws {
+    func deleteProfile(_ id: UUID) async throws {
         guard profiles.count > 1 else {
             throw ProfileError.cannotDeleteLastProfile
         }
 
         let profileName = profiles.first(where: { $0.id == id })?.name ?? "unknown"
+        let wasActive = activeProfile?.id == id
 
         profiles.removeAll { $0.id == id }
 
         // Delete credentials from Keychain before removing the profile (ADR-008)
         KeychainService.shared.deleteCredentials(for: id)
 
-        // Switch to first profile if deleted active
-        if activeProfile?.id == id {
-            if let first = profiles.first {
-                Task {
-                    await activateProfile(first.id)
-                }
-            }
+        // Switch to first remaining profile if deleted the active one
+        if wasActive, let first = profiles.first {
+            await activateProfile(first.id)
         }
 
         profileStore.saveProfiles(profiles)

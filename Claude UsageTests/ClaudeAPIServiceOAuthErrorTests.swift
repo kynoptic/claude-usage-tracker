@@ -6,6 +6,7 @@ import XCTest
 /// Verifies that OAuth endpoint HTTP status codes are mapped to the correct
 /// `ErrorCode` values — in particular that 429 produces `.apiRateLimited`
 /// rather than `.apiUnauthorized` (the bug this branch fixes).
+@MainActor
 final class ClaudeAPIServiceOAuthErrorTests: XCTestCase {
 
     // MARK: - Properties

@@ -393,10 +393,12 @@ struct ProfileRow: View {
     }
 
     private func deleteProfile() {
-        do {
-            try profileManager.deleteProfile(profile.id)
-        } catch {
-            // Error handled by ProfileManager
+        Task {
+            do {
+                try await profileManager.deleteProfile(profile.id)
+            } catch {
+                // Error handled by ProfileManager
+            }
         }
     }
 }
