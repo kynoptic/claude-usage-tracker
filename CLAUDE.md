@@ -9,7 +9,7 @@ Native macOS menu bar app (macOS 14.0+ / Sonoma) for real-time Claude AI usage m
 xcodebuild build -project "Claude Usage.xcodeproj" -scheme "Claude Usage" -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
 # Run tests (skip Keychain suites — they require code signing and prompt for password)
-xcodebuild test -project "Claude Usage.xcodeproj" -scheme "Claude Usage" -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -skip-testing:"Claude UsageTests/KeychainServiceTests" -skip-testing:"Claude UsageTests/KeychainPerProfileMigrationServiceTests"
+xcodebuild test -project "Claude Usage.xcodeproj" -scheme "Claude Usage" -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO -skip-testing:"Claude UsageTests/KeychainServiceTests" -skip-testing:"Claude UsageTests/KeychainServicePerProfileTests" -skip-testing:"Claude UsageTests/KeychainPerProfileMigrationServiceTests"
 
 # Build (Release)
 xcodebuild build -project "Claude Usage.xcodeproj" -scheme "Claude Usage" -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
