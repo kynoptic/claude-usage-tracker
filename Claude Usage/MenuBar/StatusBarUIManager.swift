@@ -199,7 +199,17 @@ final class StatusBarUIManager {
     }
 
     /// Updates all multi-profile status items
-    func updateMultiProfileButtons(profiles: [Profile], config: MultiProfileDisplayConfig) {
+    /// - Parameters:
+    ///   - profiles: All profiles (filtered internally to selected ones).
+    ///   - config: Multi-profile display configuration.
+    ///   - showGrey: Whether the grey-zone indicator is enabled.
+    ///   - greyThreshold: The threshold fraction for the grey zone.
+    func updateMultiProfileButtons(
+        profiles: [Profile],
+        config: MultiProfileDisplayConfig,
+        showGrey: Bool,
+        greyThreshold: Double
+    ) {
         guard isMultiProfileMode else { return }
 
         for profile in profiles where profile.isSelectedForDisplay {
@@ -238,8 +248,6 @@ final class StatusBarUIManager {
                 duration: Constants.weeklyWindow,
                 showRemaining: false
             )
-            let showGrey = AppearanceStore.shared.loadShowGreyZone()
-            let greyThreshold = AppearanceStore.shared.loadGreyThreshold()
             let sessionStatus = UsageStatusCalculator.calculateStatus(
                 usedPercentage: sessionUsed,
                 showRemaining: showRemaining,
@@ -340,16 +348,20 @@ final class StatusBarUIManager {
     // MARK: - UI Updates
 
     /// Updates all status bar buttons based on current usage data
+    /// - Parameters:
+    ///   - usage: Current Claude usage snapshot.
+    ///   - apiUsage: Optional API-level usage metrics.
+    ///   - iconConfig: The icon configuration for the active profile.
+    ///   - hasUsageCredentials: Whether the active profile has valid credentials.
     func updateAllButtons(
         usage: ClaudeUsage,
-        apiUsage: APIUsage?
+        apiUsage: APIUsage?,
+        iconConfig: MenuBarIconConfiguration,
+        hasUsageCredentials: Bool
     ) {
-        // Get config from active profile
-        let profile = ProfileManager.shared.activeProfile
-        let config = profile?.iconConfig ?? .default
+        let config = iconConfig
 
         // Check if we should show default logo (no usage credentials OR no enabled metrics)
-        let hasUsageCredentials = profile?.hasUsageCredentials ?? false
         if !hasUsageCredentials || config.enabledMetrics.isEmpty {
             // Show default app logo
             if let statusItem = statusItems[.session],  // We use .session as placeholder key
@@ -394,18 +406,23 @@ final class StatusBarUIManager {
     }
 
     /// Updates a specific metric's button
+    /// - Parameters:
+    ///   - metricType: The metric whose button to update.
+    ///   - usage: Current Claude usage snapshot.
+    ///   - apiUsage: Optional API-level usage metrics.
+    ///   - iconConfig: The icon configuration for the active profile.
     func updateButton(
         for metricType: MenuBarMetricType,
         usage: ClaudeUsage,
-        apiUsage: APIUsage?
+        apiUsage: APIUsage?,
+        iconConfig: MenuBarIconConfiguration
     ) {
         guard let statusItem = statusItems[metricType],
               let button = statusItem.button else {
             return
         }
 
-        // Get config from active profile
-        let config = ProfileManager.shared.activeProfile?.iconConfig ?? .default
+        let config = iconConfig
         guard let metricConfig = config.config(for: metricType) else {
             return
         }
@@ -438,8 +455,8 @@ final class StatusBarUIManager {
     }
 
     /// Get the first enabled metric's button (for backwards compatibility)
-    var primaryButton: NSStatusBarButton? {
-        let config = AppearanceStore.shared.loadMenuBarIconConfiguration()
+    /// - Parameter config: The icon configuration to determine the primary metric.
+    func primaryButton(for config: MenuBarIconConfiguration) -> NSStatusBarButton? {
         guard let firstMetric = config.enabledMetrics.first else {
             return nil
         }
