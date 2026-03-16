@@ -14,10 +14,12 @@ Invoke this skill when the user says things like "prepare a release", "cut a rel
    - MAJOR for breaking changes
    - If the user specifies a version, use it directly.
 
-2. **Bump `MARKETING_VERSION` in `project.pbxproj`**
+2. **Bump version numbers in `project.pbxproj`**
    - File: `Claude Usage.xcodeproj/project.pbxproj`
-   - Search for all occurrences of `MARKETING_VERSION` and update each to the new version.
-   - This is the sole source of version truth — there is no `package.json`, `pyproject.toml`, or similar.
+   - Update all occurrences of `MARKETING_VERSION` to the new version (e.g., `2.5.0`).
+   - Increment all occurrences of `CURRENT_PROJECT_VERSION` by 1. This is the build number that Sparkle uses for upgrade eligibility — omitting it produces an appcast entry that Sparkle will not surface as an upgrade.
+   - These are the sole source of version truth — there is no `package.json`, `pyproject.toml`, or similar.
+   - See `RELEASING.md` for post-release verification of the appcast `<sparkle:version>` value.
 
 3. **Update `CHANGELOG.md` and `DEVLOG.md`**
    - Follow Keep a Changelog format.
