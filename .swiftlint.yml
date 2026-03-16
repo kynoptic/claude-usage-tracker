@@ -1,0 +1,62 @@
+# SwiftLint configuration — relaxed for existing codebase, strict for new code.
+# Baseline captures current violations so they don't block pre-commit hooks.
+
+excluded:
+  - .build
+  - DerivedData
+
+# Relax thresholds to match this codebase's conventions
+line_length:
+  warning: 150
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+file_length:
+  warning: 600
+  error: 800
+
+type_body_length:
+  warning: 500
+  error: 700
+
+function_body_length:
+  warning: 80
+  error: 120
+
+function_parameter_count:
+  warning: 8
+  error: 12
+
+cyclomatic_complexity:
+  warning: 15
+  error: 25
+
+identifier_name:
+  min_length:
+    warning: 1
+  max_length:
+    warning: 60
+  excluded:
+    - id
+    - x
+    - y
+    - r
+    - g
+    - b
+    - f
+    - i
+    - w
+    - h
+
+nesting:
+  type_level: 2
+  function_level: 3
+
+# Disable rules that conflict with this codebase's style
+disabled_rules:
+  - trailing_comma
+  - multiple_closures_with_trailing_closure
+  - implicit_optional_initialization
+  - for_where
+  - type_name

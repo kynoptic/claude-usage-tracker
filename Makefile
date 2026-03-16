@@ -1,4 +1,4 @@
-.PHONY: help init build build-release test deploy clean
+.PHONY: help init build build-release test lint deploy clean
 
 # Build configuration (matches CLAUDE.md requirements)
 PROJECT = Claude Usage.xcodeproj
@@ -16,6 +16,7 @@ help:
 	@echo "  make build          Debug build (code signing disabled)"
 	@echo "  make build-release  Release build"
 	@echo "  make test           Run unit tests"
+	@echo "  make lint           Run SwiftLint (new violations only via baseline)"
 	@echo "  make deploy         Deploy to /Applications (clean full deploy)"
 	@echo "  make clean          Clean build artifacts and DerivedData"
 	@echo ""
@@ -81,6 +82,12 @@ test:
 		-skip-testing:"Claude UsageTests/KeychainServicePerProfileTests" \
 		-skip-testing:"Claude UsageTests/KeychainPerProfileMigrationServiceTests"
 	@echo "✓ Tests passed"
+
+# Run SwiftLint with baseline (reports only new violations)
+lint:
+	@echo "Running SwiftLint..."
+	swiftlint lint --baseline .swiftlint.baseline --strict
+	@echo "✓ No new SwiftLint violations"
 
 # Deploy to /Applications (full clean deploy per docs/procedures/DEPLOY.md)
 # Each step is critical — skipping any risks shipping a stale binary.
