@@ -315,7 +315,6 @@ struct SidebarItem: View {
 struct ProfileCredentialCardsRow: View {
     @Binding var selectedSection: SettingsSection
     @ObservedObject var profileManager = ProfileManager.shared
-    @State private var credentials: ProfileCredentials?
 
     var body: some View {
         VStack(spacing: 4) {
@@ -326,7 +325,7 @@ struct ProfileCredentialCardsRow: View {
                 CredentialMiniCard(
                     icon: "key.fill",
                     title: "Claude.ai",
-                    isConnected: credentials?.hasClaudeAI ?? false,
+                    isConnected: profileManager.activeProfile?.hasClaudeAI ?? false,
                     isSelected: selectedSection == .claudeAI
                 )
             }
@@ -339,7 +338,7 @@ struct ProfileCredentialCardsRow: View {
                 CredentialMiniCard(
                     icon: "dollarsign.circle.fill",
                     title: "API Console",
-                    isConnected: credentials?.apiSessionKey != nil,
+                    isConnected: profileManager.activeProfile?.hasAPIConsole ?? false,
                     isSelected: selectedSection == .apiConsole
                 )
             }
@@ -358,17 +357,6 @@ struct ProfileCredentialCardsRow: View {
             }
             .buttonStyle(.plain)
         }
-        .onAppear {
-            loadCredentials()
-        }
-        .onChange(of: profileManager.activeProfile?.id) { _, _ in
-            loadCredentials()
-        }
-    }
-
-    private func loadCredentials() {
-        guard let profile = profileManager.activeProfile else { return }
-        credentials = try? ProfileStore.shared.loadProfileCredentials(profile.id)
     }
 }
 
