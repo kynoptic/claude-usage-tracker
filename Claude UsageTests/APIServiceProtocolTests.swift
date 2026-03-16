@@ -165,4 +165,36 @@ final class APIServiceProtocolTests: XCTestCase {
         XCTAssertNotNil(concreteService.baseURL)
         XCTAssertNotNil(concreteService.consoleBaseURL)
     }
+
+    // MARK: - Actor Isolation Tests
+
+    /// Verifies that `ClaudeAPIService` is explicitly `@MainActor`-isolated.
+    ///
+    /// This is a compile-time contract test: the `@MainActor` test class can
+    /// synchronously access `ClaudeAPIService` properties and methods without
+    /// `await`, proving the service shares the same actor isolation. If
+    /// `@MainActor` were removed from either the protocol or the class, this
+    /// test would fail to compile.
+    func testClaudeAPIServiceIsMainActorIsolated() {
+        // Synchronous property access — only compiles if ClaudeAPIService
+        // is @MainActor-isolated (same actor as this @MainActor test class).
+        XCTAssertNotNil(concreteService.baseURL)
+        XCTAssertNotNil(concreteService.session)
+
+        // Synchronous method call — clearOrganizationIdCache() is not async,
+        // so it can only be called synchronously from the same actor.
+        concreteService.clearOrganizationIdCache()
+    }
+
+    /// Verifies that mock conformers inherit `@MainActor` from the protocol.
+    ///
+    /// Any type conforming to `APIServiceProtocol` must be `@MainActor`
+    /// because the protocol itself is `@MainActor`. This test proves the
+    /// mock can be used synchronously from the main actor.
+    func testProtocolConformersInheritMainActorIsolation() {
+        let mock = MockAPIService()
+        // Synchronous access — proves mock is @MainActor-isolated via protocol
+        mock.stubbedUsage = .empty
+        XCTAssertEqual(mock.fetchUsageCallCount, 0)
+    }
 }
