@@ -68,50 +68,30 @@ final class ClaudeCodeSyncService {
 
     // MARK: - Access Token Extraction
 
+    /// Extracts the OAuth access token from CLI credentials JSON.
+    /// Delegates to `CLICredentials` for canonical parsing.
     func extractAccessToken(from jsonData: String) -> String? {
-        guard let data = jsonData.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any],
-              let token = oauth["accessToken"] as? String else {
-            return nil
-        }
-        return token
+        CLICredentials(jsonString: jsonData)?.accessToken
     }
 
+    /// Extracts subscription type and scopes from CLI credentials JSON.
+    /// Delegates to `CLICredentials` for canonical parsing.
     func extractSubscriptionInfo(from jsonData: String) -> (type: String, scopes: [String])? {
-        guard let data = jsonData.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any] else {
-            return nil
-        }
-
-        let subType = oauth["subscriptionType"] as? String ?? "unknown"
-        let scopes = oauth["scopes"] as? [String] ?? []
-
-        return (subType, scopes)
+        guard let creds = CLICredentials(jsonString: jsonData) else { return nil }
+        return (creds.subscriptionType, creds.scopes)
     }
 
-    /// Extracts the token expiry date from CLI credentials JSON
-    /// Handles both seconds and milliseconds epoch formats
+    /// Extracts the token expiry date from CLI credentials JSON.
+    /// Handles both seconds and milliseconds epoch formats.
+    /// Delegates to `CLICredentials` for canonical parsing.
     func extractTokenExpiry(from jsonData: String) -> Date? {
-        guard let data = jsonData.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any],
-              let expiresAt = oauth["expiresAt"] as? TimeInterval else {
-            return nil
-        }
-        // Normalize milliseconds to seconds: ms epoch values are > 1e12
-        let epoch = expiresAt > 1e12 ? expiresAt / 1000.0 : expiresAt
-        return Date(timeIntervalSince1970: epoch)
+        CLICredentials(jsonString: jsonData)?.expiryDate
     }
 
-    /// Checks if the OAuth token in the credentials JSON is expired
+    /// Checks if the OAuth token in the credentials JSON is expired.
+    /// Delegates to `CLICredentials` for canonical parsing.
     func isTokenExpired(_ jsonData: String) -> Bool {
-        guard let expiryDate = extractTokenExpiry(from: jsonData) else {
-            // No expiry info = assume valid
-            return false
-        }
-        return Date() > expiryDate
+        CLICredentials(jsonString: jsonData)?.isExpired ?? false
     }
 
     // MARK: - Auto Re-sync Before Switching
