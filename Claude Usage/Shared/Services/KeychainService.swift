@@ -27,6 +27,27 @@ final class KeychainService {
         var account: String {
             return "session-key"
         }
+
+        /// Human-readable label shown in Keychain Access.app and system prompts.
+        var label: String {
+            switch self {
+            case .apiSessionKey:
+                return "Claude Usage Tracker — API Console Key"
+            case .claudeSessionKey:
+                return "Claude Usage Tracker — Claude.ai Session Key"
+            }
+        }
+
+        /// Description shown in the macOS keychain access dialog explaining
+        /// what this credential is used for.
+        var itemDescription: String {
+            switch self {
+            case .apiSessionKey:
+                return "Authenticates with the Anthropic API Console to monitor credit usage."
+            case .claudeSessionKey:
+                return "Authenticates with Claude.ai to monitor session and weekly usage limits."
+            }
+        }
     }
 
     // MARK: - Public Methods
@@ -79,6 +100,8 @@ final class KeychainService {
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: key.service,
                 kSecAttrAccount as String: key.account,
+                kSecAttrLabel as String: key.label,
+                kSecAttrDescription as String: key.itemDescription,
                 kSecValueData as String: data,
                 kSecAttrAccessControl as String: accessControl,
                 kSecAttrSynchronizable as String: false
@@ -178,6 +201,38 @@ final class KeychainService {
 
         /// The `kSecAttrService` value for this credential type.
         var service: String { rawValue }
+
+        /// Human-readable label for Keychain Access.app and system prompts.
+        var label: String {
+            switch self {
+            case .claudeSessionKey:
+                return "Claude Usage Tracker — Claude.ai Session Key"
+            case .organizationId:
+                return "Claude Usage Tracker — Organization ID"
+            case .apiSessionKey:
+                return "Claude Usage Tracker — API Console Key"
+            case .apiOrganizationId:
+                return "Claude Usage Tracker — API Organization ID"
+            case .cliCredentialsJSON:
+                return "Claude Usage Tracker — CLI Credentials"
+            }
+        }
+
+        /// Description shown in macOS keychain access dialogs.
+        var itemDescription: String {
+            switch self {
+            case .claudeSessionKey:
+                return "Authenticates with Claude.ai to monitor session and weekly usage limits."
+            case .organizationId:
+                return "Identifies your Claude.ai organization for usage tracking."
+            case .apiSessionKey:
+                return "Authenticates with the Anthropic API Console to monitor credit usage."
+            case .apiOrganizationId:
+                return "Identifies your Anthropic API organization for credit tracking."
+            case .cliCredentialsJSON:
+                return "OAuth credentials synced from Claude Code CLI for usage monitoring."
+            }
+        }
     }
 
     /// Saves a per-profile credential to the Keychain.
@@ -215,6 +270,8 @@ final class KeychainService {
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: service,
                 kSecAttrAccount as String: account,
+                kSecAttrLabel as String: credentialType.label,
+                kSecAttrDescription as String: credentialType.itemDescription,
                 kSecValueData as String: data,
                 kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
                 kSecAttrSynchronizable as String: false
