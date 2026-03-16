@@ -22,10 +22,25 @@ final class SmartUsageDashboardViewModel: ObservableObject {
     /// Chart color mode: uniform (single color) or historical (per-segment).
     @Published private(set) var chartColorMode: ChartColorMode = .uniform
 
+    private var configObserver: NSObjectProtocol?
+
     // MARK: - Initialization
 
     init() {
         reload()
+        configObserver = NotificationCenter.default.addObserver(
+            forName: .menuBarIconConfigChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.reload() }
+        }
+    }
+
+    deinit {
+        if let observer = configObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     // MARK: - Public Methods

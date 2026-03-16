@@ -87,7 +87,9 @@ final class UsageHistoryStore {
 
     // MARK: - Private Methods
 
-    /// Skip recording when the percentage matches the last snapshot
+    /// Skip recording when the percentage matches the last snapshot exactly.
+    /// All real changes are preserved — the despike filter in BurnUpChartView
+    /// handles transient API glitches at display time.
     private func shouldRecord(_ percentage: Double, for metric: UsageMetric) -> Bool {
         guard let last = cache[metric]?.last else { return true }
         return last.percentage != percentage

@@ -370,7 +370,9 @@ struct SmartUsageCard: View {
                     windowEnd: chartWindowEnd,
                     statusColor: statusColor,
                     isStale: isStale,
-                    chartColorMode: chartColorMode
+                    chartColorMode: chartColorMode,
+                    showGreyZone: showGreyZone,
+                    greyThreshold: greyThreshold
                 )
             }
         }

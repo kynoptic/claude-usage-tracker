@@ -18,6 +18,8 @@ struct BurnUpChartView: View {
     let statusColor: Color
     var isStale: Bool = false
     var chartColorMode: ChartColorMode = .uniform
+    var showGreyZone: Bool = false
+    var greyThreshold: Double = Constants.greyThresholdDefault
 
     /// Downsample to at most this many points for rendering performance
     private static let maxPoints = 200
@@ -51,8 +53,20 @@ struct BurnUpChartView: View {
         let preWindowSnapshots = snapshots.filter { $0.date < windowStart }
         let anchorPercentage = preWindowSnapshots.last?.percentage ?? 0.0
 
-        let origin = UsageSnapshot(date: windowStart, percentage: anchorPercentage)
-        let windowSnapshots = snapshots.filter { $0.date >= windowStart }
+        var windowSnapshots = despike(snapshots.filter { $0.date >= windowStart })
+
+        // Detect the last major reset (drop ≥50% that persists) within the
+        // window. Everything before it is stale previous-period data.
+        if let resetIndex = lastResetIndex(in: windowSnapshots) {
+            windowSnapshots = Array(windowSnapshots[resetIndex...])
+        }
+
+        // Only carry forward the anchor if no reset occurred — a reset means
+        // the period started fresh at 0%.
+        let originPercentage = windowSnapshots.isEmpty ? anchorPercentage :
+            (windowSnapshots.first!.percentage < anchorPercentage - 30 ? 0.0 : anchorPercentage)
+
+        let origin = UsageSnapshot(date: windowStart, percentage: originPercentage)
         var points = [origin] + windowSnapshots
 
         // Downsample if needed (skip origin when counting)
@@ -69,28 +83,101 @@ struct BurnUpChartView: View {
         return points
     }
 
+    // MARK: - Reset Detection
+
+    /// Finds the index of the last major reset (drop ≥30 points) in the snapshots
+    /// where the value stays low (doesn't revert). Returns nil if no reset found.
+    static func lastResetIndex(in snapshots: [UsageSnapshot]) -> Int? {
+        guard snapshots.count >= 2 else { return nil }
+
+        var lastReset: Int?
+        for i in 1..<snapshots.count {
+            let drop = snapshots[i - 1].percentage - snapshots[i].percentage
+            // A real reset: big drop AND value stays below the pre-drop level
+            if drop >= 30 {
+                // Check it's not a transient — value should stay low
+                let postValues = snapshots[i...].prefix(3)
+                let staysLow = postValues.allSatisfy { $0.percentage < snapshots[i - 1].percentage - 20 }
+                if staysLow {
+                    lastReset = i
+                }
+            }
+        }
+        return lastReset
+    }
+
+    // MARK: - Spike Removal
+
+    /// Removes transient API glitches: a snapshot that jumps ≥30 percentage points
+    /// from its neighbours and reverts within 5 minutes is dropped.
+    /// Runs iteratively to handle chained glitches (e.g. 38→0→39→0→39).
+    static func despike(_ snapshots: [UsageSnapshot]) -> [UsageSnapshot] {
+        let spikeThreshold: Double = 30.0
+        let revertWindow: TimeInterval = 300 // 5 minutes
+
+        var current = snapshots
+        while current.count >= 3 {
+            var result = [current[0]]
+            var removed = false
+
+            for i in 1..<(current.count - 1) {
+                let prev = result.last!  // compare against last kept point
+                let curr = current[i]
+                let next = current[i + 1]
+
+                let jumpFromPrev = abs(curr.percentage - prev.percentage)
+                let jumpToNext = abs(next.percentage - curr.percentage)
+                let prevToNext = abs(next.percentage - prev.percentage)
+                // Measure spike duration: how quickly does it revert?
+                let spikeDuration = next.date.timeIntervalSince(curr.date)
+
+                let isSpike = jumpFromPrev >= spikeThreshold
+                    && jumpToNext >= spikeThreshold
+                    && prevToNext < spikeThreshold
+                    && spikeDuration < revertWindow
+
+                if isSpike {
+                    removed = true
+                } else {
+                    result.append(curr)
+                }
+            }
+
+            result.append(current.last!)
+            current = result
+            if !removed { break }
+        }
+        return current
+    }
+
     // MARK: - Zone Calculation
 
-    /// Maps a raw usage percentage to a zone for historical chart coloring.
+    /// Maps a snapshot to a zone using the same pacing-projected thresholds
+    /// as `UsageStatusCalculator`. The elapsed fraction is derived from the
+    /// snapshot's position within the chart window.
     ///
-    /// Thresholds (raw percentage):
+    /// Projection = `(percentage / 100) / elapsedFraction`, then:
     /// ```
-    ///   green   0–80%
-    ///   yellow  80–95%
-    ///   orange  95–105%
-    ///   red     > 105%
+    ///   green   projected < 0.9
+    ///   yellow  0.9–1.1
+    ///   orange  1.1–1.5
+    ///   red     > 1.5
     /// ```
-    static func zone(forPercentage percentage: Double) -> UsageZone {
-        switch percentage {
-        case ..<80:
-            return .green
-        case 80..<95:
-            return .yellow
-        case 95...105:
-            return .orange
-        default:
-            return .red
-        }
+    static func zone(forPercentage percentage: Double, elapsedFraction: Double? = nil) -> UsageZone {
+        let status = UsageStatusCalculator.calculateStatus(
+            usedPercentage: percentage,
+            showRemaining: false,
+            elapsedFraction: elapsedFraction
+        )
+        return status.zone
+    }
+
+    /// Compute elapsed fraction for a date within a time window.
+    static func elapsedFraction(for date: Date, windowStart: Date, windowEnd: Date) -> Double? {
+        let duration = windowEnd.timeIntervalSince(windowStart)
+        guard duration > 0 else { return nil }
+        let elapsed = date.timeIntervalSince(windowStart)
+        return min(max(elapsed / duration, 0), 1)
     }
 
     /// Color for a given usage zone, using Apple system colors.
@@ -108,15 +195,40 @@ struct BurnUpChartView: View {
 
     /// Splits snapshots into contiguous segments by usage zone.
     /// Adjacent segments share a boundary point for visual continuity.
-    static func colorSegments(from snapshots: [UsageSnapshot]) -> [ColorSegment] {
+    /// Uses pacing-projected zones (matching UsageStatusCalculator) when
+    /// window bounds are provided.
+    static func colorSegments(
+        from snapshots: [UsageSnapshot],
+        windowStart: Date? = nil,
+        windowEnd: Date? = nil,
+        showGrey: Bool = false,
+        greyThreshold: Double = Constants.greyThresholdDefault
+    ) -> [ColorSegment] {
         guard let first = snapshots.first else { return [] }
 
+        func zoneFor(_ snapshot: UsageSnapshot) -> UsageZone {
+            let elapsed: Double?
+            if let ws = windowStart, let we = windowEnd {
+                elapsed = elapsedFraction(for: snapshot.date, windowStart: ws, windowEnd: we)
+            } else {
+                elapsed = nil
+            }
+            let status = UsageStatusCalculator.calculateStatus(
+                usedPercentage: snapshot.percentage,
+                showRemaining: false,
+                elapsedFraction: elapsed,
+                showGrey: showGrey,
+                greyThreshold: greyThreshold
+            )
+            return status.zone
+        }
+
         var segments: [ColorSegment] = []
-        var currentZone = zone(forPercentage: first.percentage)
+        var currentZone = zoneFor(first)
         var currentPoints = [first]
 
         for snapshot in snapshots.dropFirst() {
-            let snapshotZone = zone(forPercentage: snapshot.percentage)
+            let snapshotZone = zoneFor(snapshot)
             if snapshotZone != currentZone {
                 // Close current segment — include this point as bridge
                 currentPoints.append(snapshot)
@@ -290,7 +402,13 @@ struct BurnUpChartView: View {
 
     @ChartContentBuilder
     private var historicalMarks: some ChartContent {
-        let segments = Self.colorSegments(from: displaySnapshots)
+        let segments = Self.colorSegments(
+            from: displaySnapshots,
+            windowStart: windowStart,
+            windowEnd: windowEnd,
+            showGrey: showGreyZone,
+            greyThreshold: greyThreshold
+        )
 
         ForEach(segments) { segment in
             let segmentColor = Self.color(for: segment.zone)
