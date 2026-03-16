@@ -77,6 +77,9 @@ enum Constants {
         static let checkOverageLimitEnabled = "checkOverageLimitEnabled"
         static let selectedOrganizationId = "selectedOrganizationId"
 
+        // Chart color mode
+        static let chartColorMode = "chartColorMode"
+
         // Debug
         static let debugAPILoggingEnabled = "debugAPILoggingEnabled"
     }

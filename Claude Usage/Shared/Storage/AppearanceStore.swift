@@ -94,6 +94,20 @@ final class AppearanceStore: ObservableObject {
         return min(max(value, 0.1), 0.8)
     }
 
+    // MARK: - Chart Color Mode
+
+    func saveChartColorMode(_ mode: ChartColorMode) {
+        defaults.set(mode.rawValue, forKey: Constants.UserDefaultsKeys.chartColorMode)
+    }
+
+    func loadChartColorMode() -> ChartColorMode {
+        guard let rawValue = defaults.string(forKey: Constants.UserDefaultsKeys.chartColorMode),
+              let mode = ChartColorMode(rawValue: rawValue) else {
+            return .uniform
+        }
+        return mode
+    }
+
     // MARK: - Icon Names
 
     func saveShowIconNames(_ show: Bool) {

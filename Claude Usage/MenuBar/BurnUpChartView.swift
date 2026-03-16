@@ -1,6 +1,13 @@
 import SwiftUI
 import Charts
 
+/// A contiguous run of snapshots sharing the same usage zone color.
+struct ColorSegment: Identifiable {
+    let id = UUID()
+    let zone: UsageZone
+    let snapshots: [UsageSnapshot]
+}
+
 /// Burn-up chart showing usage progression over a time window.
 /// Displayed on the back face of flipped SmartUsageCard instances.
 struct BurnUpChartView: View {
@@ -10,6 +17,7 @@ struct BurnUpChartView: View {
     let windowEnd: Date
     let statusColor: Color
     var isStale: Bool = false
+    var chartColorMode: ChartColorMode = .uniform
 
     /// Downsample to at most this many points for rendering performance
     private static let maxPoints = 200
@@ -59,6 +67,75 @@ struct BurnUpChartView: View {
         }
 
         return points
+    }
+
+    // MARK: - Zone Calculation
+
+    /// Maps a raw usage percentage to a zone for historical chart coloring.
+    ///
+    /// Thresholds (raw percentage):
+    /// ```
+    ///   green   0–80%
+    ///   yellow  80–95%
+    ///   orange  95–105%
+    ///   red     > 105%
+    /// ```
+    static func zone(forPercentage percentage: Double) -> UsageZone {
+        switch percentage {
+        case ..<80:
+            return .green
+        case 80..<95:
+            return .yellow
+        case 95...105:
+            return .orange
+        default:
+            return .red
+        }
+    }
+
+    /// Color for a given usage zone, using Apple system colors.
+    static func color(for zone: UsageZone) -> Color {
+        switch zone {
+        case .grey:   return Color(nsColor: .systemGray)
+        case .green:  return Color(nsColor: .systemGreen)
+        case .yellow: return Color(nsColor: .systemYellow)
+        case .orange: return Color(nsColor: .systemOrange)
+        case .red:    return Color(nsColor: .systemRed)
+        }
+    }
+
+    // MARK: - Segment Computation
+
+    /// Splits snapshots into contiguous segments by usage zone.
+    /// Adjacent segments share a boundary point for visual continuity.
+    static func colorSegments(from snapshots: [UsageSnapshot]) -> [ColorSegment] {
+        guard let first = snapshots.first else { return [] }
+
+        var segments: [ColorSegment] = []
+        var currentZone = zone(forPercentage: first.percentage)
+        var currentPoints = [first]
+
+        for snapshot in snapshots.dropFirst() {
+            let snapshotZone = zone(forPercentage: snapshot.percentage)
+            if snapshotZone != currentZone {
+                // Close current segment — include this point as bridge
+                currentPoints.append(snapshot)
+                segments.append(ColorSegment(zone: currentZone, snapshots: currentPoints))
+
+                // Start new segment from this bridge point
+                currentZone = snapshotZone
+                currentPoints = [snapshot]
+            } else {
+                currentPoints.append(snapshot)
+            }
+        }
+
+        // Close final segment
+        if !currentPoints.isEmpty {
+            segments.append(ColorSegment(zone: currentZone, snapshots: currentPoints))
+        }
+
+        return segments
     }
 
     /// Whether this chart covers a weekly (multi-day) window vs a session window
@@ -117,30 +194,10 @@ struct BurnUpChartView: View {
 
     private var chartContent: some View {
         Chart {
-            // Burn-up area + line
-            ForEach(displaySnapshots) { snapshot in
-                let yValue = snapshot.percentage
-
-                AreaMark(
-                    x: .value("Time", snapshot.date),
-                    y: .value("Usage", yValue)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [statusColor.opacity(0.4), statusColor.opacity(0.05)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .interpolationMethod(.monotone)
-
-                LineMark(
-                    x: .value("Time", snapshot.date),
-                    y: .value("Usage", yValue)
-                )
-                .foregroundStyle(statusColor)
-                .lineStyle(StrokeStyle(lineWidth: 1.5))
-                .interpolationMethod(.monotone)
+            if chartColorMode == .historical {
+                historicalMarks
+            } else {
+                uniformMarks
             }
 
             // Pace line: even consumption from 0% to 100%
@@ -197,6 +254,72 @@ struct BurnUpChartView: View {
             }
         }
         .frame(height: chartHeight)
+    }
+
+    // MARK: - Uniform Rendering (existing behavior)
+
+    @ChartContentBuilder
+    private var uniformMarks: some ChartContent {
+        ForEach(displaySnapshots) { snapshot in
+            let yValue = snapshot.percentage
+
+            AreaMark(
+                x: .value("Time", snapshot.date),
+                y: .value("Usage", yValue)
+            )
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [statusColor.opacity(0.4), statusColor.opacity(0.05)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .interpolationMethod(.monotone)
+
+            LineMark(
+                x: .value("Time", snapshot.date),
+                y: .value("Usage", yValue)
+            )
+            .foregroundStyle(statusColor)
+            .lineStyle(StrokeStyle(lineWidth: 1.5))
+            .interpolationMethod(.monotone)
+        }
+    }
+
+    // MARK: - Historical Rendering (per-segment colors)
+
+    @ChartContentBuilder
+    private var historicalMarks: some ChartContent {
+        let segments = Self.colorSegments(from: displaySnapshots)
+
+        ForEach(segments) { segment in
+            let segmentColor = Self.color(for: segment.zone)
+
+            ForEach(segment.snapshots) { snapshot in
+                AreaMark(
+                    x: .value("Time", snapshot.date),
+                    y: .value("Usage", snapshot.percentage),
+                    series: .value("Segment", segment.id.uuidString)
+                )
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [segmentColor.opacity(0.4), segmentColor.opacity(0.05)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .interpolationMethod(.monotone)
+
+                LineMark(
+                    x: .value("Time", snapshot.date),
+                    y: .value("Usage", snapshot.percentage),
+                    series: .value("Segment", segment.id.uuidString)
+                )
+                .foregroundStyle(segmentColor)
+                .lineStyle(StrokeStyle(lineWidth: 1.5))
+                .interpolationMethod(.monotone)
+            }
+        }
     }
 
     // MARK: - Empty State
