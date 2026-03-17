@@ -91,8 +91,6 @@ test:
 		-scheme "$(SCHEME)" \
 		-configuration Debug \
 		$(XCODE_FLAGS) \
-		-skip-testing:"Claude UsageTests/KeychainServiceTests" \
-		-skip-testing:"Claude UsageTests/KeychainServicePerProfileTests" \
 		-skip-testing:"Claude UsageTests/KeychainPerProfileMigrationServiceTests"
 	@echo "✓ Tests passed"
 

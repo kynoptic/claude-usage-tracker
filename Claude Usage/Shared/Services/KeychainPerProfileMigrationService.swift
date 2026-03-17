@@ -18,8 +18,16 @@ final class KeychainPerProfileMigrationService {
     static let shared = KeychainPerProfileMigrationService()
 
     private let migrationKey = "didMigrateCredentialsToKeychainPerProfile"
+    private let keychainService: KeychainService
 
-    private init() {}
+    private init() {
+        self.keychainService = KeychainService.shared
+    }
+
+    /// Test-only initializer for injecting a mock-backed KeychainService.
+    init(keychainService: KeychainService) {
+        self.keychainService = keychainService
+    }
 
     // MARK: - Public
 
@@ -87,7 +95,7 @@ final class KeychainPerProfileMigrationService {
     // MARK: - Private
 
     private func migrateCredentials(of profile: Profile) throws {
-        let keychain = KeychainService.shared
+        let keychain = keychainService
         let id = profile.id
 
         if let value = profile.claudeSessionKey {

@@ -18,65 +18,21 @@ final class KeychainServicePerProfileTests: XCTestCase {
 
     // MARK: - Properties
 
-    private let service = KeychainService.shared
+    private var mockBackend: InMemoryKeychainBackend!
+    private var service: KeychainService!
     private var testProfileId: UUID!
-
-    // MARK: - Keychain accessibility probe
-
-    private var keychainIsAccessible: Bool {
-        let probeService = "com.claudeusagetracker.test.probe.perprofile"
-        let probeAccount = "probe"
-        let deleteQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: probeService,
-            kSecAttrAccount as String: probeAccount
-        ]
-        SecItemDelete(deleteQuery as CFDictionary)
-
-        var accessControlError: Unmanaged<CFError>?
-        guard let accessControl = SecAccessControlCreateWithFlags(
-            kCFAllocatorDefault,
-            kSecAttrAccessibleWhenUnlocked,
-            [],
-            &accessControlError
-        ) else {
-            return false
-        }
-
-        let addQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: probeService,
-            kSecAttrAccount as String: probeAccount,
-            kSecValueData as String: Data("x".utf8),
-            kSecAttrAccessControl as String: accessControl,
-            kSecAttrSynchronizable as String: false
-        ]
-
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
-        SecItemDelete(deleteQuery as CFDictionary)
-        return status == errSecSuccess
-    }
 
     // MARK: - Setup / Teardown
 
     override func setUp() async throws {
         try await super.setUp()
+        mockBackend = InMemoryKeychainBackend()
+        service = KeychainService(backend: mockBackend)
         testProfileId = UUID()
-        guard keychainIsAccessible else { return }
-        // Pre-clean all credential types for the test profile
-        for type_ in KeychainService.PerProfileCredentialType.allCases {
-            try? service.deletePerProfile(profileId: testProfileId, credentialType: type_)
-        }
     }
 
     override func tearDown() async throws {
-        guard keychainIsAccessible else {
-            try await super.tearDown()
-            return
-        }
-        for type_ in KeychainService.PerProfileCredentialType.allCases {
-            try? service.deletePerProfile(profileId: testProfileId, credentialType: type_)
-        }
+        mockBackend.reset()
         try await super.tearDown()
     }
 
@@ -114,9 +70,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     // MARK: - Save + Load round-trips
 
     func testSaveAndLoadPerProfile_ClaudeSessionKey_RoundTrips() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         try service.savePerProfile(
             "test-claude-key",
             profileId: testProfileId,
@@ -130,9 +83,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     }
 
     func testSaveAndLoadPerProfile_APISessionKey_RoundTrips() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         try service.savePerProfile(
             "test-api-key",
             profileId: testProfileId,
@@ -146,9 +96,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     }
 
     func testSaveAndLoadPerProfile_CLICredentialsJSON_RoundTrips() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         let json = """
         {"claudeAiOauth":{"accessToken":"tok-abc"}}
         """
@@ -165,9 +112,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     }
 
     func testSavePerProfile_OverwritesExistingValue() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         try service.savePerProfile("first", profileId: testProfileId, credentialType: .claudeSessionKey)
         try service.savePerProfile("second", profileId: testProfileId, credentialType: .claudeSessionKey)
         let loaded = try service.loadPerProfile(profileId: testProfileId, credentialType: .claudeSessionKey)
@@ -177,9 +121,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     // MARK: - Load: item not found
 
     func testLoadPerProfile_ItemNotFound_ReturnsNil() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         let result = try service.loadPerProfile(
             profileId: testProfileId,
             credentialType: .claudeSessionKey
@@ -190,9 +131,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     // MARK: - Delete
 
     func testDeletePerProfile_ExistingItem_SucceedsAndItemIsGone() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         try service.savePerProfile("to-delete", profileId: testProfileId, credentialType: .apiSessionKey)
         try service.deletePerProfile(profileId: testProfileId, credentialType: .apiSessionKey)
         let loaded = try service.loadPerProfile(profileId: testProfileId, credentialType: .apiSessionKey)
@@ -200,9 +138,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     }
 
     func testDeletePerProfile_NonExistentItem_DoesNotThrow() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         XCTAssertNoThrow(
             try service.deletePerProfile(profileId: testProfileId, credentialType: .claudeSessionKey)
         )
@@ -211,9 +146,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     // MARK: - deleteCredentials (bulk delete)
 
     func testDeleteCredentials_RemovesAllCredentialTypes() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         try service.savePerProfile("key", profileId: testProfileId, credentialType: .claudeSessionKey)
         try service.savePerProfile("org", profileId: testProfileId, credentialType: .organizationId)
         try service.savePerProfile("api", profileId: testProfileId, credentialType: .apiSessionKey)
@@ -227,9 +159,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     }
 
     func testDeleteCredentials_OnlyAffectsTargetProfile() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         let otherProfileId = UUID()
         defer {
             try? service.deletePerProfile(profileId: otherProfileId, credentialType: .claudeSessionKey)
@@ -250,9 +179,6 @@ final class KeychainServicePerProfileTests: XCTestCase {
     // MARK: - Two profiles share same credential type independently
 
     func testTwoProfiles_SameCredentialType_AreStoredIndependently() throws {
-        try XCTSkipUnless(keychainIsAccessible,
-                          "Keychain not accessible without code-signing entitlement")
-
         let profileIdB = UUID()
         defer {
             try? service.deletePerProfile(profileId: profileIdB, credentialType: .claudeSessionKey)
