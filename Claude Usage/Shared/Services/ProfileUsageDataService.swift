@@ -27,8 +27,7 @@ final class ProfileUsageDataService {
             return
         }
         manager.updateProfile(profileId) { $0.claudeUsage = usage }
-        let name = manager.profiles.first(where: { $0.id == profileId })?.name ?? profileId.uuidString
-        LoggingService.shared.log("Saved Claude usage for profile: \(name)")
+        LoggingService.shared.log("Saved Claude usage for profile: \(profileId.uuidString)")
     }
 
     /// Loads Claude usage data for a specific profile.
@@ -46,8 +45,7 @@ final class ProfileUsageDataService {
             return
         }
         manager.updateProfile(profileId) { $0.apiUsage = usage }
-        let name = manager.profiles.first(where: { $0.id == profileId })?.name ?? profileId.uuidString
-        LoggingService.shared.log("Saved API usage for profile: \(name)")
+        LoggingService.shared.log("Saved API usage for profile: \(profileId.uuidString)")
     }
 
     /// Loads API usage data for a specific profile.

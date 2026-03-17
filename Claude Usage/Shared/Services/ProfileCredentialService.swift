@@ -28,6 +28,11 @@ final class ProfileCredentialService {
     }
 
     /// Saves credentials for a profile and updates in-memory profile state.
+    ///
+    /// Note: This triggers two disk writes — one from `ProfileStore.saveProfileCredentials`
+    /// (which persists the Keychain entries and calls `saveProfiles`), and one from
+    /// `updateProfile` (which saves the in-memory mutation). The double write is acceptable
+    /// because correctness requires both the Keychain and in-memory state to stay in sync.
     func saveCredentials(for profileId: UUID, credentials: ProfileCredentials) throws {
         try profileStore.saveProfileCredentials(profileId, credentials: credentials)
 

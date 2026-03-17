@@ -143,4 +143,14 @@ final class ProfileSettingsServiceTests: XCTestCase {
         settingsService.updateAPIOrganizationId("api-org-xyz", for: profile.id)
         XCTAssertEqual(manager.profiles[0].apiOrganizationId, "api-org-xyz")
     }
+
+    func testUpdateAPIOrganizationId_ToNil_ClearsValue() {
+        var profile = manager.profiles[0]
+        profile.apiOrganizationId = "api-org-xyz"
+        manager.profiles = [profile]
+
+        settingsService.updateAPIOrganizationId(nil, for: profile.id)
+
+        XCTAssertNil(manager.profiles[0].apiOrganizationId)
+    }
 }

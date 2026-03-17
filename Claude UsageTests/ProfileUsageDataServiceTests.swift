@@ -119,6 +119,27 @@ final class ProfileUsageDataServiceTests: XCTestCase {
         XCTAssertNil(result)
     }
 
+    func testSaveAPIUsage_OverwritesPreviousUsage() {
+        let profile = manager.profiles[0]
+        let first = APIUsage(
+            currentSpendCents: 100,
+            resetsAt: Date().addingTimeInterval(86_400),
+            prepaidCreditsCents: 10_000,
+            currency: "USD"
+        )
+        let second = APIUsage(
+            currentSpendCents: 999,
+            resetsAt: Date().addingTimeInterval(86_400),
+            prepaidCreditsCents: 10_000,
+            currency: "USD"
+        )
+
+        usageService.saveAPIUsage(first, for: profile.id)
+        usageService.saveAPIUsage(second, for: profile.id)
+
+        XCTAssertEqual(usageService.loadAPIUsage(for: profile.id)?.currentSpendCents, 999)
+    }
+
     // MARK: - Private Helpers
 
     private func makeClaudeUsage(sessionPercentage: Double) -> ClaudeUsage {

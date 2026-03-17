@@ -41,6 +41,26 @@ final class ProfileCredentialServiceTests: XCTestCase {
         Profile(name: name)
     }
 
+    // MARK: - saveCredentials
+
+    func testSaveCredentials_UpdatesInMemoryProfileFields() throws {
+        let profile = manager.profiles[0]
+        let credentials = ProfileCredentials(
+            claudeSessionKey: "sk-saved",
+            organizationId: "org-saved",
+            apiSessionKey: "api-sk-saved",
+            apiOrganizationId: "api-org-saved",
+            cliCredentialsJSON: nil
+        )
+
+        try credentialService.saveCredentials(for: profile.id, credentials: credentials)
+
+        XCTAssertEqual(manager.profiles[0].claudeSessionKey, "sk-saved")
+        XCTAssertEqual(manager.profiles[0].organizationId, "org-saved")
+        XCTAssertEqual(manager.profiles[0].apiSessionKey, "api-sk-saved")
+        XCTAssertEqual(manager.profiles[0].apiOrganizationId, "api-org-saved")
+    }
+
     // MARK: - removeClaudeAICredentials
 
     func testRemoveClaudeAICredentials_ClearsSessionKeyAndOrgId() throws {

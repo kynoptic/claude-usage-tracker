@@ -247,7 +247,10 @@ final class ProfileManager: ObservableObject {
     // MARK: - Internal Methods
 
     /// Encapsulates the repeated firstIndex -> mutate -> syncActiveProfile -> save pattern.
-    /// Internal visibility so extracted services can reuse the canonical mutation path.
+    ///
+    /// - Warning: Internal visibility for use by `Profile*Service` types only
+    ///   (`ProfileUsageDataService`, `ProfileCredentialService`, `ProfileSettingsService`).
+    ///   Arbitrary callers should use the higher-level service APIs instead.
     func updateProfile(_ id: UUID, mutate: (inout Profile) -> Void) {
         guard let index = profiles.firstIndex(where: { $0.id == id }) else { return }
         mutate(&profiles[index])
