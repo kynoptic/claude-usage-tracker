@@ -8,12 +8,48 @@
 import Foundation
 import Security
 
+// MARK: - Keychain Backend Protocol
+
+/// Abstraction over SecItem operations for testability.
+/// Production uses `SystemKeychainBackend`; tests inject `InMemoryKeychainBackend`.
+protocol KeychainBackend: Sendable {
+    func add(_ attributes: CFDictionary, _ result: UnsafeMutablePointer<CFTypeRef?>?) -> OSStatus
+    func update(_ query: CFDictionary, _ attributesToUpdate: CFDictionary) -> OSStatus
+    func delete(_ query: CFDictionary) -> OSStatus
+    func copyMatching(_ query: CFDictionary, _ result: UnsafeMutablePointer<CFTypeRef?>?) -> OSStatus
+}
+
+/// Calls the real macOS Security framework.
+struct SystemKeychainBackend: KeychainBackend {
+    func add(_ attributes: CFDictionary, _ result: UnsafeMutablePointer<CFTypeRef?>?) -> OSStatus {
+        SecItemAdd(attributes, result)
+    }
+    func update(_ query: CFDictionary, _ attributesToUpdate: CFDictionary) -> OSStatus {
+        SecItemUpdate(query, attributesToUpdate)
+    }
+    func delete(_ query: CFDictionary) -> OSStatus {
+        SecItemDelete(query)
+    }
+    func copyMatching(_ query: CFDictionary, _ result: UnsafeMutablePointer<CFTypeRef?>?) -> OSStatus {
+        SecItemCopyMatching(query, result)
+    }
+}
+
 /// Service for secure storage and retrieval of sensitive data using macOS Keychain
 @MainActor
 final class KeychainService {
     static let shared = KeychainService()
 
-    private init() {}
+    nonisolated let backend: KeychainBackend
+
+    private init() {
+        self.backend = SystemKeychainBackend()
+    }
+
+    /// Test-only initializer for injecting a mock backend.
+    init(backend: KeychainBackend) {
+        self.backend = backend
+    }
 
     /// Keychain item identifiers
     enum KeychainKey: String {
@@ -73,7 +109,7 @@ final class KeychainService {
             kSecValueData as String: data
         ]
 
-        let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
+        let updateStatus = backend.update(updateQuery as CFDictionary, attributes as CFDictionary)
 
         if updateStatus == errSecSuccess {
             LoggingService.shared.log("Keychain: Updated \(key.service)")
@@ -107,7 +143,7 @@ final class KeychainService {
                 kSecAttrSynchronizable as String: false
             ]
 
-            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            let addStatus = backend.add(addQuery as CFDictionary, nil)
 
             if addStatus == errSecSuccess {
                 LoggingService.shared.log("Keychain: Added \(key.service)")
@@ -134,7 +170,7 @@ final class KeychainService {
         ]
 
         var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = backend.copyMatching(query as CFDictionary, &result)
 
         if status == errSecSuccess {
             guard let data = result as? Data,
@@ -161,7 +197,7 @@ final class KeychainService {
             kSecAttrAccount as String: key.account
         ]
 
-        let status = SecItemDelete(query as CFDictionary)
+        let status = backend.delete(query as CFDictionary)
 
         if status == errSecSuccess {
             LoggingService.shared.log("Keychain: Deleted \(key.service)")
@@ -184,7 +220,7 @@ final class KeychainService {
             kSecReturnData as String: false
         ]
 
-        let status = SecItemCopyMatching(query as CFDictionary, nil)
+        let status = backend.copyMatching(query as CFDictionary, nil)
         return status == errSecSuccess
     }
 
@@ -258,7 +294,7 @@ final class KeychainService {
             kSecAttrAccount as String: account
         ]
         let attributes: [String: Any] = [kSecValueData as String: data]
-        let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
+        let updateStatus = backend.update(updateQuery as CFDictionary, attributes as CFDictionary)
 
         if updateStatus == errSecSuccess {
             LoggingService.shared.log("Keychain: Updated per-profile \(credentialType) for \(profileId)")
@@ -277,7 +313,7 @@ final class KeychainService {
                 kSecAttrSynchronizable as String: false
             ]
 
-            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            let addStatus = backend.add(addQuery as CFDictionary, nil)
             if addStatus == errSecSuccess {
                 LoggingService.shared.log("Keychain: Added per-profile \(credentialType) for \(profileId)")
                 return
@@ -306,7 +342,7 @@ final class KeychainService {
         ]
 
         var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = backend.copyMatching(query as CFDictionary, &result)
 
         if status == errSecSuccess {
             guard let data = result as? Data,
@@ -334,7 +370,7 @@ final class KeychainService {
             kSecAttrAccount as String: profileId.uuidString
         ]
 
-        let status = SecItemDelete(query as CFDictionary)
+        let status = backend.delete(query as CFDictionary)
         if status == errSecSuccess || status == errSecItemNotFound {
             return
         }
