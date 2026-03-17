@@ -12,6 +12,8 @@ final class ProfileCredentialServiceTests: XCTestCase {
     private var manager: ProfileManager!
     private var credentialService: ProfileCredentialService!
     private var mockBackend: InMemoryKeychainBackend!
+    private var testDefaults: UserDefaults!
+    private let testSuiteName = "ProfileCredentialServiceTests-\(UUID().uuidString)"
 
     // MARK: - Lifecycle
 
@@ -19,6 +21,10 @@ final class ProfileCredentialServiceTests: XCTestCase {
         try await super.setUp()
         manager = ProfileManager.shared
         credentialService = ProfileCredentialService.shared
+
+        // Inject isolated UserDefaults suite so parallel tests don't race
+        testDefaults = UserDefaults(suiteName: testSuiteName)!
+        ProfileStore.shared.defaults = testDefaults
 
         // Inject in-memory Keychain backend so tests don't hit the real Keychain
         mockBackend = InMemoryKeychainBackend()
@@ -34,10 +40,15 @@ final class ProfileCredentialServiceTests: XCTestCase {
     }
 
     override func tearDown() async throws {
-        // Restore real Keychain backend
+        // Restore real Keychain backend and UserDefaults
         ProfileStore.shared.keychainService = .shared
+        ProfileStore.shared.defaults = UserDefaults.standard
         credentialService.keychainService = .shared
         mockBackend?.reset()
+
+        // Clean up isolated suite
+        testDefaults?.removePersistentDomain(forName: testSuiteName)
+        testDefaults = nil
 
         let cleanup = Profile(name: "Cleanup Profile")
         manager.profiles = [cleanup]
