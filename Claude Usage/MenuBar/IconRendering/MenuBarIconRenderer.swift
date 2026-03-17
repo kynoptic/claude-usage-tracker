@@ -16,6 +16,7 @@ final class MenuBarIconRenderer {
 
     private let singleMetric = SingleMetricRenderer()
     private let multiProfile = MultiProfileRenderer()
+    private let metricExtractor = MetricDataExtractor()
 
     // MARK: - Public Methods
 
@@ -32,7 +33,7 @@ final class MenuBarIconRenderer {
         showNextSessionTime: Bool
     ) -> NSImage {
         // Get the metric value and percentage
-        let metricData = singleMetric.getMetricData(
+        let metricData = metricExtractor.extract(
             metricType: metricType,
             config: config,
             usage: usage,
