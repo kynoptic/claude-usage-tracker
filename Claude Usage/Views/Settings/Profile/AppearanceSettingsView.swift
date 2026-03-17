@@ -258,7 +258,7 @@ struct AppearanceSettingsView: View {
             return
         }
 
-        profileManager.updateIconConfig(configuration, for: profileId)
+        ProfileSettingsService.shared.updateIconConfig(configuration, for: profileId)
 
         // Notify that config changed (for MenuBarManager to update)
         NotificationCenter.default.post(name: .menuBarIconConfigChanged, object: nil)

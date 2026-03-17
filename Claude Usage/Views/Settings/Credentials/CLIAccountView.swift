@@ -245,7 +245,7 @@ struct CLIAccountView: View {
 
         Task {
             do {
-                try await profileManager.syncCLICredentials(toProfile: profileId)
+                try await ProfileCredentialService.shared.syncCLICredentials(toProfile: profileId)
 
                 // Update profile metadata
                 if var updated = profileManager.activeProfile {
@@ -271,7 +271,7 @@ struct CLIAccountView: View {
         guard let profileId = profileManager.activeProfile?.id else { return }
 
         do {
-            try profileManager.removeCLICredentials(fromProfile: profileId)
+            try ProfileCredentialService.shared.removeCLICredentials(fromProfile: profileId)
 
             // Update profile metadata
             if var updated = profileManager.activeProfile {

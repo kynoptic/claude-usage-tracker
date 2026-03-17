@@ -39,7 +39,7 @@ final class APIBillingViewModel: ObservableObject {
         LoggingService.shared.log("APIBillingView: Starting credential removal for profile \(profileId)")
 
         do {
-            try profileManager.removeAPICredentials(for: profileId)
+            try ProfileCredentialService.shared.removeAPICredentials(for: profileId)
             LoggingService.shared.log("APIBillingView: Successfully removed API Console credentials")
         } catch {
             let appError = AppError.wrap(error)

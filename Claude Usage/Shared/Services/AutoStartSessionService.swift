@@ -180,7 +180,7 @@ final class AutoStartSessionService {
         let usage = try await apiService.fetchUsage(for: profile)
 
         // Save usage to profile
-        profileManager.saveClaudeUsage(usage, for: profile.id)
+        ProfileUsageDataService.shared.saveClaudeUsage(usage, for: profile.id)
 
         return usage
     }

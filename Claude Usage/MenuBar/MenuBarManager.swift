@@ -298,9 +298,9 @@ final class MenuBarManager: NSObject, ObservableObject {
             usage = u
             // Persist usage and any newly discovered org ID before updating UI.
             if let pid = profileManager.activeProfile?.id {
-                profileManager.saveClaudeUsage(u, for: pid)
+                ProfileUsageDataService.shared.saveClaudeUsage(u, for: pid)
                 if let orgId = result.newlyFetchedOrgId {
-                    profileManager.updateOrganizationId(orgId, for: pid)
+                    ProfileSettingsService.shared.updateOrganizationId(orgId, for: pid)
                 }
             }
             UsageHistoryStore.shared.recordAll(from: u)
@@ -315,7 +315,7 @@ final class MenuBarManager: NSObject, ObservableObject {
         // API usage is fetched independently; update it regardless of main usage result.
         if let a = result.apiUsage {
             apiUsage = a
-            if let pid = profileManager.activeProfile?.id { profileManager.saveAPIUsage(a, for: pid) }
+            if let pid = profileManager.activeProfile?.id { ProfileUsageDataService.shared.saveAPIUsage(a, for: pid) }
         }
 
         finalizeRefresh(userTriggeredSuccess: result.usageSuccess)
@@ -336,7 +336,7 @@ final class MenuBarManager: NSObject, ObservableObject {
     @MainActor private func applyMultiProfileResult(_ result: MultiProfileRefreshResult) {
         if let s = result.status { status = s }
         for (pid, u) in result.profileUsage {
-            profileManager.saveClaudeUsage(u, for: pid)
+            ProfileUsageDataService.shared.saveClaudeUsage(u, for: pid)
             UsageHistoryStore.shared.recordAll(from: u)
             if pid == profileManager.activeProfile?.id {
                 usage = u; lastSuccessfulFetch = Date(); pacingContext = Self.buildPacingContext(for: u)
