@@ -11,6 +11,7 @@ final class ProfileCredentialServiceTests: XCTestCase {
 
     private var manager: ProfileManager!
     private var credentialService: ProfileCredentialService!
+    private var mockBackend: InMemoryKeychainBackend!
 
     // MARK: - Lifecycle
 
@@ -18,6 +19,12 @@ final class ProfileCredentialServiceTests: XCTestCase {
         try await super.setUp()
         manager = ProfileManager.shared
         credentialService = ProfileCredentialService.shared
+
+        // Inject in-memory Keychain backend so tests don't hit the real Keychain
+        mockBackend = InMemoryKeychainBackend()
+        let testKeychain = KeychainService(backend: mockBackend)
+        ProfileStore.shared.keychainService = testKeychain
+        credentialService.keychainService = testKeychain
 
         let seed = Profile(name: "Credential Test Profile")
         manager.profiles = [seed]
@@ -27,6 +34,11 @@ final class ProfileCredentialServiceTests: XCTestCase {
     }
 
     override func tearDown() async throws {
+        // Restore real Keychain backend
+        ProfileStore.shared.keychainService = .shared
+        credentialService.keychainService = .shared
+        mockBackend?.reset()
+
         let cleanup = Profile(name: "Cleanup Profile")
         manager.profiles = [cleanup]
         manager.activeProfile = cleanup

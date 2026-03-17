@@ -18,6 +18,10 @@ final class ProfileCredentialService {
     private let profileStore = ProfileStore.shared
     private let cliSyncService = ClaudeCodeSyncService.shared
 
+    /// Keychain service used for direct credential deletion.
+    /// Tests swap this via `@testable` to inject an in-memory backend.
+    var keychainService: KeychainService = .shared
+
     private init() {}
 
     // MARK: - Credential CRUD
@@ -50,9 +54,12 @@ final class ProfileCredentialService {
     }
 
     /// Removes Claude.ai credentials for a profile.
+    ///
+    /// Deliberate behaviour change from original `ProfileManager` implementation:
+    /// deletes Keychain items directly instead of the old load-mutate-save round-trip.
     func removeClaudeAICredentials(for profileId: UUID) throws {
         // Delete Keychain items directly — avoids disk round-trip through ProfileStore
-        let keychain = KeychainService.shared
+        let keychain = keychainService
         try keychain.deletePerProfile(profileId: profileId, credentialType: .claudeSessionKey)
         try keychain.deletePerProfile(profileId: profileId, credentialType: .organizationId)
 
@@ -69,9 +76,12 @@ final class ProfileCredentialService {
     }
 
     /// Removes API Console credentials for a profile.
+    ///
+    /// Deliberate behaviour change from original `ProfileManager` implementation:
+    /// deletes Keychain items directly instead of the old load-mutate-save round-trip.
     func removeAPICredentials(for profileId: UUID) throws {
         // Delete Keychain items directly — avoids disk round-trip through ProfileStore
-        let keychain = KeychainService.shared
+        let keychain = keychainService
         try keychain.deletePerProfile(profileId: profileId, credentialType: .apiSessionKey)
         try keychain.deletePerProfile(profileId: profileId, credentialType: .apiOrganizationId)
 
