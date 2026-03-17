@@ -39,7 +39,7 @@ final class PersonalUsageViewModel: ObservableObject {
         LoggingService.shared.log("PersonalUsageView: Starting credential removal for profile \(profileId)")
 
         do {
-            try profileManager.removeClaudeAICredentials(for: profileId)
+            try ProfileCredentialService.shared.removeClaudeAICredentials(for: profileId)
             try? StatuslineService.shared.updateScriptsIfInstalled()
             LoggingService.shared.log("PersonalUsageView: Successfully removed Claude.ai credentials")
         } catch {

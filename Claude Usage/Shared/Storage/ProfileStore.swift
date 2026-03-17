@@ -27,8 +27,12 @@ enum ProfileStoreError: LocalizedError {
 final class ProfileStore {
     static let shared = ProfileStore()
 
-    private let defaults: UserDefaults
-    private let keychainService = KeychainService.shared
+    /// UserDefaults instance used for profile persistence.
+    /// Tests swap this via `@testable` to inject an isolated suite.
+    var defaults: UserDefaults
+    /// Keychain service used for credential operations.
+    /// Tests swap this via `@testable` to inject an in-memory backend.
+    var keychainService: KeychainService = .shared
 
     private enum Keys {
         static let profiles = "profiles_v3"

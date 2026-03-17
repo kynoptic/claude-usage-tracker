@@ -10,6 +10,10 @@ import Combine
 
 /// Single source of truth for the profile list and active profile.
 /// Views and services read profiles through this manager, never via `ProfileStore` directly.
+///
+/// Credential operations are delegated to `ProfileCredentialService`.
+/// Settings mutations are delegated to `ProfileSettingsService`.
+/// Usage data persistence is delegated to `ProfileUsageDataService`.
 @MainActor
 final class ProfileManager: ObservableObject {
     static let shared = ProfileManager()
@@ -21,7 +25,6 @@ final class ProfileManager: ObservableObject {
     @Published var isSwitchingProfile: Bool = false
 
     private let profileStore = ProfileStore.shared
-    private let cliSyncService = ClaudeCodeSyncService.shared
 
     private init() {}
 
@@ -184,11 +187,13 @@ final class ProfileManager: ObservableObject {
 
         LoggingService.shared.log("Switching to profile: \(profile.name)")
 
+        let credentialService = ProfileCredentialService.shared
+
         // Re-sync current profile before leaving (if CLI credentials exist)
         if let currentProfile = activeProfile, currentProfile.cliCredentialsJSON != nil {
             do {
-                try await resyncCLICredentials(forProfile: currentProfile.id)
-                LoggingService.shared.log("✓ Re-synced current profile before switching")
+                try await credentialService.resyncCLICredentials(forProfile: currentProfile.id)
+                LoggingService.shared.log("Re-synced current profile before switching")
             } catch {
                 LoggingService.shared.logError("Failed to re-sync current profile (non-fatal)", error: error)
             }
@@ -205,13 +210,13 @@ final class ProfileManager: ObservableObject {
 
         if updatedProfile.cliCredentialsJSON != nil {
             do {
-                try await applyCLICredentials(forProfile: updatedProfile.id)
-                LoggingService.shared.log("✓ Applied CLI credentials for: \(updatedProfile.name)")
+                try await credentialService.applyCLICredentials(forProfile: updatedProfile.id)
+                LoggingService.shared.log("Applied CLI credentials for: \(updatedProfile.name)")
             } catch {
                 LoggingService.shared.logError("Failed to apply CLI credentials (non-fatal)", error: error)
             }
         } else {
-            LoggingService.shared.log("⚠️ Profile '\(updatedProfile.name)' has no CLI credentials JSON")
+            LoggingService.shared.log("Profile '\(updatedProfile.name)' has no CLI credentials JSON")
         }
 
         // Update last used timestamp
@@ -230,7 +235,7 @@ final class ProfileManager: ObservableObject {
         if updated.claudeSessionKey != nil && updated.organizationId != nil {
             do {
                 try StatuslineService.shared.updateScriptsIfInstalled()
-                LoggingService.shared.log("✓ Updated statusline for profile: \(updated.name)")
+                LoggingService.shared.log("Updated statusline for profile: \(updated.name)")
             } catch {
                 LoggingService.shared.logError("Failed to update statusline (non-fatal)", error: error)
             }
@@ -239,225 +244,25 @@ final class ProfileManager: ObservableObject {
         LoggingService.shared.log("Successfully activated profile: \(updatedProfile.name)")
     }
 
-    // MARK: - CLI Sync Operations
+    // MARK: - Internal Methods
 
-    /// Syncs CLI credentials from system Keychain to a profile (one-time copy).
-    /// Updates both persistent storage and in-memory state.
-    func syncCLICredentials(toProfile profileId: UUID) async throws {
-        let jsonData = try await cliSyncService.readAndValidateSystemCredentials()
-
-        guard profiles.contains(where: { $0.id == profileId }) else {
-            throw ClaudeCodeError.noProfileCredentials
-        }
-
-        updateProfile(profileId) { profile in
-            profile.cliCredentialsJSON = jsonData
-            profile.hasValidOAuthCredentials = Profile.isValidOAuthJSON(jsonData)
-        }
-
-        LoggingService.shared.log("Synced CLI credentials to profile: \(profileId)")
-    }
-
-    /// Applies a profile's CLI credentials to the system Keychain.
-    /// Reads from in-memory state rather than loading from disk.
-    func applyCLICredentials(forProfile profileId: UUID) async throws {
-        LoggingService.shared.log("Applying CLI credentials for profile: \(profileId)")
-
-        guard let profile = profiles.first(where: { $0.id == profileId }),
-              let jsonData = profile.cliCredentialsJSON else {
-            LoggingService.shared.log("No CLI credentials found for profile: \(profileId)")
-            throw ClaudeCodeError.noProfileCredentials
-        }
-
-        LoggingService.shared.log("Found CLI credentials, writing to keychain...")
-        try await cliSyncService.writeSystemCredentials(jsonData)
-
-        LoggingService.shared.log("Applied profile CLI credentials to system: \(profileId)")
-    }
-
-    /// Removes CLI credentials from a profile (doesn't affect system Keychain).
-    /// Updates both persistent storage and in-memory state.
-    func removeCLICredentials(fromProfile profileId: UUID) throws {
-        guard profiles.contains(where: { $0.id == profileId }) else {
-            throw ClaudeCodeError.noProfileCredentials
-        }
-
-        updateProfile(profileId) { profile in
-            profile.cliCredentialsJSON = nil
-            profile.hasValidOAuthCredentials = false
-        }
-
-        LoggingService.shared.log("Removed CLI credentials from profile: \(profileId)")
-    }
-
-    /// Re-syncs fresh credentials from system Keychain into a profile before switching.
-    /// Updates both persistent storage and in-memory state.
-    func resyncCLICredentials(forProfile profileId: UUID) async throws {
-        LoggingService.shared.log("Re-syncing CLI credentials before profile switch: \(profileId)")
-
-        guard let freshJSON = try await cliSyncService.readFreshSystemCredentials() else {
-            LoggingService.shared.log("No system credentials found - skipping re-sync")
-            return
-        }
-
-        guard profiles.contains(where: { $0.id == profileId }) else {
-            return
-        }
-
-        updateProfile(profileId) { profile in
-            profile.cliCredentialsJSON = freshJSON
-            profile.hasValidOAuthCredentials = Profile.isValidOAuthJSON(freshJSON)
-            profile.cliAccountSyncedAt = Date()
-        }
-
-        LoggingService.shared.log("Re-synced CLI credentials from system and updated timestamp")
-    }
-
-    // MARK: - Credentials
-
-    func loadCredentials(for profileId: UUID) throws -> ProfileCredentials {
-        return try profileStore.loadProfileCredentials(profileId)
-    }
-
-    func saveCredentials(for profileId: UUID, credentials: ProfileCredentials) throws {
-        try profileStore.saveProfileCredentials(profileId, credentials: credentials)
-
-        // Update profile in memory
-        updateProfile(profileId) { profile in
-            profile.claudeSessionKey = credentials.claudeSessionKey
-            profile.organizationId = credentials.organizationId
-            profile.apiSessionKey = credentials.apiSessionKey
-            profile.apiOrganizationId = credentials.apiOrganizationId
-            profile.cliCredentialsJSON = credentials.cliCredentialsJSON
-            profile.hasValidOAuthCredentials = credentials.cliCredentialsJSON.map { Profile.isValidOAuthJSON($0) } ?? false
-        }
-    }
-
-    /// Removes Claude.ai credentials for a profile
-    func removeClaudeAICredentials(for profileId: UUID) throws {
-        // Load and clear credentials from Keychain
-        var creds = try profileStore.loadProfileCredentials(profileId)
-        creds.claudeSessionKey = nil
-        creds.organizationId = nil
-        try profileStore.saveProfileCredentials(profileId, credentials: creds)
-
-        // Update Profile model in memory and persist through the canonical write path
-        updateProfile(profileId) { profile in
-            profile.claudeSessionKey = nil
-            profile.organizationId = nil
-            profile.claudeUsage = nil  // Clear saved usage data
-        }
-
-        LoggingService.shared.log("ProfileManager: Removed Claude.ai credentials for profile \(profileId)")
-
-        // Post single notification for credential change
-        NotificationCenter.default.post(name: .credentialsChanged, object: nil)
-    }
-
-    /// Removes API Console credentials for a profile
-    func removeAPICredentials(for profileId: UUID) throws {
-        // Load and clear credentials from Keychain
-        var creds = try profileStore.loadProfileCredentials(profileId)
-        creds.apiSessionKey = nil
-        creds.apiOrganizationId = nil
-        try profileStore.saveProfileCredentials(profileId, credentials: creds)
-
-        // Update Profile model in memory and persist through the canonical write path
-        updateProfile(profileId) { profile in
-            profile.apiSessionKey = nil
-            profile.apiOrganizationId = nil
-            profile.apiUsage = nil  // Clear saved usage data
-        }
-
-        LoggingService.shared.log("ProfileManager: Removed API credentials for profile \(profileId)")
-
-        // Post single notification for credential change
-        NotificationCenter.default.post(name: .credentialsChanged, object: nil)
-    }
-
-    // MARK: - Usage Data
-
-    /// Saves Claude usage data for a specific profile
-    func saveClaudeUsage(_ usage: ClaudeUsage, for profileId: UUID) {
-        guard profiles.contains(where: { $0.id == profileId }) else {
-            LoggingService.shared.logError("saveClaudeUsage: Profile not found with ID: \(profileId)")
-            return
-        }
-        updateProfile(profileId) { $0.claudeUsage = usage }
-        let name = profiles.first(where: { $0.id == profileId })?.name ?? profileId.uuidString
-        LoggingService.shared.log("Saved Claude usage for profile: \(name)")
-    }
-
-    /// Loads Claude usage data for a specific profile
-    func loadClaudeUsage(for profileId: UUID) -> ClaudeUsage? {
-        return profiles.first(where: { $0.id == profileId })?.claudeUsage
-    }
-
-    /// Saves API usage data for a specific profile
-    func saveAPIUsage(_ usage: APIUsage, for profileId: UUID) {
-        guard profiles.contains(where: { $0.id == profileId }) else {
-            LoggingService.shared.logError("saveAPIUsage: Profile not found with ID: \(profileId)")
-            return
-        }
-        updateProfile(profileId) { $0.apiUsage = usage }
-        let name = profiles.first(where: { $0.id == profileId })?.name ?? profileId.uuidString
-        LoggingService.shared.log("Saved API usage for profile: \(name)")
-    }
-
-    /// Loads API usage data for a specific profile
-    func loadAPIUsage(for profileId: UUID) -> APIUsage? {
-        return profiles.first(where: { $0.id == profileId })?.apiUsage
-    }
-
-    // MARK: - Profile Settings
-
-    /// Updates icon configuration for a profile
-    func updateIconConfig(_ config: MenuBarIconConfiguration, for profileId: UUID) {
-        updateProfile(profileId) { $0.iconConfig = config }
-    }
-
-    /// Updates refresh interval for a profile
-    func updateRefreshInterval(_ interval: TimeInterval, for profileId: UUID) {
-        updateProfile(profileId) { $0.refreshInterval = interval }
-    }
-
-    /// Updates auto-start session setting for a profile
-    func updateAutoStartSessionEnabled(_ enabled: Bool, for profileId: UUID) {
-        updateProfile(profileId) { $0.autoStartSessionEnabled = enabled }
-    }
-
-    /// Updates check overage limit setting for a profile
-    func updateCheckOverageLimitEnabled(_ enabled: Bool, for profileId: UUID) {
-        updateProfile(profileId) { $0.checkOverageLimitEnabled = enabled }
-    }
-
-    /// Updates notification settings for a profile
-    func updateNotificationSettings(_ settings: NotificationSettings, for profileId: UUID) {
-        updateProfile(profileId) { $0.notificationSettings = settings }
-    }
-
-    /// Updates organization ID for a profile
-    func updateOrganizationId(_ orgId: String?, for profileId: UUID) {
-        updateProfile(profileId) { $0.organizationId = orgId }
-    }
-
-    /// Updates API organization ID for a profile
-    func updateAPIOrganizationId(_ orgId: String?, for profileId: UUID) {
-        updateProfile(profileId) { $0.apiOrganizationId = orgId }
-    }
-
-    // MARK: - Private Methods
-
-    /// Encapsulates the repeated firstIndex → mutate → syncActiveProfile → save pattern.
-    private func updateProfile(_ id: UUID, mutate: (inout Profile) -> Void) {
+    /// Encapsulates the repeated firstIndex -> mutate -> syncActiveProfile -> save pattern.
+    ///
+    /// - Warning: Internal visibility for use by `Profile*Service` types only
+    ///   (`ProfileUsageDataService`, `ProfileCredentialService`, `ProfileSettingsService`).
+    ///   Arbitrary callers should use the higher-level service APIs instead.
+    func updateProfile(_ id: UUID, mutate: (inout Profile) -> Void) {
         guard let index = profiles.firstIndex(where: { $0.id == id }) else { return }
         mutate(&profiles[index])
         if activeProfile?.id == id { activeProfile = profiles[index] }
         profileStore.saveProfiles(profiles)
     }
 
+    // MARK: - Private Methods
+
     /// Syncs CLI credentials to default profile on first launch only
     private func syncCLICredentialsToDefaultProfile(_ profileId: UUID) async {
+        let cliSyncService = ClaudeCodeSyncService.shared
         do {
             // Attempt to read credentials from system Keychain
             guard let jsonData = try await cliSyncService.readSystemCredentials() else {
@@ -478,7 +283,7 @@ final class ProfileManager: ObservableObject {
             }
 
             // Sync to the newly created default profile
-            try await syncCLICredentials(toProfile: profileId)
+            try await ProfileCredentialService.shared.syncCLICredentials(toProfile: profileId)
 
             LoggingService.shared.log("ProfileManager: Successfully synced CLI credentials to default profile on first launch")
 
