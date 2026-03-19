@@ -435,7 +435,8 @@ struct BurnUpChartView: View {
                 AreaMark(
                     x: .value("Time", snapshot.date),
                     y: .value("Usage", snapshot.percentage),
-                    series: .value("Segment", segment.id.uuidString)
+                    series: .value("Segment", segment.id.uuidString),
+                    stacking: .unstacked
                 )
                 .foregroundStyle(
                     LinearGradient(
