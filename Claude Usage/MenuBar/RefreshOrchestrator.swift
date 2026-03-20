@@ -163,7 +163,9 @@ final class RefreshOrchestrator {
     // MARK: - Authentication Resolution
 
     /// Resolves the best available authentication method for a profile.
-    /// Priority: 1) CLI OAuth (auto-refreshing) -> 2) system Keychain CLI OAuth -> 3) claude.ai session
+    /// Priority: 1) CLI OAuth (auto-refreshing) -> 2) claude.ai session
+    /// Note: Does NOT probe the system Keychain — that requires user authorization
+    /// on unsigned builds and should only happen via explicit user action (Settings > Sync).
     private func resolveAuthentication(for profile: Profile) async throws -> AuthenticationType {
         // Try saved CLI OAuth token first (auto-refreshing, most reliable)
         if let cliJSON = profile.cliCredentialsJSON {
@@ -174,26 +176,6 @@ final class RefreshOrchestrator {
             } else {
                 LoggingService.shared.log("RefreshOrchestrator: Saved CLI OAuth token is expired or invalid")
             }
-        }
-
-        // Fall back to reading CLI credentials directly from system Keychain
-        do {
-            if let systemCredentials = try await ClaudeCodeSyncService.shared.readSystemCredentials() {
-                LoggingService.shared.log("RefreshOrchestrator: Found CLI credentials in system Keychain")
-
-                if ClaudeCodeSyncService.shared.isTokenExpired(systemCredentials) {
-                    LoggingService.shared.log("RefreshOrchestrator: System Keychain CLI token is expired")
-                } else if let accessToken = ClaudeCodeSyncService.shared.extractAccessToken(from: systemCredentials) {
-                    LoggingService.shared.log("RefreshOrchestrator: Using CLI credentials from system Keychain")
-                    return .cliOAuth(accessToken)
-                } else {
-                    LoggingService.shared.log("RefreshOrchestrator: Could not extract access token from system Keychain credentials")
-                }
-            } else {
-                LoggingService.shared.log("RefreshOrchestrator: No CLI credentials found in system Keychain")
-            }
-        } catch {
-            LoggingService.shared.log("RefreshOrchestrator: Could not read system CLI credentials: \(error.localizedDescription)")
         }
 
         // Fall back to claude.ai session key
